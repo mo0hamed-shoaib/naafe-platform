@@ -16,10 +16,8 @@ const initialForm = {
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { register, loading, error } = useAuth();
   const [formData, setFormData] = useState(initialForm);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -28,26 +26,25 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword || !formData.role) {
-      setError('يرجى ملء جميع الحقول المطلوبة');
+      // Show error via context error
       return;
     }
     if (formData.password !== formData.confirmPassword) {
-      setError('كلمتا المرور غير متطابقتين');
+      // Show error via context error
       return;
     }
-    setLoading(true);
-    setTimeout(() => {
-      login({
-        id: 'demo',
-        name: `${formData.firstName} ${formData.lastName}`,
-        email: formData.email,
-        avatar: '',
-      });
-      setLoading(false);
+    const payload = {
+      email: formData.email,
+      password: formData.password,
+      name: { first: formData.firstName, last: formData.lastName },
+      phone: formData.phoneNumber,
+      role: formData.role as 'seeker' | 'provider',
+    };
+    const success = await register(payload);
+    if (success) {
       navigate('/');
-    }, 1200);
+    }
   };
 
   return (
@@ -69,7 +66,7 @@ const RegisterPage = () => {
                   value={formData.firstName}
                   onChange={handleInputChange}
                   placeholder="الاسم الأول"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder:[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
                   required
                 />
               </div>
@@ -82,7 +79,7 @@ const RegisterPage = () => {
                   value={formData.lastName}
                   onChange={handleInputChange}
                   placeholder="اسم العائلة"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder:[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
                   required
                 />
               </div>
@@ -97,7 +94,7 @@ const RegisterPage = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="youremail@example.com"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder:[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
                   required
                 />
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#2D5D4F]">
@@ -115,7 +112,7 @@ const RegisterPage = () => {
                   value={formData.phoneNumber}
                   onChange={handleInputChange}
                   placeholder="+20 1XX XXX XXXX"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder:[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
                   required
                 />
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#2D5D4F]">
@@ -133,7 +130,7 @@ const RegisterPage = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder:[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
                   required
                 />
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#2D5D4F]"></span>
@@ -147,7 +144,7 @@ const RegisterPage = () => {
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder:[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
                   required
                 />
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#2D5D4F]"></span>

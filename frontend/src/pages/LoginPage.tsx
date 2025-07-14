@@ -7,11 +7,9 @@ import BaseCard from '../components/ui/BaseCard';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loading, error } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -20,22 +18,10 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
-    setTimeout(() => {
-      if (formData.email && formData.password) {
-        login({
-          id: 'demo',
-          name: 'مستخدم نافع',
-          email: formData.email,
-          avatar: '',
-        });
-        navigate('/');
-      } else {
-        setError('يرجى إدخال البريد الإلكتروني وكلمة المرور');
-      }
-      setLoading(false);
-    }, 800);
+    const success = await login(formData.email, formData.password);
+    if (success) {
+      navigate('/categories');
+    }
   };
 
   return (
@@ -61,7 +47,7 @@ const LoginPage = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="youremail@example.com"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder:[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
                   required
                   autoComplete="email"
                   aria-describedby="email-error"
@@ -84,7 +70,7 @@ const LoginPage = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder:[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
                   required
                   autoComplete="current-password"
                   aria-describedby="password-error"
