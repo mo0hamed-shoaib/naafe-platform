@@ -49,15 +49,15 @@ const RegisterPage = () => {
   return (
     <div className="min-h-screen bg-[#F5E6D3] flex items-center justify-center p-4 font-cairo" dir="rtl">
       <div className="w-full max-w-md">
-        <BaseCard className="bg-[#FDF8F0] rounded-2xl shadow-lg p-6 sm:p-8 md:p-10">
+        <BaseCard className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 md:p-10 border border-gray-200">
           {/* Logo/Title */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-extrabold text-[#0e1b18] font-jakarta">Naafe'</h1>
           </div>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-1" htmlFor="firstName">الاسم الأول</label>
+                <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="firstName">الاسم الأول</label>
                 <input
                   type="text"
                   id="firstName"
@@ -65,12 +65,12 @@ const RegisterPage = () => {
                   value={formData.firstName}
                   onChange={handleInputChange}
                   placeholder="الاسم الأول"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-1" htmlFor="lastName">اسم العائلة</label>
+                <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="lastName">اسم العائلة</label>
                 <input
                   type="text"
                   id="lastName"
@@ -78,13 +78,13 @@ const RegisterPage = () => {
                   value={formData.lastName}
                   onChange={handleInputChange}
                   placeholder="اسم العائلة"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                   required
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-1" htmlFor="email">البريد الإلكتروني</label>
+              <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="email">البريد الإلكتروني</label>
               <div className="relative">
                 <input
                   type="email"
@@ -93,16 +93,16 @@ const RegisterPage = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="youremail@example.com"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                   required
                 />
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#2D5D4F]">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
                   <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail"><rect width="20" height="20" fill="none"/><path d="M4 4h12v12H4z" stroke="none"/><path d="M4 4l8 8m0 0l8-8"/></svg>
                 </span>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-1" htmlFor="phoneNumber">رقم الهاتف</label>
+              <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="phoneNumber">رقم الهاتف</label>
               <div className="relative">
                 <input
                   type="tel"
@@ -111,17 +111,17 @@ const RegisterPage = () => {
                   value={formData.phoneNumber}
                   onChange={handleInputChange}
                   placeholder="+20 1XX XXX XXXX"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                   required
                 />
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#2D5D4F]">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
                   <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-phone"><rect width="20" height="20" fill="none"/><path d="M4 4h12v12H4z" stroke="none"/><path d="M4 4l8 8m0 0l8-8"/></svg>
                 </span>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-1" htmlFor="password">كلمة المرور</label>
+                <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="password">كلمة المرور</label>
                 <input
                   type="password"
                   id="password"
@@ -129,13 +129,12 @@ const RegisterPage = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                   required
                 />
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#2D5D4F]"></span>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-1" htmlFor="confirmPassword">تأكيد كلمة المرور</label>
+                <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="confirmPassword">تأكيد كلمة المرور</label>
                 <input
                   type="password"
                   id="confirmPassword"
@@ -143,13 +142,12 @@ const RegisterPage = () => {
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className="input input-bordered w-full bg-white pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-[#50958a] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
+                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                   required
                 />
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#2D5D4F]"></span>
               </div>
             </div>
-            {error && <div className="text-error text-sm text-right">{error}</div>}
+            {error && <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>}
             <Button
               type="submit"
               variant="primary"

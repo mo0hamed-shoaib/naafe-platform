@@ -44,36 +44,10 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
     setShowMobileSearch(false);
   };
 
-  const handlePostService = () => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    
-    if (user.role !== 'provider') {
-      // Show verification message
-      alert('يجب أن تكون محترفًا موثقًا لنشر الخدمات. يرجى التواصل مع الدعم للتحقق من حسابك.');
-      return;
-    }
-    
-    // Navigate to post service page (to be implemented)
-    navigate('/post-service');
-  };
-
-  const handleRequestService = () => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    
-    // Navigate to request service page (to be implemented)
-    navigate('/request-service');
-  };
-
   const navigationItems = [
     { label: 'الخدمات', href: '/services' },
     { label: 'للأعمال', href: '/business' },
-    { label: 'استكشف', href: '/explore' },
+    { label: 'استكشف', href: '/search' },
   ];
 
   return (
@@ -126,24 +100,20 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
                 </li>
               ))}
               <li>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePostService}
-                  className="font-medium"
+                <Link 
+                  to="/post-service"
+                  className="font-medium text-text-primary hover:text-deep-teal/90 transition-colors duration-200 rounded-lg px-3 py-2 hover:bg-bright-orange/10 focus:outline-none focus:ring-2 focus:ring-deep-teal/50"
                 >
                   نشر خدمة
-                </Button>
+                </Link>
               </li>
               <li>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleRequestService}
-                  className="font-medium"
+                <Link 
+                  to="/request-service"
+                  className="font-medium text-text-primary hover:text-deep-teal/90 transition-colors duration-200 rounded-lg px-3 py-2 hover:bg-bright-orange/10 focus:outline-none focus:ring-2 focus:ring-deep-teal/50"
                 >
                   طلب خدمة
-                </Button>
+                </Link>
               </li>
             </ul>
           </nav>
@@ -237,28 +207,20 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
                   </li>
                 ))}
                 <li className="pt-2 border-t border-gray-200 space-y-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    fullWidth
-                    onClick={() => {
-                      handlePostService();
-                      closeMobileMenu();
-                    }}
+                  <Link 
+                    to="/post-service"
+                    className="block font-medium text-text-primary hover:text-deep-teal/90 transition-colors duration-200 rounded-lg px-3 py-2 hover:bg-bright-orange/10 focus:outline-none focus:ring-2 focus:ring-deep-teal/50"
+                    onClick={closeMobileMenu}
                   >
                     نشر خدمة
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    fullWidth
-                    onClick={() => {
-                      handleRequestService();
-                      closeMobileMenu();
-                    }}
+                  </Link>
+                  <Link 
+                    to="/request-service"
+                    className="block font-medium text-text-primary hover:text-deep-teal/90 transition-colors duration-200 rounded-lg px-3 py-2 hover:bg-bright-orange/10 focus:outline-none focus:ring-2 focus:ring-deep-teal/50"
+                    onClick={closeMobileMenu}
                   >
                     طلب خدمة
-                  </Button>
+                  </Link>
                 </li>
                 {/* Mobile Auth Buttons */}
                 {!user && (

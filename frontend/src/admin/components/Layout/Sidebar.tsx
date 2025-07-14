@@ -16,10 +16,10 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const navItems = [
-    { path: '/admin', icon: Home, label: 'Overview' },
-    { path: '/admin/users', icon: Users, label: 'Users' },
-    { path: '/admin/categories', icon: List, label: 'Categories' },
-    { path: '/admin/settings', icon: Settings, label: 'Settings' },
+    { path: '/admin', icon: Home, label: 'لوحة التحكم' },
+    { path: '/admin/users', icon: Users, label: 'المستخدمين' },
+    { path: '/admin/categories', icon: List, label: 'الفئات' },
+    { path: '/admin/settings', icon: Settings, label: 'الإعدادات' },
   ];
 
   return (
@@ -71,7 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <div className="mt-auto">
             <button className="flex w-full items-center gap-3 p-3 rounded-lg transition-all duration-200 hover:bg-soft-teal">
               <LogOut className="h-5 w-5" />
-              <span className="font-medium">Logout</span>
+              <span className="font-medium">تسجيل الخروج</span>
             </button>
           </div>
         </div>

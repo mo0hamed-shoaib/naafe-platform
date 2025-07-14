@@ -243,37 +243,37 @@ const AdminManageCategories: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         title={selectedCategory ? 'تعديل الفئة' : 'إضافة فئة جديدة'}
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-dark-teal mb-1">
+            <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">
               اسم الفئة
             </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-light-cream rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-teal focus:border-transparent"
+              className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
               placeholder="أدخل اسم الفئة"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark-teal mb-1">
+            <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">
               الوصف
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
-              className="w-full px-3 py-2 border border-light-cream rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-teal focus:border-transparent"
+              className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 min-h-[80px] focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200 resize-none"
               placeholder="أدخل وصف الفئة"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark-teal mb-1">
+            <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">
               رابط الأيقونة
             </label>
             <div className="flex gap-2">
@@ -281,13 +281,13 @@ const AdminManageCategories: React.FC = () => {
                 type="url"
                 value={formData.icon}
                 onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                className="flex-1 px-3 py-2 border border-light-cream rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-teal focus:border-transparent"
+                className="flex-1 bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                 placeholder="أدخل رابط الأيقونة"
                 required
               />
               <button
                 type="button"
-                className="px-3 py-2 bg-light-cream text-soft-teal rounded-lg hover:bg-warm-cream transition-colors"
+                className="px-3 py-2 bg-gray-50 border-2 border-gray-300 text-gray-500 rounded-xl hover:bg-gray-100 hover:border-[#2D5D4F] transition-colors"
               >
                 <Image className="h-5 w-5" />
               </button>
@@ -298,13 +298,13 @@ const AdminManageCategories: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-soft-teal hover:text-dark-teal font-medium transition-colors"
+              className="px-4 py-2 text-gray-600 hover:text-[#0e1b18] font-medium transition-colors"
             >
               إلغاء
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-deep-teal text-white rounded-lg hover:bg-soft-teal transition-colors font-medium"
+              className="px-4 py-2 bg-[#2D5D4F] text-white rounded-xl hover:bg-[#1a3d32] transition-colors font-medium"
             >
               {selectedCategory ? 'تحديث' : 'إضافة فئة'}
             </button>

@@ -49,7 +49,7 @@ const Pagination = ({
 
   return (
     <div className="flex items-center justify-between mt-6">
-      <span className="text-sm text-soft-teal">
+      <span className="text-sm text-[#0e1b18]">
         عرض {startItem} إلى {endItem} من {totalItems} نتيجة
       </span>
       
@@ -67,13 +67,13 @@ const Pagination = ({
         {getPageNumbers().map((page, index) => (
           <span key={index}>
             {page === '...' ? (
-              <span className="px-2 text-soft-teal">...</span>
+              <span className="px-2 text-[#0e1b18]">...</span>
             ) : (
               <Button
                 variant={currentPage === page ? 'primary' : 'ghost'}
                 size="sm"
                 onClick={() => onPageChange(page as number)}
-                className={`rounded-full h-9 w-9 p-0 flex items-center justify-center font-semibold ${currentPage === page ? '' : 'text-soft-teal'}`}
+                className={`rounded-full h-9 w-9 p-0 flex items-center justify-center font-semibold ${currentPage === page ? '' : 'text-[#0e1b18]'}`}
                 aria-label={`الانتقال إلى الصفحة ${page}`}
               >
                 {page}
