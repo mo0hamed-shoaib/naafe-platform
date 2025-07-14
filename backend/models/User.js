@@ -60,8 +60,8 @@ const baseUserSchema = new Schema({
                 type: [Number],
                 default: [0, 0] // [longitude, latitude]
             }
-                }
-      },
+        }
+    },
     // Account Status
     isActive: {
         type: Boolean,
@@ -83,7 +83,7 @@ baseUserSchema.index({ 'profile.location': '2dsphere' });
 baseUserSchema.index({ role: 1, isActive: 1 });
 
 // Virtual for full name
-baseUserSchema.virtual('fullName').get(function() {
+baseUserSchema.virtual('fullName').get(function () {
     return `${this.name.first} ${this.name.last}`;
 });
 
