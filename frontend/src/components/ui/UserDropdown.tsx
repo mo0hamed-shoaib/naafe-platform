@@ -45,13 +45,27 @@ const UserDropdown = ({ user, onLogout, className = '' }: UserDropdownProps) => 
     navigate('/');
   };
 
-  const getUserInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const getUserInitials = (name: string | { first?: string; last?: string }) => {
+    if (typeof name === 'string') {
+      return name
+        .split(' ')
+        .map(word => word.charAt(0))
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    if (typeof name === 'object' && name) {
+      return `${name.first?.charAt(0) || ''}${name.last?.charAt(0) || ''}`.toUpperCase();
+    }
+    return '';
+  };
+
+  const getUserFullName = (name: string | { first?: string; last?: string }) => {
+    if (typeof name === 'string') return name;
+    if (typeof name === 'object' && name) {
+      return `${name.first || ''} ${name.last || ''}`.trim();
+    }
+    return '';
   };
 
   const menuItems = [
@@ -95,7 +109,7 @@ const UserDropdown = ({ user, onLogout, className = '' }: UserDropdownProps) => 
           {user.avatar ? (
             <img 
               src={user.avatar} 
-              alt={`${user.name} profile`}
+              alt={`${getUserFullName(user.name)} profile`}
               className="w-full h-full object-cover"
             />
           ) : (
@@ -121,7 +135,7 @@ const UserDropdown = ({ user, onLogout, className = '' }: UserDropdownProps) => 
                 {user.avatar ? (
                   <img 
                     src={user.avatar} 
-                    alt={`${user.name} profile`}
+                    alt={`${getUserFullName(user.name)} profile`}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -132,7 +146,7 @@ const UserDropdown = ({ user, onLogout, className = '' }: UserDropdownProps) => 
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-text-primary truncate">
-                  {user.name}
+                  {getUserFullName(user.name)}
                 </p>
                 <p className="text-xs text-text-secondary truncate">
                   {user.email}

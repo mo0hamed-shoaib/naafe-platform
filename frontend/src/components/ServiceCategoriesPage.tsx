@@ -4,7 +4,6 @@ import PageLayout from './layout/PageLayout';
 import FilterForm from './ui/FilterForm';
 import CategoryCard from './CategoryCard';
 import CustomTaskCTA from './CustomTaskCTA';
-import AuthDemo from './AuthDemo';
 import { serviceCategories } from '../data/categories';
 import { useFilters } from '../hooks/useFilters';
 import { useSort } from '../hooks/useSort';
@@ -91,7 +90,7 @@ const ServiceCategoriesPage = () => {
           <CustomTaskCTA onPostTask={handlePostTask} />
         </div>
       </PageLayout>
-      <AuthDemo />
+      {/* AuthDemo removed */}
     </>
   );
 };

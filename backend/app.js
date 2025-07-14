@@ -17,9 +17,9 @@ app.use(express.json()); // Parse JSON
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
 // Custom logging middleware
-// app.use(requestLogger); // Request/response logging
+app.use(requestLogger); // Request/response logging
 // app.use(performanceLogger); // Performance monitoring
-// app.use(securityLogger); // Security logging
+app.use(securityLogger); // Security logging
 
 // Routes
 app.use('/api/auth', authRoutes);
