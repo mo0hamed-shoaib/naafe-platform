@@ -6,6 +6,7 @@ import userRoutes from './routes/userRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import jobRequestRoutes from './routes/jobRequestRoutes.js';
 import offerRoutes from './routes/offerRoutes.js';
+import listingRoutes from './routes/listingRoutes.js';
 import { requestLogger, errorLogger, performanceLogger, securityLogger } from './middlewares/logging.middleware.js';
 
 const app = express();
@@ -27,6 +28,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/requests', jobRequestRoutes);
 app.use('/api/offers', offerRoutes);
+app.use('/api', listingRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

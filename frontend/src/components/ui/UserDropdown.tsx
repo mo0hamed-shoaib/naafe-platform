@@ -96,6 +96,16 @@ const UserDropdown = ({ user, onLogout, className = '' }: UserDropdownProps) => 
     }
   ];
 
+  // Add Admin Dashboard link if user is admin
+  if (user.role === 'admin') {
+    menuItems.unshift({
+      icon: User,
+      label: 'لوحة تحكم المشرف',
+      href: '/admin',
+      onClick: () => setIsOpen(false),
+    });
+  }
+
   return (
     <div className={cn('relative', className)} ref={dropdownRef}>
       <button

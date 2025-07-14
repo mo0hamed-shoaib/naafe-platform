@@ -38,12 +38,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [refreshToken, setRefreshToken] = useState<string | null>(
     () => localStorage.getItem('refreshToken')
   );
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start as true
   const [error, setError] = useState<string | null>(null);
 
   // Fetch user profile if token exists
   useEffect(() => {
-    if (accessToken && !user) {
+    if (accessToken) {
+      setLoading(true);
       fetch(USER_API, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
@@ -51,6 +52,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           if (!res.ok) throw new Error('فشل تحميل بيانات المستخدم');
           const data = await res.json();
           setUser(data.data.user);
+          setLoading(false);
         })
         .catch(() => {
           setUser(null);
@@ -58,9 +60,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setRefreshToken(null);
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          setLoading(false);
         });
+    } else {
+      setLoading(false);
     }
-  }, [accessToken, user]);
+  }, [accessToken]);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
@@ -75,7 +80,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (!res.ok || !data.success) {
         setError(data.error?.message || 'فشل تسجيل الدخول');
         setLoading(false);
-        return false;
+        return null;
       }
       setAccessToken(data.data.accessToken);
       setRefreshToken(data.data.refreshToken);
@@ -83,11 +88,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       localStorage.setItem('refreshToken', data.data.refreshToken);
       setUser(data.data.user);
       setLoading(false);
-      return true;
+      return data.data.user; // Return user object
     } catch {
       setError('حدث خطأ أثناء تسجيل الدخول');
       setLoading(false);
-      return false;
+      return null;
     }
   };
 

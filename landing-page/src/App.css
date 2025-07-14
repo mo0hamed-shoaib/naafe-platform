@@ -1,0 +1,82 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+:root {
+  --naafe-teal: #008080;
+  --naafe-cream: #fdf6e3;
+  --naafe-orange: #ff5722;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.bg-naafe-teal {
+  background-color: var(--naafe-teal);
+}
+
+.text-naafe-teal {
+  color: var(--naafe-teal);
+}
+
+.bg-naafe-cream {
+  background-color: var(--naafe-cream);
+}
+
+.text-naafe-cream {
+  color: var(--naafe-cream);
+}
+
+.bg-naafe-orange {
+  background-color: var(--naafe-orange);
+}
+
+.text-naafe-orange {
+  color: var(--naafe-orange);
+}
+
+.border-naafe-teal {
+  border-color: var(--naafe-teal);
+}
+
+.border-naafe-orange {
+  border-color: var(--naafe-orange);
+}
+
+ @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out;
+        }
+        
+        .animate-in {
+          animation: fadeIn 0.2s ease-out;
+        }
+        
+        .slide-in-from-top-2 {
+          animation: slideInFromTop 0.2s ease-out;
+        }
+        
+        @keyframes slideInFromTop {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        :root {
+          --naafe-teal: #008080;
+          --naafe-cream: #fdf6e3;
+          --naafe-orange: #ff5722;
+        }
+        
+        .bg-naafe-teal { background-color: var(--naafe-teal); }
+        .text-naafe-teal { color: var(--naafe-teal); }
+        .bg-naafe-cream { background-color: var(--naafe-cream); }
+        .text-naafe-cream { color: var(--naafe-cream); }
+        .bg-naafe-orange { background-color: var(--naafe-orange); }
+        .text-naafe-orange { color: var(--naafe-orange); }
+        .border-naafe-teal { border-color: var(--naafe-teal); }
+        .border-naafe-orange { border-color: var(--naafe-orange); }
+        

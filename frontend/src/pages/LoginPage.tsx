@@ -18,9 +18,13 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login(formData.email, formData.password);
-    if (success) {
-      navigate('/categories');
+    const user = await login(formData.email, formData.password);
+    if (user) {
+      if (user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/categories');
+      }
     }
   };
 

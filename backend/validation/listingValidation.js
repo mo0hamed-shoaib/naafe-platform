@@ -1,0 +1,77 @@
+import { body, param, query } from 'express-validator';
+
+export const validateCreateListing = [
+  body('title')
+    .isString().withMessage('Title must be a string')
+    .isLength({ min: 10, max: 100 }).withMessage('Title must be 10-100 characters'),
+  body('description')
+    .isString().withMessage('Description must be a string')
+    .isLength({ min: 20, max: 3000 }).withMessage('Description must be 20-3000 characters'),
+  body('category')
+    .isString().withMessage('Category is required'),
+  body('price.amount')
+    .isFloat({ min: 0 }).withMessage('Price must be a positive number'),
+  body('price.currency')
+    .optional().isIn(['EGP', 'USD', 'EUR']).withMessage('Invalid currency'),
+  body('deliveryTimeDays')
+    .isInt({ min: 1 }).withMessage('Delivery time must be at least 1 day'),
+  body('status')
+    .optional().isIn(['active', 'paused', 'archived']).withMessage('Invalid status'),
+];
+
+export const validateUpdateListing = [
+  body('title')
+    .optional()
+    .isString().withMessage('Title must be a string')
+    .isLength({ min: 10, max: 100 }).withMessage('Title must be 10-100 characters'),
+  body('description')
+    .optional()
+    .isString().withMessage('Description must be a string')
+    .isLength({ min: 20, max: 3000 }).withMessage('Description must be 20-3000 characters'),
+  body('category')
+    .optional()
+    .isString().withMessage('Category is required'),
+  body('price.amount')
+    .optional()
+    .isFloat({ min: 0 }).withMessage('Price must be a positive number'),
+  body('price.currency')
+    .optional().isIn(['EGP', 'USD', 'EUR']).withMessage('Invalid currency'),
+  body('deliveryTimeDays')
+    .optional()
+    .isInt({ min: 1 }).withMessage('Delivery time must be at least 1 day'),
+  body('status')
+    .optional().isIn(['active', 'paused', 'archived']).withMessage('Invalid status'),
+];
+
+export const validateListingId = [
+  param('id').isMongoId().withMessage('Invalid listing ID'),
+];
+
+export const validateListingQuery = [
+  query('page').optional().isInt({ min: 1 }),
+  query('limit').optional().isInt({ min: 1, max: 100 }),
+  query('category').optional().isString(),
+  query('status').optional().isIn(['active', 'paused', 'archived']),
+  query('minPrice').optional().isFloat({ min: 0 }),
+  query('maxPrice').optional().isFloat({ min: 0 }),
+  query('deliveryTimeDays').optional().isInt({ min: 1 }),
+  query('provider').optional().isMongoId(),
+  query('search').optional().isString(),
+];
+
+export const handleValidationErrors = (req, res, next) => {
+  const { validationResult } = require('express-validator');
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Validation failed',
+        details: errors.array()
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+  next();
+}; 

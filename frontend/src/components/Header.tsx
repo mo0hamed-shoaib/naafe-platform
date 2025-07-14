@@ -3,16 +3,15 @@ import { Search, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Button from './ui/Button';
 import UserDropdown from './ui/UserDropdown';
-import { User } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
   searchValue?: string;
-  user?: User | null;
-  onLogout?: () => void;
 }
 
-const Header = ({ onSearch, searchValue = '', user, onLogout }: HeaderProps) => {
+const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState(searchValue);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
@@ -43,12 +42,6 @@ const Header = ({ onSearch, searchValue = '', user, onLogout }: HeaderProps) => 
   const closeMobileMenu = () => {
     setShowMobileMenu(false);
     setShowMobileSearch(false);
-  };
-
-  const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
-    }
   };
 
   const navigationItems = [
@@ -147,7 +140,7 @@ const Header = ({ onSearch, searchValue = '', user, onLogout }: HeaderProps) => 
             {/* Authentication Section */}
             {user ? (
               // Logged in user - show dropdown
-              <UserDropdown user={user} onLogout={handleLogout} />
+              <UserDropdown user={user} onLogout={logout} />
             ) : (
               // Not logged in - show login/register buttons
               <div className="flex items-center gap-2">

@@ -74,8 +74,19 @@ export interface SortOption {
 
 export interface User {
   id: string;
-  name: string;
+  name: { first: string; last: string };
   email: string;
   avatar?: string;
+  avatarUrl?: string;
   isPremium?: boolean;
+  isVerified?: boolean;
+  phone?: string;
+  role: 'admin' | 'seeker' | 'provider';
+  profile?: {
+    bio?: string;
+    location?: {
+      address?: string;
+      coordinates?: [number, number];
+    };
+  };
 }

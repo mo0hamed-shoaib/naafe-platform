@@ -2,7 +2,7 @@ import express from 'express';
 import userController from '../controllers/userController.js';
 import jobRequestController from '../controllers/jobRequestController.js';
 import { validateUpdateProfile, validateUserId } from '../validation/userValidation.js';
-import { authenticateToken, optionalAuth } from '../middlewares/auth.middleware.js';
+import { authenticateToken, optionalAuth, requireRole } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
@@ -40,5 +40,12 @@ router.get('/:id', optionalAuth, validateUserId, userController.getPublicUserPro
  * @access  Public
  */
 router.get('/:id/stats', validateUserId, userController.getUserStats);
+
+// Admin: Get all users (paginated, filterable)
+router.get('/', authenticateToken, requireRole(['admin']), userController.getAllUsers);
+// Admin: Block a user
+router.patch('/:id/block', authenticateToken, requireRole(['admin']), userController.blockUser);
+// Admin: Unblock a user
+router.patch('/:id/unblock', authenticateToken, requireRole(['admin']), userController.unblockUser);
 
 export default router; 

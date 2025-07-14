@@ -1,4 +1,8 @@
-import User, { Seeker, Provider, Admin } from '../models/index.js';
+import User from '../models/User.js';
+import Seeker from '../models/Seeker.js';
+import Provider from '../models/Provider.js';
+import Admin from '../models/Admin.js';
+import Review from '../models/Review.js';
 
 class UserService {
   /**
@@ -205,7 +209,6 @@ class UserService {
    * @returns {Promise<void>}
    */
   async updateUserRatingAndReviewCount(userId) {
-    const { Review } = await import('../models/index.js');
     const user = await User.findById(userId);
     if (!user) return;
     // Get all reviews for this user
@@ -215,6 +218,52 @@ class UserService {
     user.rating = avgRating;
     user.reviewCount = reviewCount;
     await user.save();
+  }
+
+  // Admin: Get all users (paginated, filterable)
+  async getAllUsers({ page = 1, limit = 20, search = '', role }) {
+    const query = {};
+    if (search) {
+      query.$or = [
+        { email: { $regex: search, $options: 'i' } },
+        { 'name.first': { $regex: search, $options: 'i' } },
+        { 'name.last': { $regex: search, $options: 'i' } },
+      ];
+    }
+    if (role) {
+      query.role = role;
+    }
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const users = await User.find(query)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 });
+    const total = await User.countDocuments(query);
+    return {
+      users,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  // Admin: Block a user
+  async blockUser(id) {
+    const user = await User.findById(id);
+    if (!user) throw new Error('User not found');
+    user.isBlocked = true;
+    await user.save();
+    return user;
+  }
+
+  // Admin: Unblock a user
+  async unblockUser(id) {
+    const user = await User.findById(id);
+    if (!user) throw new Error('User not found');
+    user.isBlocked = false;
+    await user.save();
+    return user;
   }
 }
 

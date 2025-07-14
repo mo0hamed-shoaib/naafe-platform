@@ -1,0 +1,141 @@
+import { ProfileData } from '../types/Profile';
+
+export const mockProfileData: ProfileData = {
+  id: '1',
+  name: 'Sophia Carter',
+  title: 'Certified Interior Designer',
+  location: 'Serving the Greater Austin Area',
+  rating: 4.8,
+  reviewCount: 125,
+  avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop',
+  isVerified: true,
+  phone: '+1 (555) 123-4567',
+  email: 'sophia.carter@naafe.com',
+  bio: 'I am a certified interior designer with over 10 years of experience in both residential and commercial projects. My goal is to create spaces that are not only beautiful but also functional and tailored to my clients\' needs and preferences. I specialize in space planning, custom furniture design, and creating cohesive design concepts that reflect my clients\' unique styles.',
+  services: [
+    {
+      id: '1',
+      title: 'Residential Design Consultation',
+      description: 'Initial consultation for home design projects.',
+      image: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
+      category: 'residential',
+    },
+    {
+      id: '2',
+      title: 'Commercial Space Planning',
+      description: 'Planning and layout for commercial spaces.',
+      image: 'https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
+      category: 'commercial',
+    },
+    {
+      id: '3',
+      title: 'Custom Furniture Design',
+      description: 'Design and sourcing of custom furniture.',
+      image: 'https://images.pexels.com/photos/1571453/pexels-photo-1571453.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
+      category: 'all',
+    },
+    {
+      id: '4',
+      title: 'Kitchen Renovation',
+      description: 'Complete kitchen design and renovation services.',
+      image: 'https://images.pexels.com/photos/1571463/pexels-photo-1571463.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
+      category: 'residential',
+    },
+    {
+      id: '5',
+      title: 'Office Design',
+      description: 'Modern office space design and planning.',
+      image: 'https://images.pexels.com/photos/1571467/pexels-photo-1571467.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
+      category: 'commercial',
+    },
+    {
+      id: '6',
+      title: 'Color Consultation',
+      description: 'Professional color scheme consultation.',
+      image: 'https://images.pexels.com/photos/1571457/pexels-photo-1571457.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
+      category: 'all',
+    },
+  ],
+  reviews: [
+    {
+      id: '1',
+      author: 'Liam Harper',
+      avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
+      rating: 5,
+      comment: 'Sophia transformed my living room into a stunning and functional space. Her attention to detail and understanding of my style were exceptional.',
+      date: '2 months ago',
+    },
+    {
+      id: '2',
+      author: 'Olivia Bennett',
+      avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
+      rating: 4,
+      comment: 'Sophia provided excellent space planning for my office. The layout is efficient and aesthetically pleasing, though the project took slightly longer than expected.',
+      date: '3 months ago',
+    },
+    {
+      id: '3',
+      author: 'Marcus Johnson',
+      avatar: 'https://images.pexels.com/photos/91227/pexels-photo-91227.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
+      rating: 5,
+      comment: 'Outstanding work on our restaurant interior. The design perfectly captures our brand identity and creates a welcoming atmosphere for our customers.',
+      date: '1 month ago',
+    },
+  ],
+  portfolio: [
+    {
+      id: '1',
+      image: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop',
+      title: 'Modern Living Room',
+    },
+    {
+      id: '2',
+      image: 'https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop',
+      title: 'Commercial Office',
+    },
+    {
+      id: '3',
+      image: 'https://images.pexels.com/photos/1571453/pexels-photo-1571453.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop',
+      title: 'Custom Furniture',
+    },
+    {
+      id: '4',
+      image: 'https://images.pexels.com/photos/1571463/pexels-photo-1571463.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop',
+      title: 'Kitchen Design',
+    },
+    {
+      id: '5',
+      image: 'https://images.pexels.com/photos/1571467/pexels-photo-1571467.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop',
+      title: 'Office Space',
+    },
+    {
+      id: '6',
+      image: 'https://images.pexels.com/photos/1571457/pexels-photo-1571457.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop',
+      title: 'Color Scheme',
+    },
+    {
+      id: '7',
+      image: 'https://images.pexels.com/photos/1571470/pexels-photo-1571470.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop',
+      title: 'Bedroom Design',
+    },
+    {
+      id: '8',
+      image: 'https://images.pexels.com/photos/1571471/pexels-photo-1571471.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=crop',
+      title: 'Bathroom Renovation',
+    },
+  ],
+  testimonials: [
+    {
+      id: '1',
+      author: 'Sarah Mitchell',
+      comment: 'Sophia\'s design expertise and professionalism made the entire process seamless.',
+      image: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
+    },
+    {
+      id: '2',
+      author: 'Ethan Clark',
+      comment: 'Her creativity and attention to detail are unmatched. She transformed my office.',
+      image: 'https://images.pexels.com/photos/1571468/pexels-photo-1571468.jpeg?auto=compress&cs=tinysrgb&w=600&h=400&fit=crop',
+    },
+  ],
+};

@@ -214,6 +214,39 @@ class UserController {
       });
     }
   }
+
+  // Admin: Get all users (paginated, filterable)
+  async getAllUsers(req, res) {
+    try {
+      const { page = 1, limit = 20, search = '', role } = req.query;
+      const result = await userService.getAllUsers({ page, limit, search, role });
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to fetch users', error: err.message });
+    }
+  }
+
+  // Admin: Block a user
+  async blockUser(req, res) {
+    try {
+      const { id } = req.params;
+      await userService.blockUser(id);
+      res.json({ message: 'User blocked successfully' });
+    } catch (err) {
+      res.status(400).json({ message: 'Failed to block user', error: err.message });
+    }
+  }
+
+  // Admin: Unblock a user
+  async unblockUser(req, res) {
+    try {
+      const { id } = req.params;
+      await userService.unblockUser(id);
+      res.json({ message: 'User unblocked successfully' });
+    } catch (err) {
+      res.status(400).json({ message: 'Failed to unblock user', error: err.message });
+    }
+  }
 }
 
 export default new UserController(); 
