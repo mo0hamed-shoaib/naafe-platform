@@ -7,29 +7,17 @@ import Review from '../models/Review.js';
 class UserService {
   /**
    * Get current user profile
-   * @param {string} userId - User ID
-   * @returns {Object} User object without password
    */
   async getCurrentUser(userId) {
-    try {
-      const user = await User.findById(userId).select('-password');
-      
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      if (user.isBlocked) {
-        throw new Error('Account is blocked. Please contact support.');
-      }
-
-      if (!user.isActive) {
-        throw new Error('Account is deactivated. Please contact support.');
-      }
-
-      return user;
-    } catch (error) {
-      throw error;
-    }
+    const user = await User.findById(userId).lean();
+    if (!user) throw new Error('User not found');
+    // Return both profiles if present
+    return {
+      ...user,
+      seekerProfile: user.seekerProfile || null,
+      providerProfile: user.providerProfile || null,
+      roles: user.roles || []
+    };
   }
 
   /**
@@ -96,56 +84,17 @@ class UserService {
 
   /**
    * Get public user profile by ID
-   * @param {string} userId - User ID to get profile for
-   * @param {string} requestingUserId - ID of user making the request (optional)
-   * @returns {Object} Public user profile
    */
-  async getPublicUserProfile(userId, requestingUserId = null) {
-    try {
-      const user = await User.findById(userId).select('-password -email -phone');
-      
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      if (!user.isActive) {
-        throw new Error('User profile not available');
-      }
-
-      // If the requesting user is the same as the target user, return full profile
-      if (requestingUserId && requestingUserId.toString() === userId.toString()) {
-        return await User.findById(userId).select('-password');
-      }
-
-      // Return public profile (exclude sensitive information)
-      const publicProfile = {
-        _id: user._id,
-        name: user.name,
-        avatarUrl: user.avatarUrl,
-        role: user.role,
-        profile: {
-          bio: user.profile?.bio
-        },
-        // Role-specific public information
-        ...(user.role === 'provider' && {
-          rating: user.rating,
-          reviewCount: user.reviewCount,
-          totalJobsCompleted: user.totalJobsCompleted,
-          totalEarnings: user.totalEarnings
-        }),
-        ...(user.role === 'seeker' && {
-          rating: user.rating,
-          reviewCount: user.reviewCount,
-          totalJobsPosted: user.totalJobsPosted,
-          totalSpent: user.totalSpent
-        }),
-        createdAt: user.createdAt
-      };
-
-      return publicProfile;
-    } catch (error) {
-      throw error;
-    }
+  async getPublicUserProfile(userId, requestingUserId) {
+    const user = await User.findById(userId).lean();
+    if (!user) throw new Error('User not found');
+    // Return both profiles if present
+    return {
+      ...user,
+      seekerProfile: user.seekerProfile || null,
+      providerProfile: user.providerProfile || null,
+      roles: user.roles || []
+    };
   }
 
   /**

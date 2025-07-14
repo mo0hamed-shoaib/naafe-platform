@@ -12,6 +12,12 @@ const reviewSchema = new Schema({
     ref: 'User',
     required: true
   },
+  role: {
+    type: String,
+    enum: ['seeker', 'provider'],
+    required: true,
+    description: 'Context of the review: seeker or provider'
+  },
   jobRequest: {
     type: Schema.Types.ObjectId,
     ref: 'JobRequest'
@@ -44,12 +50,8 @@ const reviewSchema = new Schema({
   timestamps: true
 });
 
-reviewSchema.index({ reviewedUser: 1, createdAt: -1 });
-reviewSchema.index({ reviewer: 1, reviewedUser: 1 }, { unique: true });
-reviewSchema.index({ jobRequest: 1 });
-reviewSchema.index({ serviceListing: 1 });
-reviewSchema.index({ rating: 1 });
-reviewSchema.index({ isPublic: 1 });
+// Indexes for querying reviews by user and role
+reviewSchema.index({ reviewedUser: 1, role: 1, createdAt: -1 });
 
 const Review = mongoose.model('Review', reviewSchema);
 export default Review; 

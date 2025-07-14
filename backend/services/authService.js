@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import User, { Seeker, Provider, Admin } from '../models/index.js';
+import User from '../models/User.js';
 
 class AuthService {
   /**
@@ -10,47 +10,37 @@ class AuthService {
    */
   async register(userData) {
     try {
-      console.log(`[AuthService] Registering new user with email: ${userData.email}, role: ${userData.role}`);
-      
+      // Default role is seeker
+      let roles = ['seeker'];
+      let seekerProfile = {};
+      let providerProfile = {};
+
+      // If admin is creating a provider, allow provider role
+      if (userData.roles && Array.isArray(userData.roles) && userData.roles.includes('provider')) {
+        roles = ['provider'];
+        providerProfile = {};
+      }
+
       // Check if user already exists
       const existingUser = await User.findOne({ email: userData.email });
       if (existingUser) {
-        console.error(`[AuthService] User already exists with email: ${userData.email}`);
         throw new Error('User with this email already exists');
       }
 
       // Hash password
       const saltRounds = 12;
       const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
-      console.log(`[AuthService] Password hashed successfully for user: ${userData.email}`);
 
-      // Determine which model to use based on role
-      let UserModel;
-      switch (userData.role) {
-        case 'seeker':
-          UserModel = Seeker;
-          break;
-        case 'provider':
-          UserModel = Provider;
-          break;
-        case 'admin':
-          UserModel = Admin;
-          break;
-        default:
-          console.error(`[AuthService] Invalid role specified: ${userData.role}`);
-          throw new Error('Invalid role specified');
-      }
-
-      console.log(`[AuthService] Using ${userData.role} model for user creation`);
-
-      // Create new user with the appropriate discriminator model
-      const newUser = new UserModel({
+      // Create new user
+      const newUser = new User({
         ...userData,
-        password: hashedPassword
+        password: hashedPassword,
+        roles,
+        seekerProfile,
+        providerProfile
       });
 
       await newUser.save();
-      console.log(`[AuthService] User created successfully: ${newUser._id}`);
 
       // Return user without password
       const userResponse = newUser.toObject();
@@ -58,7 +48,6 @@ class AuthService {
 
       return userResponse;
     } catch (error) {
-      console.error(`[AuthService] Error registering user: ${error.message}`);
       throw error;
     }
   }
@@ -71,35 +60,27 @@ class AuthService {
    */
   async login(email, password) {
     try {
-      console.log(`[AuthService] Login attempt for email: ${email}`);
-      
       // Find user by email
       const user = await User.findOne({ email: email.toLowerCase() });
       if (!user) {
-        console.error(`[AuthService] Login failed - user not found: ${email}`);
         throw new Error('Invalid email or password');
       }
 
       // Check if user is blocked
       if (user.isBlocked) {
-        console.error(`[AuthService] Login failed - account blocked: ${email}`);
         throw new Error('Account is blocked. Please contact support.');
       }
 
       // Check if user is active
       if (!user.isActive) {
-        console.error(`[AuthService] Login failed - account inactive: ${email}`);
         throw new Error('Account is deactivated. Please contact support.');
       }
 
       // Verify password
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        console.error(`[AuthService] Login failed - invalid password: ${email}`);
         throw new Error('Invalid email or password');
       }
-
-      console.log(`[AuthService] Password verified successfully for user: ${email}`);
 
       // Update last login
       user.lastLoginAt = new Date();
@@ -108,8 +89,6 @@ class AuthService {
       // Generate tokens
       const accessToken = this.generateAccessToken(user);
       const refreshToken = this.generateRefreshToken(user);
-
-      console.log(`[AuthService] Login successful for user: ${email}, tokens generated`);
 
       // Return user data and tokens
       const userResponse = user.toObject();
@@ -121,7 +100,6 @@ class AuthService {
         refreshToken
       };
     } catch (error) {
-      console.error(`[AuthService] Error during login: ${error.message}`);
       throw error;
     }
   }

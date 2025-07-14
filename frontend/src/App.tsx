@@ -13,6 +13,9 @@ import AdminOverview from './admin/pages/AdminOverview';
 import AdminManageUsers from './admin/pages/AdminManageUsers';
 import AdminManageCategories from './admin/pages/AdminManageCategories';
 import ProfilePage from './pages/ProfilePage';
+import LandingPage from './pages/LandingPage';
+import PostServicePage from './pages/PostServicePage';
+import RequestServicePage from './pages/RequestServicePage';
 
 const App = () => {
   return (
@@ -21,7 +24,7 @@ const App = () => {
         <Router>
           <div className="App">
             <Routes>
-              <Route path="/" element={<ServiceCategoriesPage />} />
+              <Route path="/" element={<LandingPage />} />
               <Route path="/test" element={<TestPage />} />
               <Route path="/minimal" element={<MinimalTest />} />
               <Route path="/categories" element={<ServiceCategoriesPage />} />
@@ -30,6 +33,8 @@ const App = () => {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/me" element={<ProfilePage />} />
+              <Route path="/post-service" element={<PostServicePage />} />
+              <Route path="/request-service" element={<RequestServicePage />} />
               <Route path="/provider/:id" element={<div className="min-h-screen bg-warm-cream flex items-center justify-center"><p className="text-2xl text-text-secondary">Provider Details Page (Coming Soon)</p></div>} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminOverview />} />

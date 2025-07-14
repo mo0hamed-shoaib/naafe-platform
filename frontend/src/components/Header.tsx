@@ -44,6 +44,32 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
     setShowMobileSearch(false);
   };
 
+  const handlePostService = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    
+    if (user.role !== 'provider') {
+      // Show verification message
+      alert('يجب أن تكون محترفًا موثقًا لنشر الخدمات. يرجى التواصل مع الدعم للتحقق من حسابك.');
+      return;
+    }
+    
+    // Navigate to post service page (to be implemented)
+    navigate('/post-service');
+  };
+
+  const handleRequestService = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    
+    // Navigate to request service page (to be implemented)
+    navigate('/request-service');
+  };
+
   const navigationItems = [
     { label: 'الخدمات', href: '/services' },
     { label: 'للأعمال', href: '/business' },
@@ -99,20 +125,31 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePostService}
+                  className="font-medium"
+                >
+                  نشر خدمة
+                </Button>
+              </li>
+              <li>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleRequestService}
+                  className="font-medium"
+                >
+                  طلب خدمة
+                </Button>
+              </li>
             </ul>
           </nav>
           
-          {/* Left Section - Search, Post Task, Auth */}
+          {/* Left Section - Search, Auth */}
           <div className="flex items-center gap-3">
-            {/* Post Task Button */}
-            <Button
-              variant="primary"
-              size="sm"
-              className="hidden sm:inline-flex"
-            >
-              نشر مهمة
-            </Button>
-            
             {/* Desktop Search */}
             <form onSubmit={handleSearchSubmit} className="relative hidden md:block">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary h-4 w-4 search-icon" />
@@ -199,14 +236,28 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
                     </Link>
                   </li>
                 ))}
-                <li className="pt-2 border-t border-gray-200">
+                <li className="pt-2 border-t border-gray-200 space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    fullWidth
+                    onClick={() => {
+                      handlePostService();
+                      closeMobileMenu();
+                    }}
+                  >
+                    نشر خدمة
+                  </Button>
                   <Button
                     variant="primary"
                     size="sm"
                     fullWidth
-                    className="mt-2"
+                    onClick={() => {
+                      handleRequestService();
+                      closeMobileMenu();
+                    }}
                   >
-                    نشر مهمة
+                    طلب خدمة
                   </Button>
                 </li>
                 {/* Mobile Auth Buttons */}

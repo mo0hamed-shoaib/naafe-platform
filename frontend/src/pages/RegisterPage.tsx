@@ -11,7 +11,6 @@ const initialForm = {
   phoneNumber: '',
   password: '',
   confirmPassword: '',
-  role: '',
 };
 
 const RegisterPage = () => {
@@ -26,7 +25,7 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword || !formData.role) {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
       // Show error via context error
       return;
     }
@@ -39,7 +38,7 @@ const RegisterPage = () => {
       password: formData.password,
       name: { first: formData.firstName, last: formData.lastName },
       phone: formData.phoneNumber,
-      role: formData.role as 'seeker' | 'provider',
+      role: 'seeker' as const, // Always set as seeker
     };
     const success = await register(payload);
     if (success) {
@@ -149,21 +148,6 @@ const RegisterPage = () => {
                 />
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#2D5D4F]"></span>
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-1" htmlFor="role">الدور</label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                className="select select-bordered w-full bg-white px-4 py-3 rounded-xl text-[#0e1b18] text-right focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F]"
-                required
-              >
-                <option value="">اختر الدور</option>
-                <option value="seeker">باحث عن خدمة</option>
-                <option value="provider">مقدم خدمة</option>
-              </select>
             </div>
             {error && <div className="text-error text-sm text-right">{error}</div>}
             <Button
