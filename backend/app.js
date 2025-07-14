@@ -1,0 +1,73 @@
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
+import jobRequestRoutes from './routes/jobRequestRoutes.js';
+import offerRoutes from './routes/offerRoutes.js';
+import { requestLogger, errorLogger, performanceLogger, securityLogger } from './middlewares/logging.middleware.js';
+
+const app = express();
+
+// Middleware
+// app.use(morgan('dev')); // HTTP request logging
+app.use(cors()); // Enable CORS
+app.use(express.json()); // Parse JSON
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+
+// Custom logging middleware
+// app.use(requestLogger); // Request/response logging
+// app.use(performanceLogger); // Performance monitoring
+// app.use(securityLogger); // Security logging
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/requests', jobRequestRoutes);
+app.use('/api/offers', offerRoutes);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: {
+      status: 'ok',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString()
+    },
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: {
+      code: 'NOT_FOUND',
+      message: 'Route not found'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Error logging middleware
+app.use(errorLogger);
+
+// Global error handler
+app.use((error, req, res, next) => {
+  console.error('Global error handler:', error);
+  res.status(500).json({
+    success: false,
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: 'Internal server error'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+export default app;

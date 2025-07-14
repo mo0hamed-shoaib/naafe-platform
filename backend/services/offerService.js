@@ -1,0 +1,312 @@
+import Offer from '../models/Offer.js';
+import JobRequest from '../models/JobRequest.js';
+import User from '../models/User.js';
+
+class OfferService {
+  // Create a new offer
+  async createOffer(jobRequestId, providerId, offerData) {
+    try {
+      // Validate job request exists and is open
+      const jobRequest = await JobRequest.findById(jobRequestId);
+      if (!jobRequest) {
+        throw new Error('Job request not found');
+      }
+      
+      if (jobRequest.status !== 'open') {
+        throw new Error('Can only make offers on open job requests');
+      }
+      
+      // Validate provider exists and is a provider
+      const provider = await User.findById(providerId);
+      if (!provider || provider.role !== 'provider') {
+        throw new Error('Invalid provider');
+      }
+      
+      // Check if provider already made an offer
+      const existingOffer = await Offer.findOne({
+        jobRequest: jobRequestId,
+        provider: providerId,
+        status: { $in: ['pending', 'accepted'] }
+      });
+      
+      if (existingOffer) {
+        throw new Error('Provider already made an offer on this job');
+      }
+      
+      // Validate price is within budget
+      if (offerData.price.amount < jobRequest.budget.min || 
+          offerData.price.amount > jobRequest.budget.max) {
+        throw new Error('Price must be within the job request budget range');
+      }
+      
+      const offer = new Offer({
+        jobRequest: jobRequestId,
+        provider: providerId,
+        price: offerData.price,
+        message: offerData.message,
+        estimatedTimeDays: offerData.estimatedTimeDays,
+        status: 'pending'
+      });
+      
+      await offer.save();
+      
+      // Populate provider and job request details
+      await offer.populate([
+        { path: 'provider', select: 'name email phone' },
+        { path: 'jobRequest', select: 'title description budget deadline' }
+      ]);
+      
+      return offer;
+    } catch (error) {
+      throw error;
+    }
+  }
+  
+  // Get offers for a specific job request
+  async getOffersByJobRequest(jobRequestId, filters = {}) {
+    try {
+      const query = { jobRequest: jobRequestId };
+      
+      if (filters.status) {
+        query.status = filters.status;
+      }
+      
+      const offers = await Offer.find(query)
+        .populate('provider', 'name email phone rating reviewCount')
+        .sort({ createdAt: -1 });
+      
+      return offers;
+    } catch (error) {
+      throw error;
+    }
+  }
+  
+  // Get all offers with role-based filtering
+  async getAllOffers(userId, userRole, filters = {}) {
+    try {
+      let query = {};
+      
+      // Role-based filtering
+      if (userRole === 'provider') {
+        // Providers can see their own offers
+        query.provider = userId;
+      } else if (userRole === 'seeker') {
+        // Seekers can see offers on their job requests
+        const userJobRequests = await JobRequest.find({ seeker: userId }).select('_id');
+        const jobRequestIds = userJobRequests.map(jr => jr._id);
+        query.jobRequest = { $in: jobRequestIds };
+      } else if (userRole !== 'admin') {
+        // Non-admin users can only see their own offers
+        query.provider = userId;
+      }
+      
+      // Additional filters
+      if (filters.status) {
+        query.status = filters.status;
+      }
+      
+      if (filters.jobRequest) {
+        query.jobRequest = filters.jobRequest;
+      }
+      
+      if (filters.provider) {
+        query.provider = filters.provider;
+      }
+      
+      const offers = await Offer.find(query)
+        .populate('provider', 'name email phone rating reviewCount')
+        .populate('jobRequest', 'title description budget deadline status')
+        .sort({ createdAt: -1 });
+      
+      return offers;
+    } catch (error) {
+      throw error;
+    }
+  }
+  
+  // Get a specific offer by ID
+  async getOfferById(offerId, userId = null) {
+    try {
+      const offer = await Offer.findById(offerId)
+        .populate('provider', 'name email phone rating reviewCount')
+        .populate('jobRequest', 'title description budget deadline status seeker');
+      
+      if (!offer) {
+        throw new Error('Offer not found');
+      }
+      
+      // Check if user has permission to view this offer
+      if (userId) {
+        const user = await User.findById(userId);
+        if (!user) {
+          throw new Error('User not found');
+        }
+        
+        // Only offer owner, job request owner, or admin can view
+        if (user.role !== 'admin' && 
+            offer.provider._id.toString() !== userId && 
+            offer.jobRequest.seeker.toString() !== userId) {
+          throw new Error('Access denied');
+        }
+      }
+      
+      return offer;
+    } catch (error) {
+      throw error;
+    }
+  }
+  
+  // Update an offer
+  async updateOffer(offerId, providerId, updateData) {
+    try {
+      const offer = await Offer.findById(offerId);
+      
+      if (!offer) {
+        throw new Error('Offer not found');
+      }
+      
+      // Only offer owner can update
+      if (offer.provider.toString() !== providerId) {
+        throw new Error('Access denied');
+      }
+      
+      // Can only update pending offers
+      if (offer.status !== 'pending') {
+        throw new Error('Can only update pending offers');
+      }
+      
+      // Validate price if being updated
+      if (updateData.price) {
+        const jobRequest = await JobRequest.findById(offer.jobRequest);
+        if (updateData.price.amount < jobRequest.budget.min || 
+            updateData.price.amount > jobRequest.budget.max) {
+          throw new Error('Price must be within the job request budget range');
+        }
+      }
+      
+      // Update allowed fields
+      const allowedUpdates = ['price', 'message', 'estimatedTimeDays'];
+      allowedUpdates.forEach(field => {
+        if (updateData[field] !== undefined) {
+          offer[field] = updateData[field];
+        }
+      });
+      
+      await offer.save();
+      
+      // Populate provider and job request details
+      await offer.populate([
+        { path: 'provider', select: 'name email phone' },
+        { path: 'jobRequest', select: 'title description budget deadline' }
+      ]);
+      
+      return offer;
+    } catch (error) {
+      throw error;
+    }
+  }
+  
+  // Delete/withdraw an offer
+  async deleteOffer(offerId, providerId) {
+    try {
+      const offer = await Offer.findById(offerId);
+      
+      if (!offer) {
+        throw new Error('Offer not found');
+      }
+      
+      // Only offer owner can delete
+      if (offer.provider.toString() !== providerId) {
+        throw new Error('Access denied');
+      }
+      
+      // Can only delete pending offers
+      if (offer.status !== 'pending') {
+        throw new Error('Can only delete pending offers');
+      }
+      
+      await Offer.findByIdAndDelete(offerId);
+      
+      return { success: true, message: 'Offer deleted successfully' };
+    } catch (error) {
+      throw error;
+    }
+  }
+  
+  // Accept an offer (called by job request owner)
+  async acceptOffer(offerId, seekerId) {
+    try {
+      const offer = await Offer.findById(offerId)
+        .populate('jobRequest');
+      
+      if (!offer) {
+        throw new Error('Offer not found');
+      }
+      
+      // Only job request owner can accept offers
+      if (offer.jobRequest.seeker.toString() !== seekerId) {
+        throw new Error('Access denied');
+      }
+      
+      // Can only accept pending offers
+      if (offer.status !== 'pending') {
+        throw new Error('Can only accept pending offers');
+      }
+      
+      // Update offer status
+      offer.status = 'accepted';
+      await offer.save();
+      
+      // Update job request status and assign provider
+      await JobRequest.findByIdAndUpdate(offer.jobRequest._id, {
+        status: 'assigned',
+        assignedTo: offer.provider
+      });
+      
+      // Reject all other pending offers for this job
+      await Offer.updateMany(
+        { 
+          jobRequest: offer.jobRequest._id, 
+          status: 'pending',
+          _id: { $ne: offerId }
+        },
+        { status: 'rejected' }
+      );
+      
+      return offer;
+    } catch (error) {
+      throw error;
+    }
+  }
+  
+  // Reject an offer (called by job request owner)
+  async rejectOffer(offerId, seekerId) {
+    try {
+      const offer = await Offer.findById(offerId)
+        .populate('jobRequest');
+      
+      if (!offer) {
+        throw new Error('Offer not found');
+      }
+      
+      // Only job request owner can reject offers
+      if (offer.jobRequest.seeker.toString() !== seekerId) {
+        throw new Error('Access denied');
+      }
+      
+      // Can only reject pending offers
+      if (offer.status !== 'pending') {
+        throw new Error('Can only reject pending offers');
+      }
+      
+      offer.status = 'rejected';
+      await offer.save();
+      
+      return offer;
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+export default new OfferService(); 
