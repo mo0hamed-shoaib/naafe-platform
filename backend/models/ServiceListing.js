@@ -24,16 +24,22 @@ const serviceListingSchema = new Schema({
     type: String,
     required: true
   },
-  price: {
-    amount: {
+  budget: {
+    min: {
       type: Number,
       required: true,
-      min: [0, 'Price cannot be negative']
+      min: [0, 'Minimum budget cannot be negative']
+    },
+    max: {
+      type: Number,
+      required: true,
+      min: [0, 'Maximum budget cannot be negative']
     },
     currency: {
       type: String,
+      enum: ['EGP', 'USD', 'EUR'],
       default: 'EGP',
-      enum: ['EGP', 'USD', 'EUR']
+      required: true
     }
   },
   deliveryTimeDays: {
@@ -48,13 +54,12 @@ const serviceListingSchema = new Schema({
     fileSize: Number
   }],
   location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: [Number],
-    address: String
+    address: String,
+    government: String,
+    city: String,
+    street: String,
+    apartmentNumber: String,
+    additionalInformation: String
   },
   status: {
     type: String,
@@ -83,7 +88,7 @@ const serviceListingSchema = new Schema({
   timestamps: true
 });
 
-serviceListingSchema.index({ location: '2dsphere' });
+// serviceListingSchema.index({ location: '2dsphere' });
 serviceListingSchema.index({ provider: 1, status: 1 });
 serviceListingSchema.index({ category: 1, status: 1 });
 serviceListingSchema.index({ provider: 1 });

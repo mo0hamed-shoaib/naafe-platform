@@ -113,7 +113,7 @@ class AuthService {
     const payload = {
       userId: user._id,
       email: user.email,
-      role: user.role
+      roles: user.roles // include the array of roles
     };
 
     return jwt.sign(payload, process.env.JWT_SECRET, {

@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import BaseCard from '../components/ui/BaseCard';
+import { User } from '../types';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -18,12 +19,12 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = await login(formData.email, formData.password);
+    const user: User | null = await login(formData.email, formData.password);
     if (user) {
       if (user.role === 'admin') {
-        navigate('/admin');
+        navigate('/admin', { replace: true });
       } else {
-        navigate('/categories');
+        navigate('/categories', { replace: true });
       }
     }
   };

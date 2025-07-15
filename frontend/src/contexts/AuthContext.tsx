@@ -7,7 +7,7 @@ interface AuthContextType {
   refreshToken: string | null;
   loading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<User | null>;
   register: (data: RegisterPayload) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;

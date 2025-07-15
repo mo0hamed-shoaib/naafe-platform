@@ -6,6 +6,7 @@ import AvailabilityFilter from './AvailabilityFilter';
 import { FilterState } from '../../types';
 import { LOCATIONS } from '../../utils/constants';
 import { SearchTab } from './SearchTabs';
+import { useEffect, useState } from 'react';
 
 interface FilterFormProps {
   filters: FilterState;
@@ -39,6 +40,25 @@ const FilterForm = ({
   };
 
   const hasActiveFilters = Object.values(filters).some(value => value !== '');
+
+  const [categories, setCategories] = useState<string[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCategoriesLoading(true);
+    fetch('/api/categories')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.data.categories)) {
+          setCategories(data.data.categories.map((cat: any) => cat.name));
+        } else {
+          setCategoriesError('فشل تحميل الفئات');
+        }
+      })
+      .catch(() => setCategoriesError('فشل تحميل الفئات'))
+      .finally(() => setCategoriesLoading(false));
+  }, []);
 
   if (variant === 'sidebar') {
     return (
@@ -85,17 +105,14 @@ const FilterForm = ({
               onChange={(e) => handleInputChange('category', e.target.value)}
               aria-label="تصفية حسب الفئة"
               title="تصفية حسب الفئة"
+              disabled={categoriesLoading}
             >
               <option value="">جميع الفئات</option>
-              <option value="Cleaning">{translateCategory('Cleaning')}</option>
-              <option value="Tutoring">{translateCategory('Tutoring')}</option>
-              <option value="Photography">{translateCategory('Photography')}</option>
-              <option value="Home Repair">{translateCategory('Home Repair')}</option>
-              <option value="Landscaping">{translateCategory('Landscaping')}</option>
-              <option value="Event Planning">{translateCategory('Event Planning')}</option>
-              <option value="Personal Training">{translateCategory('Personal Training')}</option>
-              <option value="Pet Care">{translateCategory('Pet Care')}</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
             </select>
+            {categoriesError && <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">{categoriesError}</div>}
           </div>
 
           {/* Location Filter */}

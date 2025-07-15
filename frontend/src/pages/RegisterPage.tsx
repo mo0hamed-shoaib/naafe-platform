@@ -42,7 +42,7 @@ const RegisterPage = () => {
     };
     const success = await register(payload);
     if (success) {
-      navigate('/');
+      navigate('/', { replace: true });
     }
   };
 

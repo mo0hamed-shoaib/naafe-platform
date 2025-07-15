@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import Button from './ui/Button';
 import BaseCard from './ui/BaseCard';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 interface PostServiceFormData {
   serviceTitle: string;
@@ -17,9 +18,12 @@ interface PostServiceFormData {
   apartmentNumber: string;
   additionalInformation: string;
   preferredDateTime: string;
+  deliveryTimeDays: string;
+  tags: string;
 }
 
 const PostServiceForm: React.FC = () => {
+  const { accessToken } = useAuth();
   const [formData, setFormData] = useState<PostServiceFormData>({
     serviceTitle: '',
     category: '',
@@ -32,11 +36,31 @@ const PostServiceForm: React.FC = () => {
     apartmentNumber: '',
     additionalInformation: '',
     preferredDateTime: '',
+    deliveryTimeDays: '',
+    tags: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+  const [categories, setCategories] = useState<string[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCategoriesLoading(true);
+    fetch('/api/categories')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.data.categories)) {
+          setCategories(data.data.categories.map((cat: any) => cat.name));
+        } else {
+          setCategoriesError('فشل تحميل الفئات');
+        }
+      })
+      .catch(() => setCategoriesError('فشل تحميل الفئات'))
+      .finally(() => setCategoriesLoading(false));
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -49,28 +73,33 @@ const PostServiceForm: React.FC = () => {
     setError(null);
     setSuccess(false);
     try {
-      // Backend expects: title, description, category, price, location, etc.
       const payload = {
         title: formData.serviceTitle,
         description: formData.serviceDescription,
         category: formData.category,
-        price: {
-          amount: Number(formData.maxBudget),
+        budget: {
+          min: Number(formData.minBudget),
+          max: Number(formData.maxBudget),
           currency: 'EGP',
         },
-        deliveryTimeDays: 1, // Placeholder
         location: {
-          type: 'Point',
-          coordinates: [0, 0], // Placeholder, should be geocoded
+          government: formData.government,
+          city: formData.city,
+          street: formData.street,
+          apartmentNumber: formData.apartmentNumber,
           address: `${formData.government}, ${formData.city}, ${formData.street}, ${formData.apartmentNumber}`,
+          additionalInformation: formData.additionalInformation,
         },
-        features: [],
-        requirements: [],
+        preferredDateTime: formData.preferredDateTime,
+        deliveryTimeDays: Number(formData.deliveryTimeDays),
+        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        attachments: [],
       };
       const res = await fetch('/api/listings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(payload),
         credentials: 'include',
@@ -80,25 +109,13 @@ const PostServiceForm: React.FC = () => {
         throw new Error(data.error?.message || 'Failed to post service');
       }
       setSuccess(true);
-      setTimeout(() => navigate('/services'), 1500);
+      setTimeout(() => navigate('/search?category=' + encodeURIComponent(formData.category)), 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
   };
-
-  // TODO: Fetch categories from backend
-  const categories = [
-    'Home Services',
-    'Beauty & Wellness',
-    'Events & Photography',
-    'Tutoring & Lessons',
-    'Technology & IT',
-    'Automotive',
-    'Health & Fitness',
-    'Food & Catering',
-  ];
 
   return (
     <div className="min-h-screen bg-[#F5E6D3] flex flex-col font-cairo" dir="rtl">
@@ -131,12 +148,14 @@ const PostServiceForm: React.FC = () => {
                     onChange={handleChange}
                     className="w-full bg-gray-50 border-2 border-gray-300 px-4 py-3 rounded-xl text-[#0e1b18] text-right focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                     required
+                    disabled={categoriesLoading}
                   >
                     <option value="">اختر الفئة</option>
                     {categories.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
+                  {categoriesError && <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">{categoriesError}</div>}
                 </div>
               </div>
               <div>
@@ -257,6 +276,34 @@ const PostServiceForm: React.FC = () => {
                   onChange={handleChange}
                   className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                 />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="deliveryTimeDays">مدة التسليم (أيام)</label>
+                  <input
+                    type="number"
+                    id="deliveryTimeDays"
+                    name="deliveryTimeDays"
+                    value={formData.deliveryTimeDays}
+                    onChange={handleChange}
+                    placeholder="مثال: 3"
+                    className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
+                    min="1"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="tags">الكلمات المفتاحية (افصل بينها بفاصلة)</label>
+                  <input
+                    type="text"
+                    id="tags"
+                    name="tags"
+                    value={formData.tags}
+                    onChange={handleChange}
+                    placeholder="مثال: تنظيف, سباكة, كهرباء"
+                    className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
+                  />
+                </div>
               </div>
               {error && <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>}
               {success && <div className="text-green-600 text-sm text-right bg-green-50 p-3 rounded-lg border border-green-200">تم إرسال الطلب بنجاح!</div>}

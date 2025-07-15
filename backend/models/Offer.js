@@ -11,16 +11,22 @@ const offerSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  price: {
-    amount: {
+  budget: {
+    min: {
       type: Number,
       required: true,
-      min: [0, 'Price cannot be negative']
+      min: [0, 'Minimum budget cannot be negative']
+    },
+    max: {
+      type: Number,
+      required: true,
+      min: [0, 'Maximum budget cannot be negative']
     },
     currency: {
       type: String,
+      enum: ['EGP', 'USD', 'EUR'],
       default: 'EGP',
-      enum: ['EGP', 'USD', 'EUR']
+      required: true
     }
   },
   message: {

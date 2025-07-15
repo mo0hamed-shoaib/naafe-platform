@@ -17,7 +17,7 @@ export const useUrlParams = () => {
     } else {
       newParams.delete(key);
     }
-    setSearchParams(newParams);
+    setSearchParams(newParams, { replace: true });
   }, [searchParams, setSearchParams]);
 
   const setMultipleParams = useCallback((params: Record<string, string>) => {
@@ -29,11 +29,11 @@ export const useUrlParams = () => {
         newParams.delete(key);
       }
     });
-    setSearchParams(newParams);
+    setSearchParams(newParams, { replace: true });
   }, [searchParams, setSearchParams]);
 
   const clearParams = useCallback(() => {
-    setSearchParams(new URLSearchParams());
+    setSearchParams(new URLSearchParams(), { replace: true });
   }, [setSearchParams]);
 
   const navigateWithParams = useCallback((path: string, params?: Record<string, string>) => {

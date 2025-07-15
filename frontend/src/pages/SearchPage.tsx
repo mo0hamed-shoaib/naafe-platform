@@ -7,11 +7,32 @@ import ServiceRequestCard from '../components/ServiceRequestCard';
 import SearchTabs, { SearchTab } from '../components/ui/SearchTabs';
 import Button from '../components/ui/Button';
 import BaseCard from '../components/ui/BaseCard';
-import { mockServiceProviders, mockServiceRequests } from '../data/mockData';
-import { FilterState, ServiceProvider, ServiceRequest } from '../types';
+import { useQuery } from '@tanstack/react-query';
+import { FilterState } from '../types';
 import { useUrlParams } from '../hooks/useUrlParams';
-import { translateCategory, translateCategoryToEnglish, translateLocationToEnglish, translateLocation } from '../utils/helpers';
 import { useAuth } from '../contexts/AuthContext';
+
+const fetchListings = async (filters: FilterState) => {
+  const params = new URLSearchParams();
+  if (filters.category) params.set('category', filters.category);
+  if (filters.search) params.set('search', filters.search);
+  // Add more filters as needed (location, price, etc.)
+  const res = await fetch(`/api/listings?${params.toString()}`);
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message || 'فشل تحميل الخدمات');
+  return json.data.listings || json.data.items || [];
+};
+
+const fetchRequests = async (filters: FilterState) => {
+  const params = new URLSearchParams();
+  if (filters.category) params.set('category', filters.category);
+  if (filters.search) params.set('search', filters.search);
+  // Add more filters as needed (location, price, etc.)
+  const res = await fetch(`/api/requests?${params.toString()}`);
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message || 'فشل تحميل الطلبات');
+  return json.data.requests || json.data.jobRequests || json.data.items || [];
+};
 
 const SearchPage = () => {
   const navigate = useNavigate();
@@ -20,160 +41,63 @@ const SearchPage = () => {
   
   const [filters, setFilters] = useState<FilterState>(getFiltersFromUrl());
   const [activeTab, setActiveTab] = useState<SearchTab>('services');
-  const [filteredProviders, setFilteredProviders] = useState<ServiceProvider[]>(mockServiceProviders);
-  const [filteredRequests, setFilteredRequests] = useState<ServiceRequest[]>(mockServiceRequests);
+  const { data: listings = [], isLoading: listingsLoading, error: listingsError } = useQuery({
+    queryKey: ['listings', filters],
+    queryFn: () => fetchListings(filters),
+  });
+  const { data: requests = [], isLoading: requestsLoading, error: requestsError } = useQuery({
+    queryKey: ['requests', filters],
+    queryFn: () => fetchRequests(filters),
+  });
+
+  // Map backend data to frontend types
+  // Backend response is dynamic; we validate and map at runtime
+  const mappedProviders = (listings as unknown[]).map((listing) => {
+    const l = listing as Record<string, any>;
+    return {
+      id: l._id,
+      name: l.provider?.name?.first && l.provider?.name?.last ? `${l.provider.name.first} ${l.provider.name.last}` : l.provider?.name || '',
+      rating: l.rating ?? 0,
+      category: l.category,
+      description: l.description,
+      location: l.location?.address || '',
+      startingPrice: l.price?.amount ?? 0,
+      imageUrl: l.provider?.avatarUrl || '',
+      isPremium: l.provider?.isPremium || false,
+      isTopRated: (l.rating ?? 0) >= 4.8 && (l.reviewCount ?? 0) > 10, // Example logic
+      completedJobs: l.provider?.totalJobsCompleted ?? 0,
+      isIdentityVerified: l.provider?.isVerified ?? false,
+      availability: l.availability || { days: [], timeSlots: [] },
+    };
+  });
+
+  const mappedRequests = (requests as unknown[]).map((req) => {
+    const r = req as Record<string, any>;
+    return {
+      id: r._id,
+      title: r.title,
+      description: r.description,
+      budget: r.budget,
+      location: r.location?.address || '',
+      postedBy: {
+        id: r.seeker?._id || '',
+        name: r.seeker?.name ? `${r.seeker.name.first} ${r.seeker.name.last}` : '',
+        avatar: r.seeker?.avatarUrl || '',
+        isPremium: r.seeker?.isPremium || false,
+      },
+      createdAt: r.createdAt,
+      preferredDate: r.preferredDate || r.deadline,
+      status: r.status,
+      category: r.category,
+      urgency: r.urgency,
+      availability: r.availability || { days: [], timeSlots: [] },
+    };
+  });
 
   // Update URL when filters change
   useEffect(() => {
     updateFiltersInUrl(filters);
   }, [filters, updateFiltersInUrl]);
-
-  // Filter providers based on current filters and search query
-  useEffect(() => {
-    let results = [...mockServiceProviders];
-
-    // Filter by category
-    if (filters.category) {
-      const englishCategory = translateCategoryToEnglish(filters.category);
-      results = results.filter(provider => 
-        provider.category.toLowerCase() === englishCategory.toLowerCase()
-      );
-    }
-
-    // Filter by location
-    if (filters.location) {
-      const englishLocation = translateLocationToEnglish(filters.location);
-      results = results.filter(provider => 
-        provider.location === englishLocation
-      );
-    }
-
-    // Filter by price range
-    if (filters.priceRange) {
-      results = results.filter(provider => {
-        const price = provider.startingPrice;
-        switch (filters.priceRange) {
-          case '0-50': return price <= 50;
-          case '50-100': return price > 50 && price <= 100;
-          case '100+': return price > 100;
-          case '$': return price < 30;
-          case '$$': return price >= 30 && price <= 60;
-          case '$$$': return price > 60;
-          default: return true;
-        }
-      });
-    }
-
-    // Filter by rating
-    if (filters.rating) {
-      const ratingValue = filters.rating;
-      if (ratingValue.includes('+')) {
-        const minRating = parseFloat(ratingValue.replace('+', ''));
-        results = results.filter(provider => provider.rating >= minRating);
-      } else {
-        const minRating = parseInt(ratingValue);
-        if (!isNaN(minRating)) {
-          results = results.filter(provider => provider.rating >= minRating);
-        }
-      }
-    }
-
-    // Filter by premium status
-    if (filters.premiumOnly) {
-      results = results.filter(provider => provider.isPremium);
-    }
-
-    // Filter by availability
-    if (filters.availability?.days?.length || filters.availability?.timeSlots?.length) {
-      results = results.filter(provider => {
-        const hasMatchingDays = !filters.availability?.days?.length || 
-          filters.availability.days.some(day => provider.availability.days.includes(day));
-        const hasMatchingTimeSlots = !filters.availability?.timeSlots?.length || 
-          filters.availability.timeSlots.some(slot => provider.availability.timeSlots.includes(slot));
-        return hasMatchingDays && hasMatchingTimeSlots;
-      });
-    }
-
-    // Filter by search query
-    if (filters.search) {
-      const query = filters.search.toLowerCase();
-      results = results.filter(provider =>
-        provider.name.toLowerCase().includes(query) ||
-        translateCategory(provider.category).toLowerCase().includes(query) ||
-        provider.description.toLowerCase().includes(query) ||
-        translateLocation(provider.location).toLowerCase().includes(query)
-      );
-    }
-
-    setFilteredProviders(results);
-  }, [filters]);
-
-  // Filter requests based on current filters and search query
-  useEffect(() => {
-    let results = [...mockServiceRequests];
-
-    // Filter by category
-    if (filters.category) {
-      const englishCategory = translateCategoryToEnglish(filters.category);
-      results = results.filter(request => 
-        request.category.toLowerCase() === englishCategory.toLowerCase()
-      );
-    }
-
-    // Filter by location
-    if (filters.location) {
-      const englishLocation = translateLocationToEnglish(filters.location);
-      results = results.filter(request => 
-        request.location === englishLocation
-      );
-    }
-
-    // Filter by budget range (using price range filter)
-    if (filters.priceRange) {
-      results = results.filter(request => {
-        const avgBudget = (request.budget.min + request.budget.max) / 2;
-        switch (filters.priceRange) {
-          case '0-50': return avgBudget <= 50;
-          case '50-100': return avgBudget > 50 && avgBudget <= 100;
-          case '100+': return avgBudget > 100;
-          case '$': return avgBudget < 30;
-          case '$$': return avgBudget >= 30 && avgBudget <= 60;
-          case '$$$': return avgBudget > 60;
-          default: return true;
-        }
-      });
-    }
-
-    // Filter by premium status
-    if (filters.premiumOnly) {
-      results = results.filter(request => request.postedBy.isPremium);
-    }
-
-    // Filter by availability
-    if (filters.availability?.days?.length || filters.availability?.timeSlots?.length) {
-      results = results.filter(request => {
-        const hasMatchingDays = !filters.availability?.days?.length || 
-          filters.availability.days.some(day => request.availability.days.includes(day));
-        const hasMatchingTimeSlots = !filters.availability?.timeSlots?.length || 
-          filters.availability.timeSlots.some(slot => request.availability.timeSlots.includes(slot));
-        return hasMatchingDays && hasMatchingTimeSlots;
-      });
-    }
-
-    // Filter by search query
-    if (filters.search) {
-      const query = filters.search.toLowerCase();
-      results = results.filter(request =>
-        request.title.toLowerCase().includes(query) ||
-        translateCategory(request.category).toLowerCase().includes(query) ||
-        request.description.toLowerCase().includes(query) ||
-        translateLocation(request.location).toLowerCase().includes(query) ||
-        request.postedBy.name.toLowerCase().includes(query)
-      );
-    }
-
-    setFilteredRequests(results);
-  }, [filters]);
 
   const handleSearch = (query: string) => {
     setFilters(prev => ({ ...prev, search: query }));
@@ -211,7 +135,7 @@ const SearchPage = () => {
   };
 
   const getResultsText = () => {
-    const count = activeTab === 'services' ? filteredProviders.length : filteredRequests.length;
+    const count = activeTab === 'services' ? mappedProviders.length : mappedRequests.length;
     const hasFilters = filters.category || filters.location || filters.priceRange || filters.rating || filters.search;
     
     if (!hasFilters) {
@@ -296,9 +220,13 @@ const SearchPage = () => {
           />
           
           {activeTab === 'services' ? (
-            filteredProviders.length > 0 ? (
+            listingsLoading ? (
+              <div className="text-center py-12 text-lg text-deep-teal">جاري تحميل الخدمات...</div>
+            ) : listingsError ? (
+              <div className="text-center py-12 text-red-600">{listingsError.message}</div>
+            ) : mappedProviders.length > 0 ? (
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {filteredProviders.map((provider) => (
+                {mappedProviders.map((provider) => (
                   <ServiceCard
                     key={provider.id}
                     provider={provider}
@@ -310,9 +238,13 @@ const SearchPage = () => {
               renderEmptyState()
             )
           ) : (
-            filteredRequests.length > 0 ? (
+            requestsLoading ? (
+              <div className="text-center py-12 text-lg text-deep-teal">جاري تحميل الطلبات...</div>
+            ) : requestsError ? (
+              <div className="text-center py-12 text-red-600">{requestsError.message}</div>
+            ) : mappedRequests.length > 0 ? (
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {filteredRequests.map((request) => (
+                {mappedRequests.map((request) => (
                   <ServiceRequestCard
                     key={request.id}
                     request={request}

@@ -24,7 +24,7 @@ const router = express.Router();
  */
 router.post('/', 
   authenticateToken, 
-  requireRole(['seeker']), 
+  requireRole(['seeker', 'provider']), 
   validateCreateJobRequest, 
   jobRequestController.createJobRequest
 );

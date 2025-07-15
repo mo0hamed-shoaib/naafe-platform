@@ -8,7 +8,7 @@ interface CategoryCardProps {
 }
 
 const CategoryCard = ({ category, onClick }: CategoryCardProps) => {
-  const { name, serviceCount, startingPrice, icon: Icon } = category;
+  const { name, serviceCount, startingPrice, icon } = category;
 
   return (
     <BaseCard
@@ -17,7 +17,19 @@ const CategoryCard = ({ category, onClick }: CategoryCardProps) => {
       className="bg-light-cream group"
     >
       <div className="flex h-32 items-center justify-center bg-light-cream">
-        <Icon className="h-16 w-16 text-deep-teal transition-transform group-hover:scale-110" />
+        {typeof icon === 'string' ? (
+          <img
+            src={icon}
+            alt={name}
+            className="h-16 w-16 object-contain"
+            style={{ maxWidth: '4rem', maxHeight: '4rem', display: 'block' }}
+            onError={e => { (e.target as HTMLImageElement).src = '/default-category.png'; }}
+          />
+        ) : icon ? (
+          <icon className="h-16 w-16 text-deep-teal transition-transform group-hover:scale-110" />
+        ) : (
+          <span className="h-16 w-16" />
+        )}
       </div>
       <div className="flex flex-col gap-2">
         <h3 className="text-lg font-semibold text-text-primary">{name}</h3>

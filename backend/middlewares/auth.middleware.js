@@ -54,7 +54,8 @@ export const requireRole = (roles) => {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    // FIX: Check if any of the user's roles are allowed
+    if (!req.user.roles || !req.user.roles.some(r => roles.includes(r))) {
       return res.status(403).json({
         success: false,
         error: {

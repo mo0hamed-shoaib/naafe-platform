@@ -1,4 +1,4 @@
-import { body, param, query } from 'express-validator';
+import { body, param, query, validationResult } from 'express-validator';
 
 export const validateCreateListing = [
   body('title')
@@ -9,9 +9,11 @@ export const validateCreateListing = [
     .isLength({ min: 20, max: 3000 }).withMessage('Description must be 20-3000 characters'),
   body('category')
     .isString().withMessage('Category is required'),
-  body('price.amount')
-    .isFloat({ min: 0 }).withMessage('Price must be a positive number'),
-  body('price.currency')
+  body('budget.min')
+    .isFloat({ min: 0 }).withMessage('Minimum budget must be a positive number'),
+  body('budget.max')
+    .isFloat({ min: 0 }).withMessage('Maximum budget must be a positive number'),
+  body('budget.currency')
     .optional().isIn(['EGP', 'USD', 'EUR']).withMessage('Invalid currency'),
   body('deliveryTimeDays')
     .isInt({ min: 1 }).withMessage('Delivery time must be at least 1 day'),
@@ -31,10 +33,13 @@ export const validateUpdateListing = [
   body('category')
     .optional()
     .isString().withMessage('Category is required'),
-  body('price.amount')
+  body('budget.min')
     .optional()
-    .isFloat({ min: 0 }).withMessage('Price must be a positive number'),
-  body('price.currency')
+    .isFloat({ min: 0 }).withMessage('Minimum budget must be a positive number'),
+  body('budget.max')
+    .optional()
+    .isFloat({ min: 0 }).withMessage('Maximum budget must be a positive number'),
+  body('budget.currency')
     .optional().isIn(['EGP', 'USD', 'EUR']).withMessage('Invalid currency'),
   body('deliveryTimeDays')
     .optional()
@@ -60,7 +65,6 @@ export const validateListingQuery = [
 ];
 
 export const handleValidationErrors = (req, res, next) => {
-  const { validationResult } = require('express-validator');
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({

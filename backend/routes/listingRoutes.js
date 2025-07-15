@@ -15,7 +15,7 @@ const router = express.Router();
 router.get('/users/me/listings', authenticateToken, requireRole(['provider']), validateListingQuery, handleValidationErrors, listingController.listOwnListings);
 
 // Create a new listing
-router.post('/listings', authenticateToken, requireRole(['provider']), validateCreateListing, handleValidationErrors, listingController.createListing);
+router.post('/listings', authenticateToken, requireRole(['seeker', 'provider']), validateCreateListing, handleValidationErrors, listingController.createListing);
 
 // Get a single listing by ID
 router.get('/listings/:id', validateListingId, handleValidationErrors, listingController.getListingById);

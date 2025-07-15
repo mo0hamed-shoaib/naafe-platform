@@ -14,7 +14,7 @@ const PostServicePage = () => {
         <BaseCard className="max-w-md w-full text-center">
           <h1 className="text-2xl font-bold text-text-primary mb-4">تسجيل الدخول مطلوب</h1>
           <p className="text-text-secondary mb-6">يجب تسجيل الدخول لنشر الخدمات</p>
-          <Button onClick={() => navigate('/login')} variant="primary">
+          <Button onClick={() => navigate('/login', { replace: true })} variant="primary">
             تسجيل الدخول
           </Button>
         </BaseCard>

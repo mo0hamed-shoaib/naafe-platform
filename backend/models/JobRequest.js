@@ -45,16 +45,12 @@ const jobRequestSchema = new Schema({
     }
   },
   location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number],
-      required: true
-    },
-    address: String
+    address: String,
+    government: String,
+    city: String,
+    street: String,
+    apartmentNumber: String,
+    additionalInformation: String
   },
   attachments: [{
     url: {
@@ -104,7 +100,8 @@ const jobRequestSchema = new Schema({
 });
 
 // Indexes
-jobRequestSchema.index({ location: '2dsphere' });
+// Remove geo index
+// jobRequestSchema.index({ location: '2dsphere' });
 jobRequestSchema.index({ seeker: 1, status: 1 });
 jobRequestSchema.index({ category: 1, status: 1 });
 jobRequestSchema.index({ deadline: 1 });

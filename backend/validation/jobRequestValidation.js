@@ -62,10 +62,12 @@ export const validateCreateJobRequest = [
     .withMessage('Location type must be "Point"'),
   
   body('location.coordinates')
+    .optional()
     .isArray({ min: 2, max: 2 })
     .withMessage('Location coordinates must be an array of [longitude, latitude]'),
   
   body('location.coordinates.*')
+    .optional()
     .isFloat({ min: -180, max: 180 })
     .withMessage('Coordinates must be valid longitude (-180 to 180) and latitude (-90 to 90)'),
   

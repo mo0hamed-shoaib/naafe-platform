@@ -22,10 +22,10 @@ class JobRequestService {
         throw new Error('Seeker not found');
       }
       
-      // Check if user is a seeker (either by role or discriminator)
-      if (seeker.role !== 'seeker') {
-        console.error(`[JobRequestService] User ${seekerId} is not a seeker. Role: ${seeker.role}`);
-        throw new Error('Only seekers can create job requests');
+      // Allow both seekers and providers to create job requests (for development/testing)
+      if (!seeker.roles || !seeker.roles.some(r => r === 'seeker' || r === 'provider')) {
+        console.error(`[JobRequestService] User ${seekerId} is not a seeker or provider. Roles: ${seeker.roles}`);
+        throw new Error('Only seekers or providers can create job requests');
       }
 
       console.log(`[JobRequestService] Seeker validation passed for: ${seekerId}`);
