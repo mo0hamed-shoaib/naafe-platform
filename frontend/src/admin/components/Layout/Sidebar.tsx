@@ -8,6 +8,8 @@ import {
   LogOut,
   Layers
 } from 'lucide-react';
+import Button from '../../../components/ui/Button';
+import { Link } from 'react-router-dom';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -70,6 +72,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, className }) => {
                   </NavLink>
                 </li>
               ))}
+              {/* Home Button styled as sidebar nav */}
+              <li>
+                <NavLink
+                  to="/"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 p-3 rounded-lg transition-all duration-200 hover:bg-soft-teal/60 ${
+                      isActive ? 'bg-soft-teal/80 text-orange-400 font-bold shadow' : 'text-warm-cream'
+                    }`
+                  }
+                  onClick={onClose}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Home className={`h-5 w-5 ${isActive ? 'text-orange-400' : 'text-warm-cream'}`} />
+                      <span className="font-medium">العودة إلى الصفحة الرئيسية</span>
+                    </>
+                  )}
+                </NavLink>
+              </li>
             </ul>
           </nav>
 

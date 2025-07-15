@@ -1,22 +1,22 @@
 import React from 'react';
-import { Users, Wrench, DollarSign, CheckCircle, Plus, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
-import SummaryCard from '../components/UI/SummaryCard';
+import { Users, Wrench, DollarSign, CheckCircle, Plus, AlertTriangle, TrendingUp, TrendingDown, BarChart3, PieChart, Clock } from 'lucide-react';
 import { ActivityItem } from '../types';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
-import { CardSkeleton, ChartSkeleton } from '../components/UI/LoadingSkeleton';
 import Breadcrumb from '../components/UI/Breadcrumb';
 
 // API functions
 const fetchDashboardStats = async (token: string | null) => {
-  const res = await fetch('/api/admin/dashboard-stats', {
+  const res = await fetch('/api/admin/stats', {
     credentials: 'include',
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
   if (!res.ok) throw new Error('فشل تحميل إحصائيات لوحة التحكم');
-  return res.json();
+  const json = await res.json();
+  if (!json.success || !json.data) throw new Error('الاستجابة من الخادم غير متوقعة');
+  return json.data;
 };
 
 const AdminOverview: React.FC = () => {
@@ -121,9 +121,12 @@ const AdminOverview: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {summaryData.map((item, index) => (
           <div key={index} className="bg-light-cream rounded-2xl p-6 shadow-md">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-full ${item.iconColor} bg-opacity-10`}>
-                <item.icon className="h-6 w-6" />
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-full bg-[#f5a623]/10">
+                  <item.icon className="h-7 w-7 text-[#f5a623]" />
+                </div>
+                <span className="text-lg font-bold text-[#1a3d32]">{item.title}</span>
               </div>
               {item.change !== 0 && (
                 <div className={`flex items-center gap-1 text-sm ${
@@ -138,8 +141,7 @@ const AdminOverview: React.FC = () => {
                 </div>
               )}
             </div>
-            <h3 className="text-sm font-medium text-soft-teal mb-1">{item.title}</h3>
-            <p className="text-2xl font-bold text-deep-teal">{item.value}</p>
+            <p className="text-3xl font-extrabold text-[#1a3d32] mt-2">{item.value}</p>
           </div>
         ))}
       </div>
@@ -148,7 +150,12 @@ const AdminOverview: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* User Growth Chart */}
         <div className="lg:col-span-3 bg-light-cream rounded-2xl p-6 shadow-md">
-          <h3 className="text-lg font-semibold text-deep-teal mb-4">نمو المستخدمين</h3>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 rounded-full bg-[#2D5D4F]/10">
+              <BarChart3 className="h-7 w-7 text-[#2D5D4F]" />
+            </div>
+            <h3 className="text-2xl font-bold text-[#1a3d32]">نمو المستخدمين</h3>
+          </div>
           <div className="h-64 flex items-center justify-center">
             <svg
               className="w-full h-full"
@@ -177,7 +184,12 @@ const AdminOverview: React.FC = () => {
 
         {/* Service Categories Chart */}
         <div className="lg:col-span-2 bg-light-cream rounded-2xl p-6 shadow-md">
-          <h3 className="text-lg font-semibold text-deep-teal mb-4">فئات الخدمات</h3>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 rounded-full bg-[#f5a623]/10">
+              <PieChart className="h-7 w-7 text-[#f5a623]" />
+            </div>
+            <h3 className="text-2xl font-bold text-[#1a3d32]">فئات الخدمات</h3>
+          </div>
           <div className="h-64 flex items-center justify-center">
             <svg className="w-40 h-40" viewBox="0 0 200 200">
               <circle
@@ -217,7 +229,12 @@ const AdminOverview: React.FC = () => {
 
       {/* Recent Activity */}
       <div className="bg-light-cream rounded-2xl p-6 shadow-md">
-        <h3 className="text-lg font-semibold text-deep-teal mb-4">النشاطات الأخيرة</h3>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 rounded-full bg-[#50958A]/10">
+            <Clock className="h-7 w-7 text-[#50958A]" />
+          </div>
+          <h3 className="text-2xl font-bold text-[#1a3d32]">النشاطات الأخيرة</h3>
+        </div>
         <div className="space-y-4">
           {recentActivity.map((activity, index) => (
             <div key={activity.id} className="flex items-start gap-4 relative">
