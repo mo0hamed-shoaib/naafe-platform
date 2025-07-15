@@ -26,15 +26,15 @@ const Testimonials: React.FC = () => {
           <h2 className="text-3xl md:text-4xl font-bold">ما يقوله الناس</h2>
           <p className="text-lg text-text-secondary mt-2">قصص من مجتمعنا.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8">
           {testimonials.map((testimonial, index) => (
-            <div key={index} className="card bg-warm-cream shadow-xl">
-              <div className="card-body">
-                <div className="flex items-center mb-4">
-                  <img src={testimonial.image} alt={testimonial.name} className="w-16 h-16 rounded-full object-cover mr-4" />
-                  <div>
-                    <p className="text-lg font-bold">{testimonial.name}</p>
-                    <div className="flex text-bright-orange">
+            <div key={index} className="card bg-warm-cream shadow-2xl rounded-2xl p-8 md:p-6 flex flex-col h-full">
+              <div className="card-body flex-1 flex flex-col">
+                <div className="flex items-start gap-6 mb-6">
+                  <img src={testimonial.image} alt={testimonial.name} className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md" />
+                  <div className="flex flex-col items-start justify-center">
+                    <p className="text-xl font-extrabold mb-1 mt-1">{testimonial.name}</p>
+                    <div className="flex text-bright-orange mt-1 mb-1 gap-1">
                       {[...Array(5)].map((_, i) => (
                         <svg key={i} className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                           <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
@@ -43,7 +43,7 @@ const Testimonials: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <p className="text-text-secondary">{testimonial.text}</p>
+                <p className="text-lg md:text-xl text-text-secondary font-medium leading-relaxed mb-2 md:mb-0" style={{minHeight: '80px'}}>{testimonial.text}</p>
               </div>
             </div>
           ))}

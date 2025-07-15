@@ -58,79 +58,79 @@ const providerProfileSchema = new Schema({
 }, { _id: false });
 
 const userSchema = new Schema({
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
-  },
-  password: {
-    type: String,
-    required: true,
-    minlength: [8, 'Password must be at least 8 characters long']
-  },
-  name: {
-    first: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: [2, 'First name must be at least 2 characters']
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true,
+        trim: true,
+        match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
     },
-    last: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: [2, 'Last name must be at least 2 characters']
-    }
-  },
-  phone: {
-    type: String,
-    required: true,
-    match: [/^(\+20|0)?1[0125][0-9]{8}$/, 'Please enter a valid Egyptian phone number']
-  },
-  avatarUrl: {
-    type: String,
-    default: null
-  },
+    password: {
+        type: String,
+        required: true,
+        minlength: [8, 'Password must be at least 8 characters long']
+    },
+    name: {
+        first: {
+            type: String,
+            required: true,
+            trim: true,
+            minlength: [2, 'First name must be at least 2 characters']
+        },
+        last: {
+            type: String,
+            required: true,
+            trim: true,
+            minlength: [2, 'Last name must be at least 2 characters']
+        }
+    },
+    phone: {
+        type: String,
+        required: true,
+        match: [/^(\+20|0)?1[0125][0-9]{8}$/, 'Please enter a valid Egyptian phone number']
+    },
+    avatarUrl: {
+        type: String,
+        default: null
+    },
   roles: {
     type: [String],
-    enum: ['admin', 'seeker', 'provider'],
+        enum: ['admin', 'seeker', 'provider'],
     default: ['seeker']
-  },
+    },
   seekerProfile: { type: seekerProfileSchema, default: () => ({}) },
   providerProfile: { type: providerProfileSchema, default: () => ({}) },
-  profile: {
-    bio: {
-      type: String,
-      maxlength: 1000,
-      trim: true
+    profile: {
+        bio: {
+            type: String,
+            maxlength: 1000,
+            trim: true
+        },
+        location: {
+            type: {
+                type: String,
+                enum: ['Point'],
+                default: 'Point'
+            },
+            coordinates: {
+                type: [Number],
+                default: [0, 0] // [longitude, latitude]
+            }
+        }
     },
-    location: {
-      type: {
-        type: String,
-        enum: ['Point'],
-        default: 'Point'
-      },
-      coordinates: {
-        type: [Number],
-        default: [0, 0] // [longitude, latitude]
-      }
-    }
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  isBlocked: {
-    type: Boolean,
-    default: false
-  },
-  blockedReason: String,
-  lastLoginAt: Date
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    isBlocked: {
+        type: Boolean,
+        default: false
+    },
+    blockedReason: String,
+    lastLoginAt: Date
 }, {
-  timestamps: true
+    timestamps: true
 });
 
 userSchema.index({ 'profile.location': '2dsphere' });
@@ -138,7 +138,7 @@ userSchema.index({ roles: 1, isActive: 1 });
 userSchema.index({ 'providerProfile.verification.status': 1, roles: 1 });
 
 userSchema.virtual('fullName').get(function () {
-  return `${this.name.first} ${this.name.last}`;
+    return `${this.name.first} ${this.name.last}`;
 });
 
 userSchema.virtual('isProviderVerified').get(function () {

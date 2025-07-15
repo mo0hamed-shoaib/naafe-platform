@@ -26,7 +26,7 @@ const Hero: React.FC = () => {
           <span className="inline-block bg-black/20 rounded-full px-4 py-1 font-semibold animate-fade-in-slow">خدمات منزلية، تعليمية، وأكثر!</span>
         </div>
         <p className="text-base sm:text-lg md:text-xl text-gray-200 mb-8 max-w-2xl mx-auto drop-shadow" style={{textShadow: '0 1px 4px rgba(0,0,0,0.18)'}}>
-          نافي تربطك بمحترفين مهرة لكل شيء من إصلاح المنازل إلى العناية الشخصية. ابحث عن مساعدة موثوقة اليوم.
+          نافع تربطك بمحترفين مهرة لكل شيء من إصلاح المنازل إلى العناية الشخصية. ابحث عن مساعدة موثوقة اليوم.
         </p>
         <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-4 items-center w-full animate-fade-in-slow">
           <button
@@ -34,7 +34,7 @@ const Hero: React.FC = () => {
             onClick={() => navigate('/search')}
             aria-label="ابحث عن محترف"
           >
-            <Search className="w-5 h-5 text-naafe-teal" aria-hidden="true" />
+            <Search className="w-5 h-5" style={{ color: '#2d5d4f' }} aria-hidden="true" />
             <span className="truncate text-[#2d5d4f]">ابحث عن محترف</span>
           </button>
           <a

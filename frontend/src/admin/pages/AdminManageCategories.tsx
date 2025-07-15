@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Image } from 'lucide-react';
+import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Modal from '../components/UI/Modal';
 import Pagination from '../components/UI/Pagination';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { TableSkeleton } from '../components/UI/LoadingSkeleton';
+import Breadcrumb from '../components/UI/Breadcrumb';
+import FormInput from '../components/UI/FormInput';
+import FormTextarea from '../components/UI/FormTextarea';
+import ConfirmationModal from '../components/UI/ConfirmationModal';
 
 const CATEGORIES_API = '/api/categories';
 
@@ -24,13 +30,13 @@ interface CategoriesApiResponse {
 // Utility to map backend category to frontend
 function mapCategory(raw: unknown): Category {
   if (typeof raw !== 'object' || raw === null) throw new Error('Invalid category object');
-  const obj = raw as Record<string, any>;
+  const obj = raw as Record<string, unknown>;
   return {
-    id: obj._id || obj.id,
-    name: obj.name,
-    description: obj.description,
-    icon: obj.icon,
-    createdAt: obj.createdAt,
+    id: String(obj._id || obj.id),
+    name: String(obj.name),
+    description: String(obj.description),
+    icon: String(obj.icon),
+    createdAt: String(obj.createdAt),
   };
 }
 
@@ -104,22 +110,45 @@ const AdminManageCategories: React.FC = () => {
     description: '',
     icon: ''
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(1);
 
-  const queryClient = useQueryClient();
   const { accessToken } = useAuth();
+  const { showSuccess, showError } = useToast();
+
+  const queryClient = useQueryClient();
 
   const addMutation = useMutation({
     mutationFn: (data: { name: string; description: string; icon: string }) => addCategory(data, accessToken),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      showSuccess('تم إضافة الفئة بنجاح');
+    },
+    onError: (error) => {
+      showError('فشل إضافة الفئة', error.message);
+    },
   });
+  
   const editMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: { name: string; description: string; icon: string } }) => editCategory(id, data, accessToken),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      showSuccess('تم تعديل الفئة بنجاح');
+    },
+    onError: (error) => {
+      showError('فشل تعديل الفئة', error.message);
+    },
   });
+  
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteCategory(id, accessToken),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      showSuccess('تم حذف الفئة بنجاح');
+    },
+    onError: (error) => {
+      showError('فشل حذف الفئة', error.message);
+    },
   });
 
   const {
@@ -158,8 +187,25 @@ const AdminManageCategories: React.FC = () => {
     setIsDeleteModalOpen(true);
   };
 
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.name.trim()) {
+      errors.name = 'اسم الفئة مطلوب';
+    }
+    if (!formData.description.trim()) {
+      errors.description = 'وصف الفئة مطلوب';
+    }
+    if (!formData.icon.trim()) {
+      errors.icon = 'رابط الأيقونة مطلوب';
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+    
     if (selectedCategory) {
       editMutation.mutate({ id: selectedCategory.id, data: formData });
     } else {
@@ -167,6 +213,7 @@ const AdminManageCategories: React.FC = () => {
     }
     setIsModalOpen(false);
     setFormData({ name: '', description: '', icon: '' });
+    setFormErrors({});
   };
 
   const confirmDelete = () => {
@@ -177,8 +224,17 @@ const AdminManageCategories: React.FC = () => {
     setSelectedCategory(null);
   };
 
-  if (isLoading) return <div className="text-center py-8">جاري التحميل...</div>;
-  if (isError) return <div className="text-center py-8 text-error">{(error as Error).message}</div>;
+  if (isLoading) return (
+    <div className="flex items-center justify-center min-h-[300px] text-lg text-deep-teal">جاري التحميل...</div>
+  );
+  
+  if (isError) return (
+    <div className="space-y-6">
+      <Breadcrumb items={[{ label: 'إدارة الفئات' }]} />
+      <h2 className="text-3xl font-bold text-deep-teal">إدارة الفئات</h2>
+      <div className="text-center py-8 text-red-600">{(error as Error).message}</div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -244,101 +300,71 @@ const AdminManageCategories: React.FC = () => {
         title={selectedCategory ? 'تعديل الفئة' : 'إضافة فئة جديدة'}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">
-              اسم الفئة
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
-              placeholder="أدخل اسم الفئة"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">
-              الوصف
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 min-h-[80px] focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200 resize-none"
-              placeholder="أدخل وصف الفئة"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">
-              رابط الأيقونة
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={formData.icon}
-                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                className="flex-1 bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
-                placeholder="أدخل رابط الأيقونة"
-                required
-              />
-              <button
-                type="button"
-                className="px-3 py-2 bg-gray-50 border-2 border-gray-300 text-gray-500 rounded-xl hover:bg-gray-100 hover:border-[#2D5D4F] transition-colors"
-              >
-                <Image className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
+          <FormInput
+            label="اسم الفئة"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="أدخل اسم الفئة"
+            error={formErrors.name}
+            required
+          />
+          
+          <FormTextarea
+            label="وصف الفئة"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder="أدخل وصف الفئة"
+            rows={3}
+            error={formErrors.description}
+            required
+          />
+          
+          <FormInput
+            label="رابط الأيقونة"
+            type="url"
+            value={formData.icon}
+            onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+            placeholder="أدخل رابط الأيقونة"
+            error={formErrors.icon}
+            required
+          />
+          
+          <div className="flex gap-3 justify-end">
             <button
               type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-gray-600 hover:text-[#0e1b18] font-medium transition-colors"
+              onClick={() => {
+                setIsModalOpen(false);
+                setFormErrors({});
+              }}
+              className="px-6 py-2 border border-[#F5E6D3] rounded-lg text-[#0e1b18] hover:bg-[#F5E6D3] transition-colors"
             >
               إلغاء
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#2D5D4F] text-white rounded-xl hover:bg-[#1a3d32] transition-colors font-medium"
+              className="px-6 py-2 bg-bright-orange text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              disabled={addMutation.isPending || editMutation.isPending}
             >
-              {selectedCategory ? 'تحديث' : 'إضافة فئة'}
+              {addMutation.isPending || editMutation.isPending ? 'جاري...' : (selectedCategory ? 'تعديل' : 'إضافة')}
             </button>
           </div>
         </form>
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
+      <ConfirmationModal
         isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        title="تأكيد الحذف"
-      >
-        <div className="space-y-4">
-          <p className="text-soft-teal">
-            هل أنت متأكد أنك تريد حذف الفئة "{selectedCategory?.name}"? هذا الإجراء لا يمكن التراجع عليه.
-          </p>
-          
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              onClick={() => setIsDeleteModalOpen(false)}
-              className="px-4 py-2 text-soft-teal hover:text-dark-teal font-medium transition-colors"
-            >
-              إلغاء
-            </button>
-            <button
-              onClick={confirmDelete}
-              className="px-4 py-2 bg-bright-orange text-white rounded-lg hover:bg-soft-teal transition-colors font-medium"
-            >
-              حذف
-            </button>
-          </div>
-        </div>
-      </Modal>
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedCategory(null);
+        }}
+        onConfirm={confirmDelete}
+        title="حذف الفئة"
+        message={`هل أنت متأكد من حذف الفئة "${selectedCategory?.name}"؟ هذا الإجراء لا يمكن التراجع عنه.`}
+        confirmText="حذف"
+        type="danger"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 };

@@ -12,9 +12,10 @@ import {
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  className?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, className }) => {
   const navItems = [
     { path: '/admin', icon: Home, label: 'لوحة التحكم' },
     { path: '/admin/users', icon: Users, label: 'المستخدمين' },
@@ -36,7 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       <aside 
         className={`fixed left-0 top-0 z-50 h-full w-64 bg-deep-teal text-warm-cream transform transition-transform duration-300 ease-in-out lg:transform-none lg:relative lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } ${className || ''}`}
       >
         <div className="flex h-full flex-col p-6">
           {/* Logo */}
@@ -52,15 +53,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <li key={item.path}>
                   <NavLink
                     to={item.path}
+                    {...(item.path === '/admin' ? { end: true } : {})}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 p-3 rounded-lg transition-all duration-200 hover:bg-soft-teal ${
-                        isActive ? 'bg-soft-teal' : ''
+                      `flex items-center gap-3 p-3 rounded-lg transition-all duration-200 hover:bg-soft-teal/60 ${
+                        isActive ? 'bg-soft-teal/80 text-orange-400 font-bold shadow' : 'text-warm-cream'
                       }`
                     }
                     onClick={onClose}
                   >
-                    <item.icon className="h-5 w-5" />
-                    <span className="font-medium">{item.label}</span>
+                    {({ isActive }) => (
+                      <>
+                        <item.icon className={`h-5 w-5 ${isActive ? 'text-orange-400' : 'text-warm-cream'}`} />
+                        <span className="font-medium">{item.label}</span>
+                      </>
+                    )}
                   </NavLink>
                 </li>
               ))}

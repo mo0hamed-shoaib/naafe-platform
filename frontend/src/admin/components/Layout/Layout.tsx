@@ -3,6 +3,7 @@ import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { ToastProvider } from '../../contexts/ToastContext';
 
 const AdminLayout: React.FC = () => {
   const { user, loading, isAuthenticated } = useAuth();
@@ -22,23 +23,25 @@ const AdminLayout: React.FC = () => {
   const handleReturnToCategories = () => navigate('/categories');
 
   return (
-    <div className="min-h-screen bg-warm-cream">
-      <Header onMenuClick={toggleSidebar} title="Admin Dashboard" />
-      <div className="flex">
-        <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
-        <main className="flex-1 lg:ml-0">
-          <div className="container mx-auto p-4 lg:p-8">
-            <button
-              className="mb-4 px-4 py-2 bg-deep-teal text-warm-cream rounded hover:bg-soft-teal transition-colors"
-              onClick={handleReturnToCategories}
-            >
-              العودة إلى الفئات
-            </button>
-            <Outlet />
-          </div>
-        </main>
+    <ToastProvider>
+      <div className="min-h-screen bg-warm-cream">
+        <Header onMenuClick={toggleSidebar} title="Admin Dashboard" />
+        <div className="flex min-h-screen">
+          <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} className="h-screen" />
+          <main className="flex-1 lg:ml-0">
+            <div className="container mx-auto p-4 lg:p-8">
+              <button
+                className="mb-4 px-4 py-2 bg-deep-teal text-warm-cream rounded hover:bg-soft-teal transition-colors"
+                onClick={handleReturnToCategories}
+              >
+                العودة إلى الفئات
+              </button>
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </ToastProvider>
   );
 };
 

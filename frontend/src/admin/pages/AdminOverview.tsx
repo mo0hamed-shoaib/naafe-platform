@@ -1,27 +1,57 @@
 import React from 'react';
-import { Users, Wrench, DollarSign, CheckCircle, Plus, AlertTriangle } from 'lucide-react';
+import { Users, Wrench, DollarSign, CheckCircle, Plus, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 import SummaryCard from '../components/UI/SummaryCard';
 import { ActivityItem } from '../types';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../../contexts/AuthContext';
+import { CardSkeleton, ChartSkeleton } from '../components/UI/LoadingSkeleton';
+import Breadcrumb from '../components/UI/Breadcrumb';
+
+// API functions
+const fetchDashboardStats = async (token: string | null) => {
+  const res = await fetch('/api/admin/dashboard-stats', {
+    credentials: 'include',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error('فشل تحميل إحصائيات لوحة التحكم');
+  return res.json();
+};
 
 const AdminOverview: React.FC = () => {
+  const { accessToken } = useAuth();
+  
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['dashboard-stats', accessToken],
+    queryFn: () => fetchDashboardStats(accessToken),
+    enabled: !!accessToken,
+  });
+
   const summaryData = [
     {
       title: "إجمالي المستخدمين",
-      value: "12,548",
+      value: stats?.totalUsers?.toLocaleString() || "0",
       icon: Users,
-      iconColor: "text-soft-teal"
+      iconColor: "text-soft-teal",
+      change: stats?.userGrowth || 0,
+      changeType: stats?.userGrowth > 0 ? 'increase' : 'decrease'
     },
     {
       title: "الخدمات النشطة", 
-      value: "3,492",
+      value: stats?.activeServices?.toLocaleString() || "0",
       icon: Wrench,
-      iconColor: "text-soft-teal"
+      iconColor: "text-soft-teal",
+      change: stats?.serviceGrowth || 0,
+      changeType: stats?.serviceGrowth > 0 ? 'increase' : 'decrease'
     },
     {
       title: "الإيرادات (شهرياً)",
-      value: "EGP 150,320",
+      value: `EGP ${stats?.monthlyRevenue?.toLocaleString() || "0"}`,
       icon: DollarSign,
-      iconColor: "text-soft-teal"
+      iconColor: "text-soft-teal",
+      change: stats?.revenueGrowth || 0,
+      changeType: stats?.revenueGrowth > 0 ? 'increase' : 'decrease'
     }
   ];
 
@@ -76,20 +106,41 @@ const AdminOverview: React.FC = () => {
     }
   };
 
+  if (statsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px] text-lg text-deep-teal">جاري التحميل...</div>
+    );
+  }
+
   return (
     <div className="space-y-8">
+      <Breadcrumb items={[{ label: 'لوحة التحكم' }]} />
       <h2 className="text-4xl font-bold text-deep-teal">نظرة عامة</h2>
       
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {summaryData.map((item, index) => (
-          <SummaryCard
-            key={index}
-            title={item.title}
-            value={item.value}
-            icon={item.icon}
-            iconColor={item.iconColor}
-          />
+          <div key={index} className="bg-light-cream rounded-2xl p-6 shadow-md">
+            <div className="flex items-center justify-between mb-4">
+              <div className={`p-3 rounded-full ${item.iconColor} bg-opacity-10`}>
+                <item.icon className="h-6 w-6" />
+              </div>
+              {item.change !== 0 && (
+                <div className={`flex items-center gap-1 text-sm ${
+                  item.changeType === 'increase' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {item.changeType === 'increase' ? (
+                    <TrendingUp className="h-4 w-4" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4" />
+                  )}
+                  <span>{Math.abs(item.change)}%</span>
+                </div>
+              )}
+            </div>
+            <h3 className="text-sm font-medium text-soft-teal mb-1">{item.title}</h3>
+            <p className="text-2xl font-bold text-deep-teal">{item.value}</p>
+          </div>
         ))}
       </div>
 
@@ -169,7 +220,7 @@ const AdminOverview: React.FC = () => {
         <h3 className="text-lg font-semibold text-deep-teal mb-4">النشاطات الأخيرة</h3>
         <div className="space-y-4">
           {recentActivity.map((activity, index) => (
-            <div key={activity.id} className="flex items-start gap-4">
+            <div key={activity.id} className="flex items-start gap-4 relative">
               {/* Timeline line */}
               {index < recentActivity.length - 1 && (
                 <div className="absolute left-8 top-12 w-0.5 h-8 bg-warm-cream z-0" />

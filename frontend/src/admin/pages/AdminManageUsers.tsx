@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import { CheckCircle } from 'lucide-react';
+import { Shield, User, UserCheck } from 'lucide-react';
 import SearchAndFilter from '../components/UI/SearchAndFilter';
 import Pagination from '../components/UI/Pagination';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { TableSkeleton } from '../components/UI/LoadingSkeleton';
+import Breadcrumb from '../components/UI/Breadcrumb';
+import SortableTable, { SortDirection } from '../components/UI/SortableTable';
+import ConfirmationModal from '../components/UI/ConfirmationModal';
 
 // Define types for API response
-interface User {
+interface User extends Record<string, unknown> {
   id: string;
   name: string;
   email: string;
@@ -26,15 +31,15 @@ interface UsersApiResponse {
 // Utility to map backend user to frontend
 function mapUser(raw: unknown): User {
   if (typeof raw !== 'object' || raw === null) throw new Error('Invalid user object');
-  const obj = raw as Record<string, any>;
+  const obj = raw as Record<string, unknown>;
   return {
-    id: obj._id || obj.id,
-    name: obj.name && typeof obj.name === 'object' ? `${obj.name.first} ${obj.name.last}` : obj.name,
-    email: obj.email,
-    phone: obj.phone,
-    address: obj.profile?.location?.address || '',
-    isVerified: typeof obj.isVerified === 'boolean' ? obj.isVerified : false, // fallback if not present
-    isBlocked: obj.isBlocked,
+    id: String(obj._id || obj.id),
+    name: obj.name && typeof obj.name === 'object' ? `${(obj.name as Record<string, unknown>).first} ${(obj.name as Record<string, unknown>).last}` : String(obj.name),
+    email: String(obj.email),
+    phone: String(obj.phone),
+    address: obj.profile && typeof obj.profile === 'object' && (obj.profile as Record<string, unknown>).location && typeof (obj.profile as Record<string, unknown>).location === 'object' ? String(((obj.profile as Record<string, unknown>).location as Record<string, unknown>).address || '') : '',
+    isVerified: typeof obj.isVerified === 'boolean' ? obj.isVerified : false,
+    isBlocked: Boolean(obj.isBlocked),
     createdAt: obj.createdAt,
   };
 }
@@ -81,9 +86,14 @@ const blockUser = async (userId: string, block: boolean, token: string | null) =
 
 const AdminManageUsers: React.FC = () => {
   const { accessToken } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterValue, setFilterValue] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortKey, setSortKey] = useState<keyof User>('createdAt');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   const {
     data,
@@ -99,13 +109,28 @@ const AdminManageUsers: React.FC = () => {
   const queryClient = useQueryClient();
   const blockMutation = useMutation({
     mutationFn: ({ userId, block }: { userId: string; block: boolean }) => blockUser(userId, block, accessToken),
-    onSuccess: () => {
+    onSuccess: (_, { block }) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      showSuccess(
+        block ? 'تم حظر المستخدم بنجاح' : 'تم إلغاء حظر المستخدم بنجاح'
+      );
+    },
+    onError: (error) => {
+      showError('فشل تحديث حالة المستخدم', error.message);
     },
   });
 
-  const toggleUserBlock = (userId: string, isBlocked: boolean) => {
-    blockMutation.mutate({ userId, block: !isBlocked });
+  const handleToggleUserBlock = (user: User) => {
+    setSelectedUser(user);
+    setIsConfirmModalOpen(true);
+  };
+
+  const confirmToggleBlock = () => {
+    if (selectedUser) {
+      blockMutation.mutate({ userId: selectedUser.id, block: !selectedUser.isBlocked });
+    }
+    setIsConfirmModalOpen(false);
+    setSelectedUser(null);
   };
 
   const users = data?.users || [];
@@ -123,7 +148,8 @@ const AdminManageUsers: React.FC = () => {
   const getUserStatus = (user: User) => {
     if (user.isBlocked) {
       return (
-        <span className="inline-flex items-center rounded-full bg-bright-orange px-3 py-1 text-xs font-medium text-white">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500 px-3 py-1 text-xs font-medium text-white">
+          <Shield className="h-3 w-3" />
           محظور
         </span>
       );
@@ -131,25 +157,103 @@ const AdminManageUsers: React.FC = () => {
     
     if (user.isVerified) {
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-deep-teal px-3 py-1 text-xs font-medium text-white">
-          <CheckCircle className="h-3 w-3" />
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500 px-3 py-1 text-xs font-medium text-white">
+          <UserCheck className="h-3 w-3" />
           موثق
         </span>
       );
     }
     
     return (
-      <span className="inline-flex items-center rounded-full bg-warm-cream px-3 py-1 text-xs font-medium text-soft-teal">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-yellow-500 px-3 py-1 text-xs font-medium text-white">
+        <User className="h-3 w-3" />
         غير موثق
       </span>
     );
   };
 
-  if (isLoading) return <div className="text-center py-8">جاري التحميل...</div>;
-  if (isError) return <div className="text-center py-8 text-error">{(error as Error).message}</div>;
+  const tableColumns = [
+    {
+      key: 'name' as keyof User,
+      label: 'الاسم',
+      sortable: true,
+      render: (value: unknown, user: User) => (
+        <span className={`font-medium ${user.isBlocked ? 'text-red-600' : 'text-deep-teal'}`}>
+          {String(value)}
+        </span>
+      )
+    },
+    {
+      key: 'email' as keyof User,
+      label: 'البريد الإلكتروني',
+      sortable: true,
+      render: (value: unknown, user: User) => (
+        <span className={user.isBlocked ? 'text-red-600' : 'text-deep-teal'}>
+          {String(value)}
+        </span>
+      )
+    },
+    {
+      key: 'phone' as keyof User,
+      label: 'رقم الهاتف',
+      sortable: false,
+      render: (value: unknown, user: User) => (
+        <span className={user.isBlocked ? 'text-red-600' : 'text-deep-teal'}>
+          {String(value)}
+        </span>
+      )
+    },
+    {
+      key: 'address' as keyof User,
+      label: 'العنوان',
+      sortable: false,
+      render: (value: unknown, user: User) => (
+        <span className={user.isBlocked ? 'text-red-600' : 'text-deep-teal'}>
+          {String(value) || 'غير محدد'}
+        </span>
+      )
+    },
+    {
+      key: 'isVerified' as keyof User,
+      label: 'الحالة',
+      sortable: true,
+      render: (value: unknown, user: User) => getUserStatus(user)
+    },
+    {
+      key: 'id' as keyof User,
+      label: 'الإجراء',
+      sortable: false,
+      render: (value: unknown, user: User) => (
+        <button
+          onClick={() => handleToggleUserBlock(user)}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            user.isBlocked
+              ? 'bg-green-500 hover:bg-green-600 text-white'
+              : 'bg-red-500 hover:bg-red-600 text-white'
+          }`}
+          disabled={blockMutation.isPending}
+        >
+          {blockMutation.isPending ? 'جاري...' : (user.isBlocked ? 'إلغاء الحظر' : 'حظر')}
+        </button>
+      )
+    }
+  ];
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center min-h-[300px] text-lg text-deep-teal">جاري التحميل...</div>
+  );
+  
+  if (isError) return (
+    <div className="space-y-6">
+      <Breadcrumb items={[{ label: 'إدارة المستخدمين' }]} />
+      <h1 className="text-3xl font-bold text-deep-teal">إدارة المستخدمين</h1>
+      <div className="text-center py-8 text-red-600">{(error as Error).message}</div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: 'إدارة المستخدمين' }]} />
       <h1 className="text-3xl font-bold text-deep-teal">إدارة المستخدمين</h1>
       
       <div className="bg-light-cream rounded-2xl p-6 shadow-md">
@@ -162,80 +266,18 @@ const AdminManageUsers: React.FC = () => {
           placeholder="ابحث عن المستخدمين بالاسم أو البريد الإلكتروني أو رقم الهاتف"
         />
 
-        <div className="overflow-hidden rounded-xl bg-warm-cream shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-warm-cream border-b border-light-cream">
-                <tr>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-deep-teal uppercase tracking-wider">
-                    الاسم
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-deep-teal uppercase tracking-wider">
-                    رقم الهاتف
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-deep-teal uppercase tracking-wider">
-                    البريد الإلكتروني
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-deep-teal uppercase tracking-wider">
-                    العنوان
-                  </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-deep-teal uppercase tracking-wider">
-                    الحالة
-                  </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-deep-teal uppercase tracking-wider">
-                    الإجراء
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-light-cream text-deep-teal">
-                {users.map((user: User) => (
-                  <tr
-                    key={user.id}
-                    className={`hover:bg-bright-orange/10 transition-colors ${
-                      user.isBlocked ? 'bg-red-50' : ''
-                    }`}
-                  >
-                    <td className={`px-6 py-4 whitespace-nowrap font-medium ${
-                      user.isBlocked ? 'text-bright-orange' : 'text-deep-teal'
-                    } text-right`}>
-                      {user.name}
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap ${
-                      user.isBlocked ? 'text-bright-orange' : 'text-deep-teal'
-                    } text-right`}>
-                      {user.phone}
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap ${
-                      user.isBlocked ? 'text-bright-orange' : 'text-deep-teal'
-                    } text-right`}>
-                      {user.email}
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap ${
-                      user.isBlocked ? 'text-bright-orange' : 'text-deep-teal'
-                    } text-right`}>
-                      {user.address}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {getUserStatus(user)}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <label className="relative inline-flex cursor-pointer items-center">
-                        <input
-                          type="checkbox"
-                          checked={user.isBlocked}
-                          onChange={() => toggleUserBlock(user.id, user.isBlocked)}
-                          className="sr-only peer"
-                          aria-label="تبديل حالة الحظر"
-                        />
-                        <div className="w-11 h-6 bg-warm-cream peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-bright-orange"></div>
-                      </label>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <SortableTable
+          data={users}
+          columns={tableColumns}
+          onSort={(key, direction) => {
+            setSortKey(key);
+            setSortDirection(direction);
+          }}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          className="mt-6"
+          emptyMessage="لا توجد مستخدمين"
+        />
 
         <Pagination
           currentPage={currentPage}
@@ -245,6 +287,21 @@ const AdminManageUsers: React.FC = () => {
           onPageChange={setCurrentPage}
         />
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => {
+          setIsConfirmModalOpen(false);
+          setSelectedUser(null);
+        }}
+        onConfirm={confirmToggleBlock}
+        title={selectedUser?.isBlocked ? 'إلغاء حظر المستخدم' : 'حظر المستخدم'}
+        message={`هل أنت متأكد من ${selectedUser?.isBlocked ? 'إلغاء حظر' : 'حظر'} المستخدم "${selectedUser?.name}"؟`}
+        confirmText={selectedUser?.isBlocked ? 'إلغاء الحظر' : 'حظر'}
+        type="warning"
+        isLoading={blockMutation.isPending}
+      />
     </div>
   );
 };
