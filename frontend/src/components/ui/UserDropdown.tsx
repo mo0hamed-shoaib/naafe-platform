@@ -81,7 +81,7 @@ const UserDropdown = ({ user, onLogout, className = '' }: UserDropdownProps) => 
     },
     {
       icon: HelpCircle,
-      label: 'المساعدة والدعم',
+      label: 'مركز المساعدة',
       href: '/help',
       onClick: () => setIsOpen(false)
     },

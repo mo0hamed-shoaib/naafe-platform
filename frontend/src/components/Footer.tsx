@@ -24,7 +24,7 @@ const Footer = () => {
     {
       title: 'الدعم',
       links: [
-        { label: 'مركز المساعدة', href: '#' },
+        { label: 'مركز المساعدة', href: '/help' },
         { label: 'اتصل بنا', href: '#' },
         { label: 'الثقة والأمان', href: '#' },
       ],
