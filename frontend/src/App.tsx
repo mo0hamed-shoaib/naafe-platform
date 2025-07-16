@@ -16,6 +16,8 @@ import ProfilePage from './pages/ProfilePage';
 import LandingPage from './pages/LandingPage';
 import PostServiceForm from './components/PostServiceForm';
 import RequestServiceForm from './components/RequestServiceForm';
+import RequestServiceDetailsPage from './pages/RequestServiceDetailsPage';
+import ServiceResponseForm from './components/ServiceResponseForm';
 
 const App = () => {
   return (
@@ -35,6 +37,8 @@ const App = () => {
               <Route path="/me" element={<ProfilePage />} />
               <Route path="/post-service" element={<PostServiceForm />} />
               <Route path="/request-service" element={<RequestServiceForm />} />
+              <Route path="/requests/:id" element={<RequestServiceDetailsPage />} />
+              <Route path="/requests/:id/respond" element={<ServiceResponseForm />} />
               <Route path="/provider/:id" element={<div className="min-h-screen bg-warm-cream flex items-center justify-center"><p className="text-2xl text-text-secondary">Provider Details Page (Coming Soon)</p></div>} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminOverview />} />

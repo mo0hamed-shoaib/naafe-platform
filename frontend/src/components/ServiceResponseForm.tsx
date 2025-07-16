@@ -1,0 +1,530 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { X, Check, Star, Shield, Calendar, Clock } from 'lucide-react';
+import Button from './ui/Button';
+import BaseCard from './ui/BaseCard';
+import Badge from './ui/Badge';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+
+interface FormData {
+  price: string;
+  timeline: string;
+  duration: string;
+  message: string;
+  availableDates: Date[];
+  timePreferences: string[];
+  agreedToTerms: boolean;
+}
+
+interface ProviderData {
+  name: { first: string; last: string };
+  avatarUrl: string;
+  providerProfile: {
+    rating: number;
+    reviewCount: number;
+    verification: {
+      status: string;
+    };
+  };
+}
+
+const ServiceResponseForm: React.FC = () => {
+  const { id: jobRequestId } = useParams();
+  const navigate = useNavigate();
+  const { accessToken } = useAuth();
+  
+  const [formData, setFormData] = useState<FormData>({
+    price: '',
+    timeline: '',
+    duration: '',
+    message: '',
+    availableDates: [],
+    timePreferences: [],
+    agreedToTerms: false,
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [providerData, setProviderData] = useState<ProviderData | null>(null);
+  const [jobRequest, setJobRequest] = useState<{ title?: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch job request details
+        const jobRes = await fetch(`/api/requests/${jobRequestId}`);
+        const jobData = await jobRes.json();
+        if (!jobData.success) throw new Error('Failed to fetch job request');
+        setJobRequest(jobData.data.jobRequest as { title?: string });
+
+        // Fetch current user's provider data
+        if (accessToken) {
+          const userRes = await fetch('/api/users/me', {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+          });
+                  const userData = await userRes.json();
+        if (userData.success) {
+          setProviderData(userData.data.user as ProviderData);
+        }
+        }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (jobRequestId) fetchData();
+  }, [jobRequestId, accessToken]);
+
+  const handleDateChange = (date: Date | null) => {
+    if (!date) return;
+    
+    setFormData(prev => {
+      const dateString = date.toDateString();
+      const isAlreadySelected = prev.availableDates.some(
+        selectedDate => selectedDate.toDateString() === dateString
+      );
+      
+      if (isAlreadySelected) {
+        // Remove the date if already selected
+        return {
+          ...prev,
+          availableDates: prev.availableDates.filter(
+            selectedDate => selectedDate.toDateString() !== dateString
+          )
+        };
+      } else {
+        // Add the new date
+        return {
+          ...prev,
+          availableDates: [...prev.availableDates, date].sort((a, b) => a.getTime() - b.getTime())
+        };
+      }
+    });
+  };
+
+  const handleTimePreferenceChange = (preference: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      timePreferences: checked
+        ? [...prev.timePreferences, preference]
+        : prev.timePreferences.filter(p => p !== preference)
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      const offerData = {
+        budget: {
+          min: parseFloat(formData.price),
+          max: parseFloat(formData.price),
+          currency: 'EGP'
+        },
+        message: formData.message,
+        estimatedTimeDays: parseInt(formData.duration) || 1,
+        availableDates: formData.availableDates.map(date => date.toISOString()),
+        timePreferences: formData.timePreferences
+      };
+
+      const res = await fetch(`/api/requests/${jobRequestId}/offers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(offerData)
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error?.message || 'Failed to submit offer');
+
+      // Navigate back to job request details
+      navigate(`/requests/${jobRequestId}`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const formatPrice = (price: string) => {
+    return price ? `${price} جنيه` : '0 جنيه';
+  };
+
+  const getTimelineDisplay = () => {
+    switch (formData.timeline) {
+      case 'today': return 'اليوم';
+      case 'tomorrow': return 'غداً';
+      case 'this-week': return 'هذا الأسبوع';
+      case 'next-week': return 'الأسبوع القادم';
+      case 'flexible': return 'مرن';
+      default: return 'غير محدد';
+    }
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
+  if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
+
+  return (
+    <div className="min-h-screen bg-warm-cream flex items-center justify-center p-4" dir="rtl">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl flex overflow-hidden">
+        {/* Form Section */}
+        <div className="w-full lg:w-1/2 p-8">
+          <header className="flex items-start justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-deep-teal mb-1">
+                الرد على طلب الخدمة
+              </h1>
+              <p className="text-sm text-medium-teal">
+                لطلب "{jobRequest?.title || 'الخدمة'}"
+              </p>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => navigate(`/requests/${jobRequestId}`)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </header>
+
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Your Offer Section */}
+            <div>
+              <h2 className="text-lg font-semibold text-deep-teal mb-4 pb-2 border-b border-gray-200">
+                عرضك
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="price" className="text-sm font-medium text-text-primary mb-2 block">
+                    سعرك
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
+                      جنيه
+                    </span>
+                    <input
+                      id="price"
+                      type="number"
+                      placeholder="أدخل سعرك"
+                      value={formData.price}
+                      onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                      className="w-full pr-12 pl-3 h-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal"
+                      required
+                    />
+                  </div>
+                  <p className="mt-2 text-sm text-emerald-600 flex items-center">
+                    <Check className="h-4 w-4 ml-1" />
+                    سعر عادل في السوق
+                  </p>
+                </div>
+                
+                <div>
+                  <label htmlFor="timeline" className="text-sm font-medium text-text-primary mb-2 block">
+                    متى يمكنك البدء؟
+                  </label>
+                  <select 
+                    value={formData.timeline} 
+                    onChange={(e) => setFormData(prev => ({ ...prev, timeline: e.target.value }))}
+                    className="w-full h-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal"
+                    required
+                    aria-label="اختر التوقيت"
+                  >
+                    <option value="">اختر التوقيت</option>
+                    <option value="today">اليوم</option>
+                    <option value="tomorrow">غداً</option>
+                    <option value="this-week">هذا الأسبوع</option>
+                    <option value="next-week">الأسبوع القادم</option>
+                    <option value="flexible">مرن</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <label htmlFor="duration" className="text-sm font-medium text-text-primary mb-2 block">
+                  المدة المتوقعة
+                </label>
+                <input
+                  id="duration"
+                  type="number"
+                  placeholder="مثال: 2 ساعة"
+                  value={formData.duration}
+                  onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
+                  className="w-full h-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal"
+                />
+              </div>
+            </div>
+
+            {/* Availability Section */}
+            <div>
+              <h2 className="text-lg font-semibold text-deep-teal mb-4 pb-2 border-b border-gray-200 flex items-center">
+                <Calendar className="h-5 w-5 ml-2" />
+                التواريخ المتاحة
+              </h2>
+              
+              <div className="mb-6">
+                <label className="text-sm font-medium text-text-primary mb-3 block">
+                  اختر التواريخ المتاحة لك
+                </label>
+                <p className="text-xs text-medium-teal mb-3">
+                  انقر على التواريخ لتحديدها أو إلغاء تحديدها
+                </p>
+                <div className="relative">
+                  <DatePicker
+                    selected={null}
+                    onChange={handleDateChange}
+                    inline
+                    minDate={new Date()}
+                    maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)} // 30 days from now
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="اختر التواريخ المتاحة"
+                    className="w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal"
+                    locale="ar"
+                    dayClassName={(date) => {
+                      const isSelected = formData.availableDates.some(
+                        selectedDate => selectedDate.toDateString() === date.toDateString()
+                      );
+                      return isSelected ? 'bg-deep-teal text-white rounded' : '';
+                    }}
+                  />
+                </div>
+                {formData.availableDates.length > 0 && (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm text-medium-teal">التواريخ المختارة ({formData.availableDates.length} يوم):</p>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, availableDates: [] }))}
+                        className="text-xs text-red-500 hover:text-red-700 underline"
+                      >
+                        مسح الكل
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.availableDates.slice(0, 8).map((date, index) => (
+                        <Badge key={index} variant="category">
+                          {date.toLocaleDateString('ar-EG', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </Badge>
+                      ))}
+                      {formData.availableDates.length > 8 && (
+                        <Badge variant="category">
+                          +{formData.availableDates.length - 8} أكثر
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-text-primary mb-3 block flex items-center">
+                  <Clock className="h-4 w-4 ml-2" />
+                  تفضيلات الوقت
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { value: 'morning', label: 'صباحاً (8 ص - 12 م)' },
+                    { value: 'afternoon', label: 'ظهراً (12 م - 4 م)' },
+                    { value: 'evening', label: 'مساءً (4 م - 8 م)' },
+                    { value: 'flexible', label: 'مرن (أي وقت)' }
+                  ].map((timeSlot) => (
+                    <label key={timeSlot.value} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.timePreferences.includes(timeSlot.value)}
+                        onChange={(e) => handleTimePreferenceChange(timeSlot.value, e.target.checked)}
+                        className="rounded border-gray-300 text-deep-teal focus:ring-deep-teal"
+                      />
+                      <span className="text-sm text-text-primary">{timeSlot.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Message Section */}
+            <div>
+              <h2 className="text-lg font-semibold text-deep-teal mb-4 pb-2 border-b border-gray-200">
+                رسالتك
+              </h2>
+              <div>
+                <label htmlFor="message" className="text-sm font-medium text-text-primary mb-2 block">
+                  رسالة شخصية{' '}
+                  <span className="text-medium-teal font-normal">(اختياري)</span>
+                </label>
+                <textarea
+                  id="message"
+                  placeholder="أخبرهم لماذا أنت الشخص المناسب لهذا العمل..."
+                  value={formData.message}
+                  onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                  maxLength={300}
+                  rows={4}
+                  className="w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal resize-none"
+                />
+                <p className="mt-1 text-xs text-medium-teal text-left">
+                  {formData.message.length} / 300 حرف
+                </p>
+              </div>
+            </div>
+
+            {/* Submit Section */}
+            <div className="pt-6 border-t border-gray-200">
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={isSubmitting || !formData.agreedToTerms}
+                className="w-full h-14"
+              >
+                {isSubmitting ? 'جاري الإرسال...' : 'إرسال ردك'}
+              </Button>
+              
+              <div className="mt-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="terms"
+                    checked={formData.agreedToTerms}
+                    onChange={(e) => setFormData(prev => ({ ...prev, agreedToTerms: e.target.checked }))}
+                    className="rounded border-gray-300 text-deep-teal focus:ring-deep-teal"
+                  />
+                  <label htmlFor="terms" className="text-sm text-text-primary">
+                    يمكنني إكمال هذه الخدمة كما هو موضح
+                  </label>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* Live Preview Section */}
+        <div className="w-1/2 bg-[#FDF8F0] p-8 hidden lg:block">
+          <h2 className="text-lg font-semibold text-deep-teal mb-6">معاينة مباشرة</h2>
+          
+          <BaseCard className="bg-white shadow-lg">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <img
+                  src={providerData?.avatarUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=face&auto=format"}
+                  alt="صورة المزود"
+                  className="h-16 w-16 rounded-full object-cover"
+                />
+                <div className="mr-4">
+                  <h3 className="font-bold text-text-primary">
+                    {providerData ? `${providerData.name.first} ${providerData.name.last}` : 'اسمك'}
+                  </h3>
+                  <div className="flex items-center mt-1">
+                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                    <span className="text-sm text-medium-teal mr-1">
+                      {providerData?.providerProfile?.rating || 0} ({providerData?.providerProfile?.reviewCount || 0} تقييم)
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold text-medium-teal">السعر</p>
+                  <p className="text-2xl font-bold text-deep-teal">
+                    {formatPrice(formData.price)}
+                  </p>
+                </div>
+                
+                <div>
+                  <p className="text-sm font-semibold text-medium-teal">تاريخ البدء</p>
+                  <p className="text-text-primary">{getTimelineDisplay()}</p>
+                </div>
+
+                {formData.availableDates.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold text-medium-teal">التواريخ المتاحة ({formData.availableDates.length} يوم)</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {formData.availableDates.slice(0, 5).map((date, index) => (
+                        <Badge key={index} variant="category" className="text-xs">
+                          {date.toLocaleDateString('ar-EG', { 
+                            weekday: 'short',
+                            month: 'short', 
+                            day: 'numeric' 
+                          })}
+                        </Badge>
+                      ))}
+                      {formData.availableDates.length > 5 && (
+                        <Badge variant="category" className="text-xs">
+                          +{formData.availableDates.length - 5} أكثر
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {formData.timePreferences.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold text-medium-teal">تفضيلات الوقت</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                                             {formData.timePreferences.map((pref, index) => (
+                         <Badge key={index} variant="category" className="text-xs">
+                           {pref === 'morning' ? 'صباحاً' : 
+                            pref === 'afternoon' ? 'ظهراً' : 
+                            pref === 'evening' ? 'مساءً' : 'مرن'}
+                         </Badge>
+                       ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div>
+                  <p className="text-sm font-semibold text-medium-teal">مقتطف من الرسالة</p>
+                  <p className="text-text-primary text-sm italic line-clamp-3">
+                    {formData.message || "أخبرهم لماذا أنت الشخص المناسب لهذا العمل..."}
+                  </p>
+                </div>
+                
+                <div className="pt-4 border-t border-gray-200">
+                  <p className="text-sm font-semibold text-medium-teal mb-2">
+                    المهارات والتحقق
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {providerData?.providerProfile?.verification?.status === 'verified' && (
+                      <Badge variant="top-rated">
+                        <Shield className="h-3 w-3 ml-1" />
+                        موثق
+                      </Badge>
+                    )}
+                    <Badge variant="category">التصوير</Badge>
+                    <Badge variant="category">التحرير</Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </BaseCard>
+
+          {/* Tips Section */}
+          <BaseCard className="mt-6 bg-teal-50 border-r-4 border-deep-teal">
+            <div className="p-4">
+              <p className="font-bold text-deep-teal mb-2">نصيحة لرد أفضل</p>
+              <ul className="list-disc list-inside text-sm text-deep-teal space-y-1">
+                <li>أضف رسالة شخصية</li>
+                <li>اذكر خبرتك في هذا المجال</li>
+                <li>ارفع أمثلة من أعمالك</li>
+                <li>حدد تواريخ متاحة واضحة</li>
+              </ul>
+            </div>
+          </BaseCard>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ServiceResponseForm; 

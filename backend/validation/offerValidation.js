@@ -2,10 +2,13 @@ import { body, param, validationResult } from 'express-validator';
 
 // Validation rules for creating an offer
 const createOfferValidation = [
-  body('price.amount')
+  body('budget.min')
     .isFloat({ min: 0 })
-    .withMessage('Price amount must be a positive number'),
-  body('price.currency')
+    .withMessage('Minimum budget must be a positive number'),
+  body('budget.max')
+    .isFloat({ min: 0 })
+    .withMessage('Maximum budget must be a positive number'),
+  body('budget.currency')
     .isIn(['EGP', 'USD', 'EUR'])
     .withMessage('Currency must be EGP, USD, or EUR'),
   body('message')
@@ -15,16 +18,36 @@ const createOfferValidation = [
   body('estimatedTimeDays')
     .optional()
     .isInt({ min: 1 })
-    .withMessage('Estimated time must be at least 1 day')
+    .withMessage('Estimated time must be at least 1 day'),
+  body('availableDates')
+    .optional()
+    .isArray()
+    .withMessage('Available dates must be an array'),
+  body('availableDates.*')
+    .optional()
+    .isISO8601()
+    .withMessage('Each date must be a valid ISO date string'),
+  body('timePreferences')
+    .optional()
+    .isArray()
+    .withMessage('Time preferences must be an array'),
+  body('timePreferences.*')
+    .optional()
+    .isIn(['morning', 'afternoon', 'evening', 'flexible'])
+    .withMessage('Time preference must be one of: morning, afternoon, evening, flexible')
 ];
 
 // Validation rules for updating an offer
 const updateOfferValidation = [
-  body('price.amount')
+  body('budget.min')
     .optional()
     .isFloat({ min: 0 })
-    .withMessage('Price amount must be a positive number'),
-  body('price.currency')
+    .withMessage('Minimum budget must be a positive number'),
+  body('budget.max')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Maximum budget must be a positive number'),
+  body('budget.currency')
     .optional()
     .isIn(['EGP', 'USD', 'EUR'])
     .withMessage('Currency must be EGP, USD, or EUR'),
@@ -35,7 +58,23 @@ const updateOfferValidation = [
   body('estimatedTimeDays')
     .optional()
     .isInt({ min: 1 })
-    .withMessage('Estimated time must be at least 1 day')
+    .withMessage('Estimated time must be at least 1 day'),
+  body('availableDates')
+    .optional()
+    .isArray()
+    .withMessage('Available dates must be an array'),
+  body('availableDates.*')
+    .optional()
+    .isISO8601()
+    .withMessage('Each date must be a valid ISO date string'),
+  body('timePreferences')
+    .optional()
+    .isArray()
+    .withMessage('Time preferences must be an array'),
+  body('timePreferences.*')
+    .optional()
+    .isIn(['morning', 'afternoon', 'evening', 'flexible'])
+    .withMessage('Time preference must be one of: morning, afternoon, evening, flexible')
 ];
 
 // Validation for offer ID parameter

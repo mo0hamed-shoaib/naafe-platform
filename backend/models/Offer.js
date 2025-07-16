@@ -39,6 +39,16 @@ const offerSchema = new mongoose.Schema({
     default: 1,
     min: [1, 'Estimated time must be at least 1 day']
   },
+  // Availability fields
+  availableDates: [{
+    type: Date,
+    required: false
+  }],
+  timePreferences: [{
+    type: String,
+    enum: ['morning', 'afternoon', 'evening', 'flexible'],
+    required: false
+  }],
   status: {
     type: String,
     enum: ['pending', 'accepted', 'rejected', 'withdrawn'],

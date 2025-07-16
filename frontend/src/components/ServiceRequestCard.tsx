@@ -4,6 +4,7 @@ import Button from './ui/Button';
 import PremiumBadge from './ui/PremiumBadge';
 import { ServiceRequest } from '../types';
 import { translateLocation } from '../utils/helpers';
+import { useNavigate } from 'react-router-dom';
 
 interface ServiceRequestCardProps {
   request: ServiceRequest;
@@ -12,6 +13,7 @@ interface ServiceRequestCardProps {
 }
 
 const ServiceRequestCard = ({ request, onInterested, onViewDetails }: ServiceRequestCardProps) => {
+  const navigate = useNavigate();
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('ar-EG', {
@@ -128,7 +130,7 @@ const ServiceRequestCard = ({ request, onInterested, onViewDetails }: ServiceReq
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onViewDetails(request.id)}
+                onClick={() => navigate(`/requests/${request.id}`)}
                 className="w-full sm:w-auto"
               >
                 عرض التفاصيل
@@ -137,7 +139,7 @@ const ServiceRequestCard = ({ request, onInterested, onViewDetails }: ServiceReq
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={() => onInterested(request.id)}
+                  onClick={() => navigate(`/requests/${request.id}/respond`)}
                   className="w-full sm:w-auto"
                 >
                   أنا مهتم

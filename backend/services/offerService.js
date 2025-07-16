@@ -34,17 +34,19 @@ class OfferService {
       }
       
       // Validate price is within budget
-      if (offerData.price.amount < jobRequest.budget.min || 
-          offerData.price.amount > jobRequest.budget.max) {
+      if (offerData.budget.min < jobRequest.budget.min || 
+          offerData.budget.max > jobRequest.budget.max) {
         throw new Error('Price must be within the job request budget range');
       }
       
       const offer = new Offer({
         jobRequest: jobRequestId,
         provider: providerId,
-        price: offerData.price,
+        budget: offerData.budget,
         message: offerData.message,
         estimatedTimeDays: offerData.estimatedTimeDays,
+        availableDates: offerData.availableDates || [],
+        timePreferences: offerData.timePreferences || [],
         status: 'pending'
       });
       
@@ -175,17 +177,17 @@ class OfferService {
         throw new Error('Can only update pending offers');
       }
       
-      // Validate price if being updated
-      if (updateData.price) {
+      // Validate budget if being updated
+      if (updateData.budget) {
         const jobRequest = await JobRequest.findById(offer.jobRequest);
-        if (updateData.price.amount < jobRequest.budget.min || 
-            updateData.price.amount > jobRequest.budget.max) {
+        if (updateData.budget.min < jobRequest.budget.min || 
+            updateData.budget.max > jobRequest.budget.max) {
           throw new Error('Price must be within the job request budget range');
         }
       }
       
       // Update allowed fields
-      const allowedUpdates = ['price', 'message', 'estimatedTimeDays'];
+      const allowedUpdates = ['budget', 'message', 'estimatedTimeDays', 'availableDates', 'timePreferences'];
       allowedUpdates.forEach(field => {
         if (updateData[field] !== undefined) {
           offer[field] = updateData[field];

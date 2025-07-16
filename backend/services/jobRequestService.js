@@ -62,7 +62,7 @@ class JobRequestService {
       console.log(`[JobRequestService] Job request created successfully: ${jobRequest._id}`);
 
       // Populate seeker information
-      await jobRequest.populate('seeker', 'name email avatarUrl');
+      await jobRequest.populate('seeker', 'name email avatarUrl createdAt');
 
       return jobRequest;
     } catch (error) {
@@ -137,7 +137,7 @@ class JobRequestService {
 
       const [jobRequests, totalCount] = await Promise.all([
         JobRequest.find(query)
-          .populate('seeker', 'name email avatarUrl')
+          .populate('seeker', 'name email avatarUrl createdAt')
           .populate('assignedTo', 'name email avatarUrl')
           .sort({ createdAt: -1 })
           .skip(skip)
@@ -165,7 +165,7 @@ class JobRequestService {
   async getJobRequestById(jobRequestId) {
     try {
       const jobRequest = await JobRequest.findById(jobRequestId)
-        .populate('seeker', 'name email avatarUrl profile')
+        .populate('seeker', 'name email avatarUrl profile createdAt')
         .populate('assignedTo', 'name email avatarUrl profile');
 
       if (!jobRequest) {
@@ -243,7 +243,7 @@ class JobRequestService {
         jobRequestId,
         updateData,
         { new: true, runValidators: true }
-      ).populate('seeker', 'name email avatarUrl')
+      ).populate('seeker', 'name email avatarUrl createdAt')
        .populate('assignedTo', 'name email avatarUrl');
 
       return updatedJobRequest;
@@ -337,7 +337,7 @@ class JobRequestService {
     try {
       // Verify job request exists
       const jobRequest = await JobRequest.findById(jobRequestId)
-        .populate('seeker', 'name email avatarUrl');
+        .populate('seeker', 'name email avatarUrl createdAt');
       if (!jobRequest) {
         throw new Error('Job request not found');
       }
