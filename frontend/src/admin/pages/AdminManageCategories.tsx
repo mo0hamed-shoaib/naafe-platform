@@ -10,8 +10,10 @@ import Breadcrumb from '../components/UI/Breadcrumb';
 import FormInput from '../components/UI/FormInput';
 import FormTextarea from '../components/UI/FormTextarea';
 import ConfirmationModal from '../components/UI/ConfirmationModal';
+import { useEffect } from 'react';
 
 const CATEGORIES_API = '/api/categories';
+const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || import.meta.env.IMGBB_API_KEY || '1de1430d74f7eb8b6823ec33be19e651';
 
 interface Category {
   id: string;
@@ -112,6 +114,8 @@ const AdminManageCategories: React.FC = () => {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [iconUploadLoading, setIconUploadLoading] = useState(false);
+  const [iconUploadError, setIconUploadError] = useState('');
 
   const { accessToken } = useAuth();
   const { showSuccess, showError } = useToast();
@@ -224,6 +228,30 @@ const AdminManageCategories: React.FC = () => {
     setSelectedCategory(null);
   };
 
+  // ImgBB upload handler
+  const handleIconFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIconUploadError('');
+    setIconUploadLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error?.message || 'فشل رفع الصورة');
+      }
+      setFormData(prev => ({ ...prev, icon: data.data.url }));
+    } catch (err) {
+      setIconUploadError('فشل رفع الصورة. الرجاء المحاولة مرة أخرى.');
+    }
+    setIconUploadLoading(false);
+  };
+
   if (isLoading) return (
     <div className="flex items-center justify-center min-h-[300px] text-lg text-deep-teal">جاري التحميل...</div>
   );
@@ -318,17 +346,29 @@ const AdminManageCategories: React.FC = () => {
             error={formErrors.description}
             required
           />
-          
-          <FormInput
-            label="رابط الأيقونة"
-            type="url"
-            value={formData.icon}
-            onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-            placeholder="أدخل رابط الأيقونة"
-            error={formErrors.icon}
-            required
-          />
-          
+
+          {/* Icon file upload */}
+          <div>
+            <label className="block text-sm font-semibold text-text-primary mb-2">أيقونة الفئة (JPG, PNG)</label>
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png"
+              onChange={handleIconFileChange}
+              disabled={iconUploadLoading}
+              className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-bright-orange file:text-white hover:file:bg-orange-600"
+            />
+            {iconUploadLoading && <div className="text-xs text-deep-teal mt-1">جاري رفع الصورة...</div>}
+            {iconUploadError && <div className="text-xs text-red-600 mt-1">{iconUploadError}</div>}
+            {formData.icon && (
+              <div className="mt-2 flex items-center gap-2">
+                <img src={formData.icon} alt="معاينة الأيقونة" className="h-12 w-12 rounded-full object-cover border" />
+                <span className="text-xs text-gray-500 break-all">{formData.icon}</span>
+              </div>
+            )}
+            <div className="text-xs text-gray-500 mt-1">سيتم رفع الصورة إلى ImgBB واستخدام الرابط مباشرة</div>
+            {formErrors.icon && <div className="text-xs text-red-600 mt-1">{formErrors.icon}</div>}
+          </div>
+
           <div className="flex gap-3 justify-end">
             <button
               type="button"
@@ -343,7 +383,7 @@ const AdminManageCategories: React.FC = () => {
             <button
               type="submit"
               className="px-6 py-2 bg-bright-orange text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-              disabled={addMutation.isPending || editMutation.isPending}
+              disabled={addMutation.isPending || editMutation.isPending || iconUploadLoading}
             >
               {addMutation.isPending || editMutation.isPending ? 'جاري...' : (selectedCategory ? 'تعديل' : 'إضافة')}
             </button>

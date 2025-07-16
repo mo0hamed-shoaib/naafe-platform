@@ -25,17 +25,17 @@ const App = () => {
   return (
     <ErrorBoundary>
       <Router>
-        <AuthProvider>
+      <AuthProvider>
           <OfferProvider>
-            <div className="App">
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/test" element={<TestPage />} />
-                <Route path="/minimal" element={<MinimalTest />} />
-                <Route path="/categories" element={<ServiceCategoriesPage />} />
-                <Route path="/search" element={<SearchPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
+          <div className="App">
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/test" element={<TestPage />} />
+              <Route path="/minimal" element={<MinimalTest />} />
+              <Route path="/categories" element={<ServiceCategoriesPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
                 <Route path="/profile" element={
                   <ProtectedRoute>
                     <ProfilePage />
@@ -58,26 +58,26 @@ const App = () => {
                 } />
                 <Route path="/requests/:id" element={<RequestServiceDetailsPage />} />
                 <Route path="/requests/:id/respond" element={<ServiceResponseForm />} />
-                <Route path="/provider/:id" element={<div className="min-h-screen bg-warm-cream flex items-center justify-center"><p className="text-2xl text-text-secondary">Provider Details Page (Coming Soon)</p></div>} />
+              <Route path="/provider/:id" element={<div className="min-h-screen bg-warm-cream flex items-center justify-center"><p className="text-2xl text-text-secondary">Provider Details Page (Coming Soon)</p></div>} />
                 <Route path="/admin" element={
                   <ProtectedRoute requiredRoles={['admin']}>
                     <AdminLayout />
                   </ProtectedRoute>
                 }>
-                  <Route index element={<AdminOverview />} />
-                  <Route path="users" element={<AdminManageUsers />} />
-                  <Route path="categories" element={<AdminManageCategories />} />
-                </Route>
-                {/* Fallback routes for footer links */}
-                <Route path="/services" element={<Navigate to="/categories" replace />} />
-                <Route path="/business" element={<div className="min-h-screen bg-warm-cream flex items-center justify-center"><p className="text-2xl text-text-secondary">Business Page (Coming Soon)</p></div>} />
-                <Route path="/explore" element={<Navigate to="/categories" replace />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </div>
+                <Route index element={<AdminOverview />} />
+                <Route path="users" element={<AdminManageUsers />} />
+                <Route path="categories" element={<AdminManageCategories />} />
+              </Route>
+              {/* Fallback routes for footer links */}
+              <Route path="/services" element={<Navigate to="/categories" replace />} />
+              <Route path="/business" element={<div className="min-h-screen bg-warm-cream flex items-center justify-center"><p className="text-2xl text-text-secondary">Business Page (Coming Soon)</p></div>} />
+              <Route path="/explore" element={<Navigate to="/categories" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
           </OfferProvider>
         </AuthProvider>
-      </Router>
+        </Router>
     </ErrorBoundary>
   );
 }
