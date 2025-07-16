@@ -1,19 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { User, Settings, HelpCircle, LogOut, ChevronDown } from 'lucide-react';
 import { User as UserType } from '../../types';
 import { cn } from '../../utils/helpers';
 
 interface UserDropdownProps {
   user: UserType;
-  onLogout: () => void;
+  onLogout: () => Promise<void>;
   className?: string;
 }
 
 const UserDropdown = ({ user, onLogout, className = '' }: UserDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -39,10 +38,9 @@ const UserDropdown = ({ user, onLogout, className = '' }: UserDropdownProps) => 
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
-  const handleLogout = () => {
-    onLogout();
+  const handleLogout = async () => {
+    await onLogout();
     setIsOpen(false);
-    navigate('/');
   };
 
   const getUserInitials = (name: string | { first?: string; last?: string }) => {
@@ -97,7 +95,7 @@ const UserDropdown = ({ user, onLogout, className = '' }: UserDropdownProps) => 
   ];
 
   // Add Admin Dashboard link if user is admin
-  if (user.role === 'admin') {
+  if (user.roles.includes('admin')) {
     menuItems.unshift({
       icon: User,
       label: 'لوحة تحكم المشرف',

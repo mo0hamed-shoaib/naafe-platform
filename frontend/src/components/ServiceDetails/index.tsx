@@ -17,6 +17,8 @@ interface ServiceDetailsContainerProps {
   onShare?: () => void;
   onBookmark?: () => void;
   onReport?: () => void;
+  onOfferAdded?: (newOffer: any) => void;
+  onOffersRefresh?: () => Promise<void>;
 }
 
 const ServiceDetailsContainer: React.FC<ServiceDetailsContainerProps> = ({
@@ -25,17 +27,23 @@ const ServiceDetailsContainer: React.FC<ServiceDetailsContainerProps> = ({
   onInterested,
   onShare,
   onBookmark,
-  onReport
+  onReport,
+  onOfferAdded,
+  onOffersRefresh
 }) => {
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8" data-theme="naafe">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-8">
           <ServiceGallery images={service.images} title={service.title} />
           <ServiceDetails service={service} />
           <RequesterInfo requester={service.requester} />
-          <ResponsesSection responses={offers} />
+          <ResponsesSection 
+            responses={offers} 
+            onOfferAdded={onOfferAdded}
+            onOffersRefresh={onOffersRefresh}
+          />
           <CommentsSection comments={service.comments || []} />
         </div>
         {/* Sidebar */}

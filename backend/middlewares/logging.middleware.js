@@ -93,7 +93,7 @@ export const securityLogger = (req, res, next) => {
   const ip = req.ip || req.connection.remoteAddress;
   
   // Log suspicious requests
-  if (req.path.includes('admin') && !req.user?.role === 'admin') {
+  if (req.path.includes('admin') && !req.user?.roles?.includes('admin')) {
     console.warn(`[SECURITY] Unauthorized admin access attempt from ${ip} - ${req.path}`);
   }
   

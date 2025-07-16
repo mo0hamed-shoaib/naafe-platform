@@ -106,18 +106,8 @@ const userSchema = new Schema({
             type: String,
             maxlength: 1000,
             trim: true
-        },
-        location: {
-            type: {
-                type: String,
-                enum: ['Point'],
-                default: 'Point'
-            },
-            coordinates: {
-                type: [Number],
-                default: [0, 0] // [longitude, latitude]
-            }
         }
+        // location field removed for simplicity and to avoid redundancy
     },
     isActive: {
         type: Boolean,
@@ -133,7 +123,10 @@ const userSchema = new Schema({
     timestamps: true
 });
 
-userSchema.index({ 'profile.location': '2dsphere' });
+// All user types (seeker, provider, admin) are managed via the roles array and their respective subdocuments.
+
+// Remove geolocation index
+// userSchema.index({ 'profile.location': '2dsphere' });
 userSchema.index({ roles: 1, isActive: 1 });
 userSchema.index({ 'providerProfile.verification.status': 1, roles: 1 });
 

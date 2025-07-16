@@ -117,15 +117,16 @@ class AuthController {
    */
   async logout(req, res) {
     try {
-      // In a stateless JWT system, logout is handled client-side
-      // by removing the token. However, we can implement a blacklist
-      // or track logout events if needed.
+      // In a more sophisticated implementation, you might want to:
+      // 1. Add the token to a blacklist
+      // 2. Update user's last logout time
+      // 3. Clear any server-side sessions
+      
+      // For now, we'll just return a success response
+      // The client will handle clearing local storage and tokens
       
       res.status(200).json({
         success: true,
-        data: {
-          message: 'Logout successful'
-        },
         message: 'Logout successful',
         timestamp: new Date().toISOString()
       });

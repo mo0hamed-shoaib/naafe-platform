@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useOfferContext } from '../contexts/OfferContext';
 import { X, Check, Star, Shield, Calendar, Clock } from 'lucide-react';
 import Button from './ui/Button';
 import BaseCard from './ui/BaseCard';
@@ -30,10 +31,26 @@ interface ProviderData {
   };
 }
 
+interface Offer {
+  id: string;
+  name: string;
+  avatar: string;
+  rating: number;
+  price: number;
+  specialties: string[];
+  verified?: boolean;
+  message?: string;
+  estimatedTimeDays?: number;
+  availableDates?: string[];
+  timePreferences?: string[];
+  createdAt?: string;
+}
+
 const ServiceResponseForm: React.FC = () => {
   const { id: jobRequestId } = useParams();
   const navigate = useNavigate();
   const { accessToken } = useAuth();
+  const { addNewOffer } = useOfferContext();
   
   const [formData, setFormData] = useState<FormData>({
     price: '',
@@ -123,12 +140,12 @@ const ServiceResponseForm: React.FC = () => {
     try {
       const offerData = {
         budget: {
-          min: parseFloat(formData.price),
-          max: parseFloat(formData.price),
+          min: Number(formData.price),
+          max: Number(formData.price),
           currency: 'EGP'
         },
         message: formData.message,
-        estimatedTimeDays: parseInt(formData.duration) || 1,
+        estimatedTimeDays: Number(formData.duration) || 1,
         availableDates: formData.availableDates.map(date => date.toISOString()),
         timePreferences: formData.timePreferences
       };
@@ -144,6 +161,25 @@ const ServiceResponseForm: React.FC = () => {
 
       const data = await res.json();
       if (!data.success) throw new Error(data.error?.message || 'Failed to submit offer');
+
+      // Create new offer object for the details page
+      const newOffer: Offer = {
+        id: data.data._id || `temp-${Date.now()}`,
+        name: providerData ? `${providerData.name.first} ${providerData.name.last}` : 'مستخدم',
+        avatar: providerData?.avatarUrl || '',
+        rating: providerData?.providerProfile?.rating || 0,
+        price: parseFloat(formData.price),
+        specialties: [], // TODO: Get from provider profile
+        verified: providerData?.providerProfile?.verification?.status === 'verified',
+        message: formData.message,
+        estimatedTimeDays: parseInt(formData.duration) || 1,
+        availableDates: formData.availableDates.map(date => date.toISOString()),
+        timePreferences: formData.timePreferences,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Add the new offer to the context
+      addNewOffer(newOffer);
 
       // Navigate back to job request details
       navigate(`/requests/${jobRequestId}`);
@@ -250,15 +286,17 @@ const ServiceResponseForm: React.FC = () => {
               
               <div className="mt-6">
                 <label htmlFor="duration" className="text-sm font-medium text-text-primary mb-2 block">
-                  المدة المتوقعة
+                  المدة المتوقعة (أيام)
                 </label>
                 <input
                   id="duration"
                   type="number"
-                  placeholder="مثال: 2 ساعة"
+                  placeholder="مثال: 2 يوم"
                   value={formData.duration}
                   onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
                   className="w-full h-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal bg-white text-text-primary placeholder-gray-500"
+                  min="1"
+                  required
                 />
               </div>
             </div>

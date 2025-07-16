@@ -18,7 +18,7 @@ class OfferService {
       
       // Validate provider exists and is a provider
       const provider = await User.findById(providerId);
-      if (!provider || provider.role !== 'provider') {
+      if (!provider || !provider.roles.includes('provider')) {
         throw new Error('Invalid provider');
       }
       

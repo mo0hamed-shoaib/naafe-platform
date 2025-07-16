@@ -1,20 +1,17 @@
 import { useAuth } from '../../../contexts/AuthContext';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { ToastProvider } from '../../contexts/ToastContext';
 
 const AdminLayout: React.FC = () => {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  if (loading || !user) {
-    return <div className="min-h-screen flex items-center justify-center text-2xl text-deep-teal">جاري التحقق من الصلاحيات...</div>;
-  }
-
-  if (!isAuthenticated || user.role !== 'admin') {
-    return <Navigate to="/login" replace />;
+  // Show loading while user data is being fetched
+  if (!user) {
+    return <div className="min-h-screen flex items-center justify-center text-2xl text-deep-teal">جاري تحميل لوحة التحكم...</div>;
   }
 
   const toggleSidebar = () => setSidebarOpen((open) => !open);

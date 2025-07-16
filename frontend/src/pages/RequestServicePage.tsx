@@ -1,27 +1,8 @@
 import React from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import BaseCard from '../components/ui/BaseCard';
 
 const RequestServicePage = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-warm-cream flex items-center justify-center p-4">
-        <BaseCard className="max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-text-primary mb-4">تسجيل الدخول مطلوب</h1>
-          <p className="text-text-secondary mb-6">يجب تسجيل الدخول لطلب الخدمات</p>
-          <Button onClick={() => navigate('/login', { replace: true })} variant="primary">
-            تسجيل الدخول
-          </Button>
-        </BaseCard>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-warm-cream p-4">
       <div className="container mx-auto max-w-4xl">

@@ -77,7 +77,7 @@ const jobRequestSchema = new Schema({
         if (!userId) return true; // Allow null/undefined
         const User = mongoose.model('User');
         const user = await User.findById(userId);
-        return user && user.role === 'provider';
+        return user && user.roles && user.roles.includes('provider');
       },
       message: 'Assigned user must be a provider'
     }

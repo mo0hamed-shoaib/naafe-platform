@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import BaseCard from '../components/ui/BaseCard';
@@ -8,6 +8,7 @@ import { User } from '../types';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, loading, error } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -21,7 +22,10 @@ const LoginPage = () => {
     e.preventDefault();
     const user: User | null = await login(formData.email, formData.password);
     if (user) {
-      if (user.role === 'admin') {
+      const redirectTo = searchParams.get('redirect');
+      if (user.roles.includes('admin') && redirectTo === '/admin') {
+        navigate('/admin', { replace: true });
+      } else if (user.roles.includes('admin')) {
         navigate('/admin', { replace: true });
       } else {
         navigate('/categories', { replace: true });

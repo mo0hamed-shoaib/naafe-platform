@@ -24,11 +24,11 @@ const ServiceSidebar: React.FC<ServiceSidebarProps> = ({
   return (
     <aside className="bg-white rounded-lg shadow p-4 mb-6 sticky top-24 text-right">
       <div className="mb-4">
-        <div className="font-bold text-lg mb-2">ملخص الطلب</div>
-        <div className="text-sm text-gray-700 mb-1">الحالة: {service.status === 'open' ? 'مفتوح' : service.status === 'assigned' ? 'مُسند' : service.status === 'completed' ? 'مكتمل' : 'غير معروف'}</div>
-        <div className="text-sm text-gray-700 mb-1">الميزانية: {service.budget?.min} - {service.budget?.max} جنيه</div>
+        <div className="font-bold text-lg mb-2 text-deep-teal">ملخص الطلب</div>
+        <div className="text-sm text-text-primary mb-1">الحالة: {service.status === 'open' ? 'مفتوح' : service.status === 'assigned' ? 'مُسند' : service.status === 'completed' ? 'مكتمل' : 'غير معروف'}</div>
+        <div className="text-sm text-text-primary mb-1">الميزانية: {service.budget?.min} - {service.budget?.max} جنيه</div>
         {service.deadline && (
-          <div className="text-sm text-gray-700 mb-1">
+          <div className="text-sm text-text-primary mb-1">
             الموعد النهائي: {new Date(service.deadline).toLocaleDateString('ar-EG', {
               year: 'numeric',
               month: 'long',

@@ -32,14 +32,14 @@ const RequesterInfo: React.FC<RequesterInfoProps> = ({ requester }) => {
       <img
         src={requester.avatar}
         alt={requester.name}
-        className="w-16 h-16 rounded-full object-cover border border-gray-200"
+        className="w-16 h-16 rounded-full object-cover border border-deep-teal/20"
       />
       <div>
-        <div className="font-bold text-lg">{requester.name}</div>
-        <div className="text-sm text-gray-500">{formatJoinDate(requester.createdAt)}</div>
+        <div className="font-bold text-lg text-deep-teal">{requester.name}</div>
+        <div className="text-sm text-text-secondary">{formatJoinDate(requester.createdAt)}</div>
       </div>
     </div>
   );
 };
 
-export default RequesterInfo; 
+export default RequesterInfo;

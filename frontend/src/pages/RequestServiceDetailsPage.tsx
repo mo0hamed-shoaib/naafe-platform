@@ -1,19 +1,83 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import ServiceDetailsContainer from '../components/ServiceDetails';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import BackButton from '../components/ui/BackButton';
 import { useAuth } from '../contexts/AuthContext';
+import { useOfferContext } from '../contexts/OfferContext';
+
+interface Offer {
+  id: string;
+  name: string;
+  avatar: string;
+  rating: number;
+  price: number;
+  specialties: string[];
+  verified?: boolean;
+  message?: string;
+  estimatedTimeDays?: number;
+  availableDates?: string[];
+  timePreferences?: string[];
+  createdAt?: string;
+}
 
 const RequestServiceDetailsPage = () => {
   const { id } = useParams();
   const { accessToken } = useAuth();
+  const { offers, addNewOffer, setOffers } = useOfferContext();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [service, setService] = useState<any>(null); // TODO: Replace 'any' with proper type after mapping
-  const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Function to fetch offers
+  const fetchOffers = useCallback(async () => {
+    if (!id) return;
+    try {
+      const offersRes = await fetch(`/api/requests/${id}/offers`, {
+        headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
+      });
+      const offersData = await offersRes.json();
+      if (offersData.success) {
+        // Map backend offers to frontend responses model
+        const mappedOffers = (offersData.data?.offers || []).map((offer: {
+          _id: string;
+          provider?: { 
+            name?: { first?: string; last?: string } | string; 
+            avatarUrl?: string; 
+            rating?: number; 
+            specialties?: string[]; 
+            verified?: boolean 
+          };
+          budget?: { min?: number };
+          message?: string;
+          estimatedTimeDays?: number;
+          availableDates?: string[];
+          timePreferences?: string[];
+          createdAt: string;
+        }): Offer => ({
+          id: offer._id,
+          name: typeof offer.provider?.name === 'object' 
+            ? `${offer.provider.name.first || ''} ${offer.provider.name.last || ''}`.trim()
+            : offer.provider?.name || '',
+          avatar: offer.provider?.avatarUrl || '',
+          rating: offer.provider?.rating || 0,
+          price: offer.budget?.min || 0,
+          specialties: offer.provider?.specialties || [],
+          verified: offer.provider?.verified || false,
+          message: offer.message || '',
+          estimatedTimeDays: offer.estimatedTimeDays || 1,
+          availableDates: offer.availableDates || [],
+          timePreferences: offer.timePreferences || [],
+          createdAt: offer.createdAt,
+        }));
+        setOffers(mappedOffers);
+      }
+    } catch (err) {
+      console.error('Error fetching offers:', err);
+    }
+  }, [id, accessToken, setOffers]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,35 +101,8 @@ const RequestServiceDetailsPage = () => {
           // Add comments: [] if not present
           comments: [],
         });
-        // Fetch offers with Authorization header
-        const offersRes = await fetch(`/api/requests/${id}/offers`, {
-          headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
-        });
-        const offersData = await offersRes.json();
-        // TODO: Map backend offers to frontend responses model as needed
-        setOffers((offersData.data?.offers || []).map((offer: {
-          _id: string;
-          provider?: { name?: string; avatarUrl?: string; rating?: number; specialties?: string[]; verified?: boolean };
-          budget?: { min?: number };
-          message?: string;
-          estimatedTimeDays?: number;
-          availableDates?: string[];
-          timePreferences?: string[];
-          createdAt: string;
-        }) => ({
-          id: offer._id,
-          name: offer.provider?.name || '',
-          avatar: offer.provider?.avatarUrl || '',
-          rating: offer.provider?.rating || 0,
-          price: offer.budget?.min || 0,
-          specialties: offer.provider?.specialties || [],
-          verified: offer.provider?.verified || false,
-          message: offer.message || '',
-          estimatedTimeDays: offer.estimatedTimeDays || 1,
-          availableDates: offer.availableDates || [],
-          timePreferences: offer.timePreferences || [],
-          createdAt: offer.createdAt,
-        })));
+        // Fetch offers
+        await fetchOffers();
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -73,7 +110,7 @@ const RequestServiceDetailsPage = () => {
       }
     };
     if (id) fetchData();
-  }, [id, accessToken]);
+  }, [id, fetchOffers]);
 
   if (loading) return (
     <div className="min-h-screen flex flex-col bg-warm-cream">
@@ -122,6 +159,8 @@ const RequestServiceDetailsPage = () => {
           onShare={() => {}}
           onBookmark={() => {}}
           onReport={() => {}}
+          onOfferAdded={addNewOffer}
+          onOffersRefresh={fetchOffers}
         />
       </main>
       <Footer />

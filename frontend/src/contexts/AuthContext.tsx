@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -9,7 +10,7 @@ interface AuthContextType {
   error: string | null;
   login: (email: string, password: string) => Promise<User | null>;
   register: (data: RegisterPayload) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -18,7 +19,7 @@ interface RegisterPayload {
   password: string;
   name: { first: string; last: string };
   phone: string;
-  role: 'seeker' | 'provider';
+  roles: ('seeker' | 'provider')[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +32,7 @@ const API_BASE = '/api/auth';
 const USER_API = '/api/users/me';
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(
     () => localStorage.getItem('accessToken')
@@ -122,12 +124,50 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Try to call backend logout endpoint to invalidate token
+    if (accessToken) {
+      try {
+        await fetch(`${API_BASE}/logout`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+        });
+      } catch {
+        // Ignore errors - we still want to logout locally
+        console.log('Backend logout failed, continuing with local logout');
+      }
+    }
+
+    // Clear all authentication state immediately
     setUser(null);
     setAccessToken(null);
     setRefreshToken(null);
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    
+    // Clear all stored data
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Clear any cookies that might be set
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+    
+    // Clear browser history completely to prevent back navigation
+    // This is the key to preventing users from going back to authenticated pages
+    window.history.pushState(null, '', '/');
+    window.history.replaceState(null, '', '/');
+    
+    // Navigate to landing page with replace to prevent back button
+    navigate('/', { replace: true });
+    
+    // Force a complete page reload to ensure all components re-render
+    // This is the most reliable way to prevent any cached state or components
+    setTimeout(() => {
+      window.location.replace('/');
+    }, 50);
   };
 
   const isAuthenticated = !!user && !!accessToken;

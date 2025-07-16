@@ -8,8 +8,7 @@ import {
   LogOut,
   Layers
 } from 'lucide-react';
-import Button from '../../../components/ui/Button';
-import { Link } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -18,6 +17,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, className }) => {
+  const { logout } = useAuth();
   const navItems = [
     { path: '/admin', icon: Home, label: 'لوحة التحكم' },
     { path: '/admin/users', icon: Users, label: 'المستخدمين' },
@@ -96,7 +96,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, className }) => {
 
           {/* Logout */}
           <div className="mt-auto">
-            <button className="flex w-full items-center gap-3 p-3 rounded-lg transition-all duration-200 hover:bg-soft-teal">
+            <button 
+              onClick={async () => {
+                try {
+                  await logout();
+                } catch (error) {
+                  console.error('Logout failed:', error);
+                }
+              }}
+              className="flex w-full items-center gap-3 p-3 rounded-lg transition-all duration-200 hover:bg-soft-teal"
+            >
               <LogOut className="h-5 w-5" />
               <span className="font-medium">تسجيل الخروج</span>
             </button>

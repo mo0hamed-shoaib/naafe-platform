@@ -1,6 +1,4 @@
 import User from '../models/User.js';
-import Seeker from '../models/Seeker.js';
-import Provider from '../models/Provider.js';
 import Admin from '../models/Admin.js';
 import Review from '../models/Review.js';
 

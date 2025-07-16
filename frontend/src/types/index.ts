@@ -81,7 +81,7 @@ export interface User {
   isPremium?: boolean;
   isVerified?: boolean;
   phone?: string;
-  role: 'admin' | 'seeker' | 'provider';
+  roles: ('admin' | 'seeker' | 'provider')[];
   profile?: {
     bio?: string;
     location?: {

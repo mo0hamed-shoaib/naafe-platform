@@ -19,9 +19,15 @@ interface Response {
 
 interface ResponsesSectionProps {
   responses: Response[];
+  onOfferAdded?: (newOffer: Response) => void;
+  onOffersRefresh?: () => Promise<void>;
 }
 
-const ResponsesSection: React.FC<ResponsesSectionProps> = ({ responses }) => {
+const ResponsesSection: React.FC<ResponsesSectionProps> = ({ 
+  responses, 
+  onOfferAdded, 
+  onOffersRefresh 
+}) => {
   if (!responses || responses.length === 0) return null;
 
   const formatDate = (dateString: string) => {
@@ -48,13 +54,13 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({ responses }) => {
       <h2 className="text-xl font-bold mb-4 text-right text-deep-teal">العروض المقدمة ({responses.length})</h2>
       <div className="space-y-4">
         {responses.map((resp) => (
-          <div key={resp.id} className="bg-white rounded-lg shadow-lg p-6 border border-gray-100">
+          <div key={resp.id} className="bg-white rounded-lg shadow-lg p-6 border border-deep-teal/10">
             {/* Provider Info */}
             <div className="flex items-center gap-4 mb-4">
               <img
                 src={resp.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=face&auto=format"}
                 alt={resp.name}
-                className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                className="w-16 h-16 rounded-full object-cover border-2 border-deep-teal/20"
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
@@ -65,7 +71,7 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({ responses }) => {
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-4 text-sm text-medium-teal">
+                <div className="flex items-center gap-4 text-sm text-deep-teal">
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 fill-current" />
                     <span>{resp.rating} ({resp.specialties.length} تخصص)</span>
@@ -80,7 +86,7 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({ responses }) => {
             {/* Specialties */}
             {resp.specialties.length > 0 && (
               <div className="mb-4">
-                <p className="text-sm font-medium text-medium-teal mb-2">التخصصات:</p>
+                <p className="text-sm font-medium text-deep-teal mb-2">التخصصات:</p>
                 <div className="flex flex-wrap gap-2">
                   {resp.specialties.map((specialty, index) => (
                     <Badge key={index} variant="category" size="sm">
@@ -93,10 +99,10 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({ responses }) => {
 
             {/* Message */}
             {resp.message && (
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <div className="mb-4 p-3 bg-warm-cream rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
-                  <MessageCircle className="h-4 w-4 text-medium-teal" />
-                  <span className="text-sm font-medium text-medium-teal">الرسالة:</span>
+                  <MessageCircle className="h-4 w-4 text-deep-teal" />
+                  <span className="text-sm font-medium text-deep-teal">الرسالة:</span>
                 </div>
                 <p className="text-sm text-text-primary leading-relaxed">{resp.message}</p>
               </div>
@@ -105,14 +111,14 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({ responses }) => {
             {/* Availability Information */}
             {((resp.availableDates && resp.availableDates.length > 0) || (resp.timePreferences && resp.timePreferences.length > 0)) && (
               <div className="mb-4">
-                <h4 className="text-sm font-semibold text-medium-teal mb-3">التواريخ والأوقات المتاحة:</h4>
+                <h4 className="text-sm font-semibold text-deep-teal mb-3">التواريخ والأوقات المتاحة:</h4>
                 
                 {/* Available Dates */}
                 {resp.availableDates && resp.availableDates.length > 0 && (
                   <div className="mb-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="h-4 w-4 text-medium-teal" />
-                      <span className="text-sm font-medium text-medium-teal">التواريخ المتاحة:</span>
+                      <Calendar className="h-4 w-4 text-deep-teal" />
+                      <span className="text-sm font-medium text-deep-teal">التواريخ المتاحة:</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {resp.availableDates.slice(0, 5).map((date, index) => (
@@ -133,8 +139,8 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({ responses }) => {
                 {resp.timePreferences && resp.timePreferences.length > 0 && (
                   <div className="mb-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <Clock className="h-4 w-4 text-medium-teal" />
-                      <span className="text-sm font-medium text-medium-teal">تفضيلات الوقت:</span>
+                      <Clock className="h-4 w-4 text-deep-teal" />
+                      <span className="text-sm font-medium text-deep-teal">تفضيلات الوقت:</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {resp.timePreferences.map((pref, index) => (
@@ -148,7 +154,7 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({ responses }) => {
 
                 {/* Estimated Time */}
                 {resp.estimatedTimeDays && (
-                  <div className="text-sm text-medium-teal">
+                  <div className="text-sm text-deep-teal">
                     <span className="font-medium">المدة المتوقعة:</span> {resp.estimatedTimeDays} يوم
                   </div>
                 )}
@@ -156,11 +162,11 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({ responses }) => {
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3 pt-4 border-t border-gray-100">
-              <button className="flex-1 bg-deep-teal text-white py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors font-medium">
+            <div className="flex gap-3 pt-4 border-t border-deep-teal/10">
+              <button className="flex-1 bg-deep-teal text-white py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors font-medium shadow">
                 قبول العرض
               </button>
-              <button className="flex-1 bg-gray-100 text-deep-teal py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+              <button className="flex-1 bg-warm-cream text-deep-teal py-2 px-4 rounded-lg hover:bg-deep-teal/10 transition-colors font-medium border border-deep-teal/20">
                 رفض العرض
               </button>
             </div>

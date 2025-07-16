@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import connectDB from '../config/db.js';
-import User, { Seeker, Provider } from '../models/index.js';
+import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 
 dotenv.config();
@@ -14,23 +14,23 @@ async function testUserEndpoints() {
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash('TestPass123!', saltRounds);
 
-    const testSeeker = new Seeker({
+    const testSeeker = new User({
       email: 'testseeker@example.com',
       password: hashedPassword,
       name: { first: 'John', last: 'Seeker' },
       phone: '01012345678',
-      role: 'seeker',
+      roles: ['seeker'],
       profile: {
         bio: 'I am a test seeker looking for services'
       }
     });
 
-    const testProvider = new Provider({
+    const testProvider = new User({
       email: 'testprovider@example.com',
       password: hashedPassword,
       name: { first: 'Jane', last: 'Provider' },
       phone: '01087654321',
-      role: 'provider',
+      roles: ['provider'],
       profile: {
         bio: 'I am a test provider offering various services'
       }

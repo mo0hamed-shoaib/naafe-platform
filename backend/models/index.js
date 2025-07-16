@@ -1,6 +1,4 @@
 import User from './User.js';
-import Seeker from './Seeker.js';
-import Provider from './Provider.js';
 import Admin from './Admin.js';
 import Category from './Category.js';
 import JobRequest from './JobRequest.js';
@@ -13,8 +11,6 @@ import Review from './Review.js';
 
 export {
   User,
-  Seeker,
-  Provider,
   Admin,
   Category,
   JobRequest,

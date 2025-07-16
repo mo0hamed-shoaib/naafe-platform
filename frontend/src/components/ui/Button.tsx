@@ -60,7 +60,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
     ].join(' '),
     
     outline: [
-      'bg-transparent border-deep-teal text-deep-teal',
+      'bg-warm-cream border-2 border-deep-teal text-deep-teal',
       'hover:bg-deep-teal hover:text-white hover:shadow-md',
       'focus:ring-deep-teal/50',
       'active:bg-deep-teal/95'
