@@ -287,7 +287,6 @@ const ServiceResponseForm: React.FC = () => {
                     dateFormat="dd/MM/yyyy"
                     placeholderText="اختر التواريخ المتاحة"
                     className="w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal"
-                    locale="ar"
                     dayClassName={(date) => {
                       const isSelected = formData.availableDates.some(
                         selectedDate => selectedDate.toDateString() === date.toDateString()
