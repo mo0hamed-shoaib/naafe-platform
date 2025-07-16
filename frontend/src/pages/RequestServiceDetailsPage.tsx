@@ -148,7 +148,7 @@ const RequestServiceDetailsPage = () => {
       <main className="flex-1">
         {/* Back Button Section */}
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <BackButton className="mb-4" />
+          <BackButton to="/search" className="mb-4" />
         </div>
         
         {/* Service Details */}
