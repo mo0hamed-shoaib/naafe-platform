@@ -199,7 +199,7 @@ class JobRequestService {
       }
 
       // Only seeker who created the request or admin can update
-      if (jobRequest.seeker.toString() !== userId && user.role !== 'admin') {
+      if (jobRequest.seeker.toString() !== userId && !user.roles.includes('admin')) {
         throw new Error('Not authorized to update this job request');
       }
 
@@ -211,7 +211,7 @@ class JobRequestService {
       // If assignedTo is being set, verify it's a provider
       if (updateData.assignedTo) {
         const assignedUser = await User.findById(updateData.assignedTo);
-        if (!assignedUser || assignedUser.role !== 'provider') {
+        if (!assignedUser || !assignedUser.roles.includes('provider')) {
           throw new Error('Assigned user must be a provider');
         }
       }
@@ -272,7 +272,7 @@ class JobRequestService {
       }
 
       // Only seeker who created the request or admin can delete
-      if (jobRequest.seeker.toString() !== userId && user.role !== 'admin') {
+      if (jobRequest.seeker.toString() !== userId && !user.roles.includes('admin')) {
         throw new Error('Not authorized to delete this job request');
       }
 
@@ -349,7 +349,7 @@ class JobRequestService {
       }
 
       // Only job request owner or admin can view offers
-      if (jobRequest.seeker._id.toString() !== userId.toString() && user.role !== 'admin') {
+      if (jobRequest.seeker._id.toString() !== userId.toString() && !user.roles.includes('admin')) {
         throw new Error('Not authorized to view offers for this job request');
       }
 

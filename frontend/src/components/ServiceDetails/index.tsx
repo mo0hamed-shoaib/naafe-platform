@@ -28,29 +28,27 @@ const ServiceDetailsContainer: React.FC<ServiceDetailsContainerProps> = ({
   onReport
 }) => {
   return (
-    <div className="min-h-screen bg-warm-cream" data-theme="naafe">
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-8">
-            <ServiceGallery images={service.images} title={service.title} />
-            <ServiceDetails service={service} />
-            <RequesterInfo requester={service.requester} />
-            <ResponsesSection responses={offers} />
-            <CommentsSection comments={service.comments || []} />
-          </div>
-          {/* Sidebar */}
-          <div className="lg:col-span-4">
-            <ServiceSidebar
-              service={service}
-              onInterested={onInterested}
-              onShare={onShare}
-              onBookmark={onBookmark}
-              onReport={onReport}
-            />
-          </div>
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8" data-theme="naafe">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Main Content */}
+        <div className="lg:col-span-8">
+          <ServiceGallery images={service.images} title={service.title} />
+          <ServiceDetails service={service} />
+          <RequesterInfo requester={service.requester} />
+          <ResponsesSection responses={offers} />
+          <CommentsSection comments={service.comments || []} />
         </div>
-      </main>
+        {/* Sidebar */}
+        <div className="lg:col-span-4">
+          <ServiceSidebar
+            service={service}
+            onInterested={onInterested}
+            onShare={onShare}
+            onBookmark={onBookmark}
+            onReport={onReport}
+          />
+        </div>
+      </div>
     </div>
   );
 };

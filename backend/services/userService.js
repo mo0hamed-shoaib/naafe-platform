@@ -112,19 +112,19 @@ class UserService {
 
       let stats = {
         userId: user._id,
-        role: user.role,
+        roles: user.roles || [],
         rating: user.rating || 0,
         reviewCount: user.reviewCount || 0
       };
 
       // Add role-specific stats
-      if (user.role === 'provider') {
+      if (user.roles.includes('provider')) {
         stats = {
           ...stats,
           totalJobsCompleted: user.totalJobsCompleted || 0,
           totalEarnings: user.totalEarnings || 0
         };
-      } else if (user.role === 'seeker') {
+      } else if (user.roles.includes('seeker')) {
         stats = {
           ...stats,
           totalJobsPosted: user.totalJobsPosted || 0,
@@ -180,7 +180,7 @@ class UserService {
       ];
     }
     if (role) {
-      query.role = role;
+      query.roles = role;
     }
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const users = await User.find(query)

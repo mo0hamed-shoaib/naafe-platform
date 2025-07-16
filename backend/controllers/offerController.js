@@ -36,12 +36,12 @@ class OfferController {
   async getAllOffers(req, res) {
     try {
       const userId = req.user._id;
-      const userRole = req.user.role;
+      const userRoles = req.user.roles;
       const filters = req.query;
       
-      logger.info(`Getting offers for user ${userId} with role ${userRole}`);
+      logger.info(`Getting offers for user ${userId} with roles ${userRoles}`);
       
-      const offers = await offerService.getAllOffers(userId, userRole, filters);
+      const offers = await offerService.getAllOffers(userId, userRoles, filters);
       
       logger.info(`Found ${offers.length} offers for user ${userId}`);
       

@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ServiceDetailsContainer from '../components/ServiceDetails';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import BackButton from '../components/ui/BackButton';
 import { useAuth } from '../contexts/AuthContext';
 
 const RequestServiceDetailsPage = () => {
@@ -72,19 +75,57 @@ const RequestServiceDetailsPage = () => {
     if (id) fetchData();
   }, [id, accessToken]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
-  if (!service) return <div className="min-h-screen flex items-center justify-center">Service not found</div>;
+  if (loading) return (
+    <div className="min-h-screen flex flex-col bg-warm-cream">
+      <Header />
+      <main className="flex-1 flex items-center justify-center">
+        <div className="text-deep-teal text-lg">جاري التحميل...</div>
+      </main>
+      <Footer />
+    </div>
+  );
+  
+  if (error) return (
+    <div className="min-h-screen flex flex-col bg-warm-cream">
+      <Header />
+      <main className="flex-1 flex items-center justify-center">
+        <div className="text-red-500 text-lg">{error}</div>
+      </main>
+      <Footer />
+    </div>
+  );
+  
+  if (!service) return (
+    <div className="min-h-screen flex flex-col bg-warm-cream">
+      <Header />
+      <main className="flex-1 flex items-center justify-center">
+        <div className="text-deep-teal text-lg">لم يتم العثور على الخدمة</div>
+      </main>
+      <Footer />
+    </div>
+  );
 
   return (
-    <ServiceDetailsContainer
-      service={service}
-      offers={offers}
-      onInterested={() => {}}
-      onShare={() => {}}
-      onBookmark={() => {}}
-      onReport={() => {}}
-    />
+    <div className="min-h-screen flex flex-col bg-warm-cream">
+      <Header />
+      <main className="flex-1">
+        {/* Back Button Section */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <BackButton className="mb-4" />
+        </div>
+        
+        {/* Service Details */}
+        <ServiceDetailsContainer
+          service={service}
+          offers={offers}
+          onInterested={() => {}}
+          onShare={() => {}}
+          onBookmark={() => {}}
+          onReport={() => {}}
+        />
+      </main>
+      <Footer />
+    </div>
   );
 };
 

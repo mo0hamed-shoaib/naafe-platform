@@ -84,20 +84,20 @@ class OfferService {
   }
   
   // Get all offers with role-based filtering
-  async getAllOffers(userId, userRole, filters = {}) {
+  async getAllOffers(userId, userRoles, filters = {}) {
     try {
       let query = {};
       
       // Role-based filtering
-      if (userRole === 'provider') {
+      if (userRoles.includes('provider')) {
         // Providers can see their own offers
         query.provider = userId;
-      } else if (userRole === 'seeker') {
+      } else if (userRoles.includes('seeker')) {
         // Seekers can see offers on their job requests
         const userJobRequests = await JobRequest.find({ seeker: userId }).select('_id');
         const jobRequestIds = userJobRequests.map(jr => jr._id);
         query.jobRequest = { $in: jobRequestIds };
-      } else if (userRole !== 'admin') {
+      } else if (!userRoles.includes('admin')) {
         // Non-admin users can only see their own offers
         query.provider = userId;
       }
@@ -145,7 +145,7 @@ class OfferService {
         }
         
         // Only offer owner, job request owner, or admin can view
-        if (user.role !== 'admin' && 
+        if (!user.roles.includes('admin') && 
             offer.provider._id.toString() !== userId && 
             offer.jobRequest.seeker.toString() !== userId) {
           throw new Error('Access denied');

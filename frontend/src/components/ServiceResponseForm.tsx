@@ -182,7 +182,7 @@ const ServiceResponseForm: React.FC = () => {
               <h1 className="text-2xl font-bold text-deep-teal mb-1">
                 الرد على طلب الخدمة
               </h1>
-              <p className="text-sm text-medium-teal">
+              <p className="text-sm text-text-secondary">
                 لطلب "{jobRequest?.title || 'الخدمة'}"
               </p>
             </div>
@@ -217,11 +217,11 @@ const ServiceResponseForm: React.FC = () => {
                       placeholder="أدخل سعرك"
                       value={formData.price}
                       onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                      className="w-full pr-12 pl-3 h-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal"
+                      className="w-full pr-12 pl-3 h-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal bg-white text-text-primary placeholder-gray-500"
                       required
                     />
                   </div>
-                  <p className="mt-2 text-sm text-emerald-600 flex items-center">
+                  <p className="mt-2 text-sm text-deep-teal flex items-center">
                     <Check className="h-4 w-4 ml-1" />
                     سعر عادل في السوق
                   </p>
@@ -234,7 +234,7 @@ const ServiceResponseForm: React.FC = () => {
                   <select 
                     value={formData.timeline} 
                     onChange={(e) => setFormData(prev => ({ ...prev, timeline: e.target.value }))}
-                    className="w-full h-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal"
+                    className="w-full h-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal bg-white text-text-primary"
                     required
                     aria-label="اختر التوقيت"
                   >
@@ -258,7 +258,7 @@ const ServiceResponseForm: React.FC = () => {
                   placeholder="مثال: 2 ساعة"
                   value={formData.duration}
                   onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-                  className="w-full h-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal"
+                  className="w-full h-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal bg-white text-text-primary placeholder-gray-500"
                 />
               </div>
             </div>
@@ -274,7 +274,7 @@ const ServiceResponseForm: React.FC = () => {
                 <label className="text-sm font-medium text-text-primary mb-3 block">
                   اختر التواريخ المتاحة لك
                 </label>
-                <p className="text-xs text-medium-teal mb-3">
+                <p className="text-xs text-text-secondary mb-3">
                   انقر على التواريخ لتحديدها أو إلغاء تحديدها
                 </p>
                 <div className="relative">
@@ -291,14 +291,14 @@ const ServiceResponseForm: React.FC = () => {
                       const isSelected = formData.availableDates.some(
                         selectedDate => selectedDate.toDateString() === date.toDateString()
                       );
-                      return isSelected ? 'bg-deep-teal text-white rounded' : '';
+                      return isSelected ? '!bg-deep-teal !text-white !font-semibold rounded' : '';
                     }}
                   />
                 </div>
                 {formData.availableDates.length > 0 && (
                   <div className="mt-3">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm text-medium-teal">التواريخ المختارة ({formData.availableDates.length} يوم):</p>
+                      <p className="text-sm text-text-secondary">التواريخ المختارة ({formData.availableDates.length} يوم):</p>
                       <button
                         type="button"
                         onClick={() => setFormData(prev => ({ ...prev, availableDates: [] }))}
@@ -361,7 +361,7 @@ const ServiceResponseForm: React.FC = () => {
               <div>
                 <label htmlFor="message" className="text-sm font-medium text-text-primary mb-2 block">
                   رسالة شخصية{' '}
-                  <span className="text-medium-teal font-normal">(اختياري)</span>
+                  <span className="text-text-secondary font-normal">(اختياري)</span>
                 </label>
                 <textarea
                   id="message"
@@ -370,9 +370,9 @@ const ServiceResponseForm: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
                   maxLength={300}
                   rows={4}
-                  className="w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal resize-none"
+                  className="w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal resize-none bg-white text-text-primary placeholder-gray-500"
                 />
-                <p className="mt-1 text-xs text-medium-teal text-left">
+                <p className="mt-1 text-xs text-text-secondary text-left">
                   {formData.message.length} / 300 حرف
                 </p>
               </div>
@@ -425,7 +425,7 @@ const ServiceResponseForm: React.FC = () => {
                   </h3>
                   <div className="flex items-center mt-1">
                     <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                    <span className="text-sm text-medium-teal mr-1">
+                    <span className="text-sm text-text-secondary mr-1">
                       {providerData?.providerProfile?.rating || 0} ({providerData?.providerProfile?.reviewCount || 0} تقييم)
                     </span>
                   </div>
@@ -434,20 +434,20 @@ const ServiceResponseForm: React.FC = () => {
               
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-semibold text-medium-teal">السعر</p>
+                  <p className="text-sm font-semibold text-text-secondary">السعر</p>
                   <p className="text-2xl font-bold text-deep-teal">
                     {formatPrice(formData.price)}
                   </p>
                 </div>
                 
                 <div>
-                  <p className="text-sm font-semibold text-medium-teal">تاريخ البدء</p>
+                  <p className="text-sm font-semibold text-text-secondary">تاريخ البدء</p>
                   <p className="text-text-primary">{getTimelineDisplay()}</p>
                 </div>
 
                 {formData.availableDates.length > 0 && (
                   <div>
-                    <p className="text-sm font-semibold text-medium-teal">التواريخ المتاحة ({formData.availableDates.length} يوم)</p>
+                    <p className="text-sm font-semibold text-text-secondary">التواريخ المتاحة ({formData.availableDates.length} يوم)</p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {formData.availableDates.slice(0, 5).map((date, index) => (
                         <Badge key={index} variant="category" className="text-xs">
@@ -469,7 +469,7 @@ const ServiceResponseForm: React.FC = () => {
 
                 {formData.timePreferences.length > 0 && (
                   <div>
-                    <p className="text-sm font-semibold text-medium-teal">تفضيلات الوقت</p>
+                    <p className="text-sm font-semibold text-text-secondary">تفضيلات الوقت</p>
                     <div className="flex flex-wrap gap-1 mt-1">
                                              {formData.timePreferences.map((pref, index) => (
                          <Badge key={index} variant="category" className="text-xs">
@@ -483,14 +483,14 @@ const ServiceResponseForm: React.FC = () => {
                 )}
                 
                 <div>
-                  <p className="text-sm font-semibold text-medium-teal">مقتطف من الرسالة</p>
+                  <p className="text-sm font-semibold text-text-secondary">مقتطف من الرسالة</p>
                   <p className="text-text-primary text-sm italic line-clamp-3">
                     {formData.message || "أخبرهم لماذا أنت الشخص المناسب لهذا العمل..."}
                   </p>
                 </div>
                 
                 <div className="pt-4 border-t border-gray-200">
-                  <p className="text-sm font-semibold text-medium-teal mb-2">
+                  <p className="text-sm font-semibold text-text-secondary mb-2">
                     المهارات والتحقق
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -509,10 +509,10 @@ const ServiceResponseForm: React.FC = () => {
           </BaseCard>
 
           {/* Tips Section */}
-          <BaseCard className="mt-6 bg-teal-50 border-r-4 border-deep-teal">
+          <BaseCard className="mt-6 bg-light-cream border-r-4 border-deep-teal">
             <div className="p-4">
               <p className="font-bold text-deep-teal mb-2">نصيحة لرد أفضل</p>
-              <ul className="list-disc list-inside text-sm text-deep-teal space-y-1">
+              <ul className="list-disc list-inside text-sm text-text-secondary space-y-1">
                 <li>أضف رسالة شخصية</li>
                 <li>اذكر خبرتك في هذا المجال</li>
                 <li>ارفع أمثلة من أعمالك</li>
