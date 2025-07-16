@@ -22,6 +22,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, className }) => {
     { path: '/admin', icon: Home, label: 'لوحة التحكم' },
     { path: '/admin/users', icon: Users, label: 'المستخدمين' },
     { path: '/admin/categories', icon: List, label: 'الفئات' },
+    { path: '/admin/upgrade-requests', icon: List, label: 'طلبات الترقية' },
     { path: '/admin/settings', icon: Settings, label: 'الإعدادات' },
   ];
 

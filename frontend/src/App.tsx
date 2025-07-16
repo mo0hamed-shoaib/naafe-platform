@@ -20,6 +20,7 @@ import PostServiceForm from './components/PostServiceForm';
 import RequestServiceForm from './components/RequestServiceForm';
 import RequestServiceDetailsPage from './pages/RequestServiceDetailsPage';
 import ServiceResponseForm from './components/ServiceResponseForm';
+import AdminUpgradeRequests from './admin/pages/AdminUpgradeRequests';
 
 const App = () => {
   return (
@@ -67,6 +68,7 @@ const App = () => {
                 <Route index element={<AdminOverview />} />
                 <Route path="users" element={<AdminManageUsers />} />
                 <Route path="categories" element={<AdminManageCategories />} />
+                <Route path="upgrade-requests" element={<AdminUpgradeRequests />} />
               </Route>
               {/* Fallback routes for footer links */}
               <Route path="/services" element={<Navigate to="/categories" replace />} />

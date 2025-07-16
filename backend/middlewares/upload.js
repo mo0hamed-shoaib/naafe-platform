@@ -86,8 +86,11 @@ const uploadArray = (fieldName = 'files', maxCount = 10) => (req, res, next) => 
   });
 };
 
+const uploadUpgradeAttachments = uploadArray('attachments', 3);
+
 export default {
   uploadSingle,
   uploadArray,
+  uploadUpgradeAttachments,
   raw: upload, // for advanced use
 }; 
