@@ -135,7 +135,7 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
 
   const navigationItems = [
     { label: 'الخدمات', href: '/services' },
-    { label: 'للأعمال', href: '/business' },
+    { label: 'العضوية المميزة', href: '/pricing' },
     { label: 'استكشف', href: '/search' },
   ];
 
@@ -523,49 +523,49 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
             </div>
             {/* Attempts left */}
             <div className="mb-2 text-sm text-gray-700">المحاولات المتبقية: {attemptsLeft} من 3</div>
-            <form onSubmit={handleUpgradeSubmit} className="space-y-4" dir="rtl">
-              <div>
-                <label className="block mb-2 font-semibold">سبب الترقية أو نبذة عن خبرتك (اختياري)</label>
-                <FormTextarea
-                  value={comment}
-                  onChange={e => setComment(e.target.value)}
-                  rows={3}
-                  placeholder="اكتب سبب طلب الترقية أو خبرتك..."
-                />
-              </div>
-              <div>
-                <label className="block mb-2 font-semibold">المرفقات (صور أو PDF، حتى 3 ملفات)</label>
-                <input
-                  type="file"
+        <form onSubmit={handleUpgradeSubmit} className="space-y-4" dir="rtl">
+          <div>
+            <label className="block mb-2 font-semibold">سبب الترقية أو نبذة عن خبرتك (اختياري)</label>
+            <FormTextarea
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              rows={3}
+              placeholder="اكتب سبب طلب الترقية أو خبرتك..."
+            />
+          </div>
+          <div>
+            <label className="block mb-2 font-semibold">المرفقات (صور أو PDF، حتى 3 ملفات)</label>
+            <input
+              type="file"
                   accept="image/*"
-                  multiple
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="block w-full border border-gray-300 rounded-lg p-2"
-                  disabled={attachments.length >= 3}
+              multiple
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="block w-full border border-gray-300 rounded-lg p-2"
+              disabled={attachments.length >= 3}
                   placeholder="اختر صور (حتى 3 صور)"
-                />
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {attachments.map((file, idx) => (
-                    <div key={idx} className="flex items-center gap-1 bg-light-cream px-2 py-1 rounded">
+            />
+            <div className="flex flex-wrap gap-2 mt-2">
+              {attachments.map((file, idx) => (
+                <div key={idx} className="flex items-center gap-1 bg-light-cream px-2 py-1 rounded">
                       {file.name.startsWith('http') ? (
                         <img src={file.name} alt="مرفق" className="h-10 w-10 rounded object-cover border" />
                       ) : (
-                        <span className="text-xs">{file.name}</span>
+                  <span className="text-xs">{file.name}</span>
                       )}
                       {uploadProgress[file.name] && <span className="text-xs text-blue-600 ml-2">جاري رفع الصورة...</span>}
                       <button type="button" className="text-red-500 ml-1" onClick={() => handleRemoveFile(idx)} disabled={uploadProgress[file.name] || uploading}>&times;</button>
-                    </div>
-                  ))}
                 </div>
-              </div>
-              {upgradeError && <div className="text-red-600 text-sm">{upgradeError}</div>}
-              {upgradeSuccess && <div className="text-green-600 text-sm">{upgradeSuccess}</div>}
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={() => setShowUpgradeModal(false)} disabled={upgradeLoading}>إلغاء</Button>
+              ))}
+            </div>
+          </div>
+          {upgradeError && <div className="text-red-600 text-sm">{upgradeError}</div>}
+          {upgradeSuccess && <div className="text-green-600 text-sm">{upgradeSuccess}</div>}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setShowUpgradeModal(false)} disabled={upgradeLoading}>إلغاء</Button>
                 <Button type="submit" variant="primary" loading={upgradeLoading || uploading} disabled={attachments.length === 0 || upgradeLoading || uploading}>إرسال الطلب</Button>
-              </div>
-            </form>
+          </div>
+        </form>
           </>
         )}
       </Modal>

@@ -23,6 +23,7 @@ import ServiceResponseForm from './components/ServiceResponseForm';
 import AdminUpgradeRequests from './admin/pages/AdminUpgradeRequests';
 import HelpCenterPage from './pages/HelpCenterPage';
 import SettingsPage from './pages/SettingsPage';
+import PricingPage from './pages/PricingPage';
 
 const App = () => {
   return (
@@ -67,6 +68,7 @@ const App = () => {
                 <Route path="/requests/:id" element={<RequestServiceDetailsPage />} />
                 <Route path="/requests/:id/respond" element={<ServiceResponseForm />} />
               <Route path="/help" element={<HelpCenterPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
               <Route path="/provider/:id" element={<div className="min-h-screen bg-warm-cream flex items-center justify-center"><p className="text-2xl text-text-secondary">Provider Details Page (Coming Soon)</p></div>} />
                 <Route path="/admin" element={
                   <ProtectedRoute requiredRoles={['admin']}>
@@ -80,7 +82,6 @@ const App = () => {
               </Route>
               {/* Fallback routes for footer links */}
               <Route path="/services" element={<Navigate to="/categories" replace />} />
-              <Route path="/business" element={<div className="min-h-screen bg-warm-cream flex items-center justify-center"><p className="text-2xl text-text-secondary">Business Page (Coming Soon)</p></div>} />
               <Route path="/explore" element={<Navigate to="/categories" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

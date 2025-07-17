@@ -62,7 +62,7 @@ const RegisterPage = () => {
 
   const handleOnboardingComplete = () => {
     setOnboardingStep('complete');
-    navigate('/', { replace: true });
+      navigate('/', { replace: true });
   };
 
   // Show onboarding components after successful registration

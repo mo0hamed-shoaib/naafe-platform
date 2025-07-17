@@ -131,7 +131,7 @@ const ServiceRequestCard = ({ request, onInterested, onViewDetails, alreadyAppli
               منذ {formatDate(request.createdAt)}
             </span>
           </div>
-
+          
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
             <div className="flex items-center gap-2 text-xs text-text-secondary">
               {/* Clock icon is already used for the date, so no need to add it here */}
@@ -139,22 +139,22 @@ const ServiceRequestCard = ({ request, onInterested, onViewDetails, alreadyAppli
             
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1 min-w-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(`/requests/${request.id}`)}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/requests/${request.id}`)}
                   className="w-full px-4"
-                >
-                  عرض التفاصيل
-                </Button>
+              >
+                عرض التفاصيل
+              </Button>
               </div>
               <div className="flex-1 min-w-0">
-                {request.status === 'open' && (
+              {request.status === 'open' && (
                   user && user.roles.includes('provider') ? (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => navigate(`/requests/${request.id}/respond`)}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => navigate(`/requests/${request.id}/respond`)}
                       className="w-full"
                       disabled={alreadyApplied}
                       title={alreadyApplied ? 'لقد قدمت عرضاً بالفعل لهذا الطلب' : undefined}
@@ -179,11 +179,11 @@ const ServiceRequestCard = ({ request, onInterested, onViewDetails, alreadyAppli
                           disabled
                         >
                           للمقدمين فقط
-                        </Button>
+                </Button>
                       </div>
                     </Tippy>
                   )
-                )}
+              )}
               </div>
             </div>
           </div>
