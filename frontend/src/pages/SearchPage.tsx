@@ -36,7 +36,7 @@ const fetchRequests = async (filters: FilterState) => {
 
 const SearchPage = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, accessToken } = useAuth();
   const { getFiltersFromUrl, updateFiltersInUrl } = useUrlParams();
   
   const [filters, setFilters] = useState<FilterState>(getFiltersFromUrl());
@@ -49,6 +49,7 @@ const SearchPage = () => {
     queryKey: ['requests', filters],
     queryFn: () => fetchRequests(filters),
   });
+  const [providerOfferRequestIds, setProviderOfferRequestIds] = useState<string[]>([]);
 
   // Map backend data to frontend types
   // Backend response is dynamic; we validate and map at runtime
@@ -98,6 +99,26 @@ const SearchPage = () => {
   useEffect(() => {
     updateFiltersInUrl(filters);
   }, [filters, updateFiltersInUrl]);
+
+  useEffect(() => {
+    const fetchProviderOffers = async () => {
+      if (user && user.roles.includes('provider') && activeTab === 'requests') {
+        try {
+          type Offer = { jobRequest: string };
+          const res = await fetch('/api/offers', {
+            headers: { 'Authorization': `Bearer ${accessToken || localStorage.getItem('accessToken')}` },
+          });
+          const data = await res.json();
+          if (data.success && Array.isArray(data.data)) {
+            setProviderOfferRequestIds(data.data.map((offer: Offer) => offer.jobRequest));
+          }
+        } catch {
+          // Optionally log error
+        }
+      }
+    };
+    fetchProviderOffers();
+  }, [user, activeTab, accessToken]);
 
   const handleSearch = (query: string) => {
     setFilters(prev => ({ ...prev, search: query }));
@@ -250,6 +271,7 @@ const SearchPage = () => {
                     request={request}
                     onInterested={handleInterestedInRequest}
                     onViewDetails={handleViewRequestDetails}
+                    alreadyApplied={providerOfferRequestIds.includes(request.id)}
                   />
                 ))}
               </div>

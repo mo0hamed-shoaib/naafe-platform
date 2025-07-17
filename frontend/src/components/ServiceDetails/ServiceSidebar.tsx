@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../ui/Button';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ServiceSidebarProps {
   service: any; // TODO: type
@@ -8,6 +9,7 @@ interface ServiceSidebarProps {
   onShare?: () => void;
   onBookmark?: () => void;
   onReport?: () => void;
+  alreadyApplied?: boolean;
 }
 
 const ServiceSidebar: React.FC<ServiceSidebarProps> = ({
@@ -15,10 +17,12 @@ const ServiceSidebar: React.FC<ServiceSidebarProps> = ({
   onInterested,
   onShare,
   onBookmark,
-  onReport
+  onReport,
+  alreadyApplied
 }) => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuth();
   
   if (!service) return null;
   return (
@@ -39,7 +43,25 @@ const ServiceSidebar: React.FC<ServiceSidebarProps> = ({
         )}
       </div>
       <div className="flex flex-col gap-2">
-        <Button variant="primary" onClick={() => navigate(`/requests/${id}/respond`)}>أنا مهتم</Button>
+        {user && user.roles.includes('provider') ? (
+          <Button
+            variant="primary"
+            onClick={() => navigate(`/requests/${id}/respond`)}
+            disabled={alreadyApplied}
+            title={alreadyApplied ? 'لقد قدمت عرضاً بالفعل لهذا الطلب' : undefined}
+          >
+            {alreadyApplied ? 'تم التقديم' : 'أنا مهتم'}
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            disabled
+            className="cursor-not-allowed"
+            title="يجب أن تكون مقدم خدمات للتقديم على هذا الطلب"
+          >
+            يجب أن تكون مقدم خدمات
+          </Button>
+        )}
         <Button variant="outline" onClick={onShare}>مشاركة</Button>
         <Button variant="outline" onClick={onBookmark}>حفظ</Button>
         <Button variant="danger" onClick={onReport}>إبلاغ</Button>

@@ -5,15 +5,20 @@ import PremiumBadge from './ui/PremiumBadge';
 import { ServiceRequest } from '../types';
 import { translateLocation } from '../utils/helpers';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import Tippy from '@tippyjs/react';
+import 'tippy.js/dist/tippy.css';
 
 interface ServiceRequestCardProps {
   request: ServiceRequest;
   onInterested: (requestId: string) => void;
   onViewDetails: (requestId: string) => void;
+  alreadyApplied?: boolean;
 }
 
-const ServiceRequestCard = ({ request, onInterested, onViewDetails }: ServiceRequestCardProps) => {
+const ServiceRequestCard = ({ request, onInterested, onViewDetails, alreadyApplied }: ServiceRequestCardProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('ar-EG', {
@@ -119,32 +124,67 @@ const ServiceRequestCard = ({ request, onInterested, onViewDetails }: ServiceReq
           <p className="text-sm text-text-secondary mb-4 text-right leading-relaxed">
             {request.description}
           </p>
-          
+
+          <div className="flex items-center gap-2 mb-2 text-right">
+            <Clock className="h-4 w-4 text-text-secondary flex-shrink-0" />
+            <span className="text-sm text-text-secondary">
+              منذ {formatDate(request.createdAt)}
+            </span>
+          </div>
+
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
             <div className="flex items-center gap-2 text-xs text-text-secondary">
-              <Clock className="h-3 w-3 flex-shrink-0" />
-              <span>منذ {formatDate(request.createdAt)}</span>
+              {/* Clock icon is already used for the date, so no need to add it here */}
             </div>
             
             <div className="flex flex-col sm:flex-row gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(`/requests/${request.id}`)}
-                className="w-full sm:w-auto"
-              >
-                عرض التفاصيل
-              </Button>
-              {request.status === 'open' && (
+              <div className="flex-1 min-w-0">
                 <Button
-                  variant="primary"
+                  variant="outline"
                   size="sm"
-                  onClick={() => navigate(`/requests/${request.id}/respond`)}
-                  className="w-full sm:w-auto"
+                  onClick={() => navigate(`/requests/${request.id}`)}
+                  className="w-full px-4"
                 >
-                  أنا مهتم
+                  عرض التفاصيل
                 </Button>
-              )}
+              </div>
+              <div className="flex-1 min-w-0">
+                {request.status === 'open' && (
+                  user && user.roles.includes('provider') ? (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => navigate(`/requests/${request.id}/respond`)}
+                      className="w-full"
+                      disabled={alreadyApplied}
+                      title={alreadyApplied ? 'لقد قدمت عرضاً بالفعل لهذا الطلب' : undefined}
+                    >
+                      {alreadyApplied ? 'تم التقديم' : 'أنا مهتم'}
+                    </Button>
+                  ) : (
+                    <Tippy
+                      content={<span className="font-jakarta text-xs">يجب أن تكون مقدم خدمات للتقديم على هذا الطلب</span>}
+                      placement="top"
+                      arrow={true}
+                      theme="light-border"
+                      appendTo={document.body}
+                      delay={[0, 0]}
+                      zIndex={9999}
+                    >
+                      <div className="w-full">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full cursor-not-allowed truncate"
+                          disabled
+                        >
+                          للمقدمين فقط
+                        </Button>
+                      </div>
+                    </Tippy>
+                  )
+                )}
+              </div>
             </div>
           </div>
         </div>

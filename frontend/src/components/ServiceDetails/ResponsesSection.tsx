@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, Clock, MessageCircle, Star } from 'lucide-react';
 import Badge from '../ui/Badge';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Response {
   id: string;
@@ -15,6 +16,7 @@ interface Response {
   availableDates?: string[];
   timePreferences?: string[];
   createdAt?: string;
+  jobRequestSeekerId?: string; // Added this field to check if the user is the seeker
 }
 
 interface ResponsesSectionProps {
@@ -28,6 +30,7 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
   onOfferAdded, 
   onOffersRefresh 
 }) => {
+  const { user } = useAuth();
   if (!responses || responses.length === 0) return null;
 
   const formatDate = (dateString: string) => {
@@ -162,14 +165,16 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3 pt-4 border-t border-deep-teal/10">
-              <button className="flex-1 bg-deep-teal text-white py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors font-medium shadow">
-                قبول العرض
-              </button>
-              <button className="flex-1 bg-warm-cream text-deep-teal py-2 px-4 rounded-lg hover:bg-deep-teal/10 transition-colors font-medium border border-deep-teal/20">
-                رفض العرض
-              </button>
-            </div>
+            {user && user._id === resp.jobRequestSeekerId && (
+              <div className="flex gap-3 pt-4 border-t border-deep-teal/10">
+                <button className="flex-1 bg-deep-teal text-white py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors font-medium shadow">
+                  قبول العرض
+                </button>
+                <button className="flex-1 bg-warm-cream text-deep-teal py-2 px-4 rounded-lg hover:bg-deep-teal/10 transition-colors font-medium border border-deep-teal/20">
+                  رفض العرض
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>

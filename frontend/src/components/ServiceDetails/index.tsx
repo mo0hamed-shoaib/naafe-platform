@@ -6,6 +6,7 @@ import RequesterInfo from './RequesterInfo.tsx';
 import ResponsesSection from './ResponsesSection.tsx';
 import CommentsSection from './CommentsSection.tsx';
 import ServiceSidebar from './ServiceSidebar.tsx';
+import { useAuth } from '../../contexts/AuthContext';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface ServiceDetailsContainerProps {
@@ -31,6 +32,8 @@ const ServiceDetailsContainer: React.FC<ServiceDetailsContainerProps> = ({
   onOfferAdded,
   onOffersRefresh
 }) => {
+  const { user } = useAuth();
+  const alreadyApplied = user && user.roles.includes('provider') && offers.some(o => o.providerId === user._id);
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -54,6 +57,7 @@ const ServiceDetailsContainer: React.FC<ServiceDetailsContainerProps> = ({
             onShare={onShare}
             onBookmark={onBookmark}
             onReport={onReport}
+            alreadyApplied={alreadyApplied}
           />
         </div>
       </div>
