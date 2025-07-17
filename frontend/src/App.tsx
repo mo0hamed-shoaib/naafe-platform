@@ -22,6 +22,7 @@ import RequestServiceDetailsPage from './pages/RequestServiceDetailsPage';
 import ServiceResponseForm from './components/ServiceResponseForm';
 import AdminUpgradeRequests from './admin/pages/AdminUpgradeRequests';
 import HelpCenterPage from './pages/HelpCenterPage';
+import SettingsPage from './pages/SettingsPage';
 
 const App = () => {
   return (
@@ -46,6 +47,11 @@ const App = () => {
                 <Route path="/me" element={
                   <ProtectedRoute>
                     <ProfilePage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <SettingsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/post-service" element={

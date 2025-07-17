@@ -118,7 +118,11 @@ const userSchema = new Schema({
         default: false
     },
     blockedReason: String,
-    lastLoginAt: Date
+    lastLoginAt: Date,
+    settings: {
+        type: Schema.Types.Mixed,
+        default: {}
+    }
 }, {
     timestamps: true
 });
