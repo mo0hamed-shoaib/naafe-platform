@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Naafe' - How it Works</title>
+    <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+    <link as="style"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;family=Noto+Sans:wght@400;500;700;900"
+        onload="this.rel='stylesheet'" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <style type="text/tailwindcss">
+        :root {
+        --primary-color: #0c7ff2;
+        --secondary-color: #e7f2fe;
+        --text-primary: #1d2939;
+        --text-secondary: #475467;
+        --background-color: #ffffff;
+      }
+      .timeline::before {
+        content: '';
+        position: absolute;
+        left: 23px;
+        top: 48px;
+        bottom: 48px;
+        width: 2px;
+        background-color: #e2e8f0;
+        z-index: 0;
+      }
+    </style>
+</head>
+
+<body class="bg-[var(--background-color)]" style='font-family: "Plus Jakarta Sans", "Noto Sans", sans-serif;'>
+    <div class="relative flex size-full min-h-screen flex-col group/design-root overflow-x-hidden">
+        <div class="layout-container flex h-full grow flex-col">
+            <header
+                class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-gray-200 px-10 py-4">
+                <div class="flex items-center gap-3 text-2xl font-bold text-[var(--text-primary)]">
+                    <svg class="h-8 w-8 text-[var(--primary-color)]" fill="none" viewBox="0 0 48 48"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path clip-rule="evenodd" d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z"
+                            fill="currentColor" fill-rule="evenodd"></path>
+                    </svg>
+                    <h2 class="tracking-tight">Naafe'</h2>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button
+                        class="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-gray-100 text-[var(--text-secondary)] hover:bg-gray-200">
+                        <svg fill="currentColor" height="24px" viewBox="0 0 256 256" width="24px"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M140,180a12,12,0,1,1-12-12A12,12,0,0,1,140,180ZM128,72c-22.06,0-40,16.15-40,36v4a8,8,0,0,0,16,0v-4c0-11,10.77-20,24-20s24,9,24,20-10.77,20-24,20a8,8,0,0,0-8,8v8a8,8,0,0,0,16,0v-.72c18.24-3.35,32-17.9,32-35.28C168,88.15,150.06,72,128,72Zm104,56A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z">
+                            </path>
+                        </svg>
+                    </button>
+                    <div class="h-10 w-10 rounded-full bg-cover bg-center bg-no-repeat"
+                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD2a1YGVkOdv6MtZbpGd9lpwUpEtq-Tdirgk4NTedgvu4aSHKQMf_0QF-I8w9VjCwuEUZ8LYDijK9jV6W8JY8k6gY7v78Otno9RI8fpYDz31V00Od8oui2MagC4hvuBnD6MXROU4WCcISeKKCqm1zUvqezlHdZRr5mBjYpR9LdtRZrjDiA91zTWzIiOqmWeTDkPWOOo6h-Cy6-kcK3l3veq7n8PMniY6URwpv1uI6pnTJ5IW711mLbjGLkWHtmP6XEZDUzYiaHTjXro");'>
+                    </div>
+                </div>
+            </header>
+            <main class="flex flex-1 justify-center py-12 px-4 sm:px-6 lg:px-8">
+                <div class="w-full max-w-2xl">
+                    <div class="text-center">
+                        <h1 class="text-4xl font-extrabold tracking-tight text-[var(--text-primary)] sm:text-5xl">How
+                            jobs work</h1>
+                        <p class="mt-4 text-lg text-[var(--text-secondary)]">A quick visual summary of the process on
+                            Naafe'.</p>
+                    </div>
+                    <div class="mt-12">
+                        <div class="relative timeline">
+                            <div class="relative mb-12 flex items-start gap-6">
+                                <div
+                                    class="z-10 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[var(--secondary-color)] text-[var(--primary-color)]">
+                                    <svg fill="currentColor" height="28px" viewBox="0 0 256 256" width="28px"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path
+                                            d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Z">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-[var(--text-primary)]">1. Clients post a job</h3>
+                                    <p class="mt-1 text-base text-[var(--text-secondary)]">Clients describe the service
+                                        they need, and it becomes available for providers like you.</p>
+                                </div>
+                            </div>
+                            <div class="relative mb-12 flex items-start gap-6">
+                                <div
+                                    class="z-10 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[var(--secondary-color)] text-[var(--primary-color)]">
+                                    <svg fill="currentColor" height="28px" viewBox="0 0 256 256" width="28px"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path
+                                            d="M220.2,100l-18-31.18a28,28,0,0,0-47.3-1.92L139.56,40.31a28,28,0,0,0-48.12-.63,28,28,0,0,0-43,34.78l3.34,5.79a28,28,0,0,0-22,41.92l38,65.82a87.46,87.46,0,0,0,53.43,41,88.56,88.56,0,0,0,22.92,3A88,88,0,0,0,220.2,100Zm-6.67,62.63A72,72,0,0,1,81.63,180l-38-65.82a12,12,0,0,1,20.79-12l22,38.1a8,8,0,1,0,13.85-8l-38-65.81a12,12,0,0,1,13.5-17.59,11.9,11.9,0,0,1,7.29,5.59l34,58.89a8,8,0,0,0,13.85-8l-26-45h0a12,12,0,0,1,20.78-12L160,107.78a48.08,48.08,0,0,0-11,61,8,8,0,0,0,13.86-8,32,32,0,0,1,11.71-43.71,8,8,0,0,0,2.93-10.93l-10-17.32a12,12,0,0,1,20.78-12l18,31.18A71.49,71.49,0,0,1,213.53,162.62ZM184.27,29.93a8,8,0,0,1,9.8-5.66c15.91,4.27,29,14.11,36.86,27.73a8,8,0,0,1-13.86,8c-5.72-9.92-15.36-17.12-27.14-20.27A8,8,0,0,1,184.27,29.93ZM80.91,237a8,8,0,0,1-11.24,1.33c-11-8.69-20.11-19.58-28.6-34.28a8,8,0,0,1,13.86-8c7.44,12.88,15.27,22.32,24.65,29.72A8,8,0,0,1,80.91,237Z">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-[var(--text-primary)]">2. Respond with an offer
+                                    </h3>
+                                    <p class="mt-1 text-base text-[var(--text-secondary)]">You see the job request and
+                                        can choose to respond with a competitive offer for your services.</p>
+                                </div>
+                            </div>
+                            <div class="relative mb-12 flex items-start gap-6">
+                                <div
+                                    class="z-10 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[var(--secondary-color)] text-[var(--primary-color)]">
+                                    <svg fill="currentColor" height="28px" viewBox="0 0 256 256" width="28px"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path
+                                            d="M140,128a12,12,0,1,1-12-12A12,12,0,0,1,140,128ZM84,116a12,12,0,1,0,12,12A12,12,0,0,0,84,116Zm88,0a12,12,0,1,0,12,12A12,12,0,0,0,172,116Zm60,12A104,104,0,0,1,79.12,219.82L45.07,231.17a16,16,0,0,1-20.24-20.24l11.35-34.05A104,104,0,1,1,232,128Zm-16,0A88,88,0,1,0,51.81,172.06a8,8,0,0,1,.66,6.54L40,216,77.4,203.53a7.85,7.85,0,0,1,2.53-.42,8,8,0,0,1,4,1.08A88,88,0,0,0,216,128Z">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-[var(--text-primary)]">3. Chat and confirm</h3>
+                                    <p class="mt-1 text-base text-[var(--text-secondary)]">Once the client shows
+                                        interest, you can chat directly to finalize details and confirm the job.</p>
+                                </div>
+                            </div>
+                            <div class="relative flex items-start gap-6">
+                                <div
+                                    class="z-10 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[var(--secondary-color)] text-[var(--primary-color)]">
+                                    <svg fill="currentColor" height="28px" viewBox="0 0 256 256" width="28px"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path
+                                            d="M152,120H136V56h8a32,32,0,0,1,32,32,8,8,0,0,0,16,0,48.05,48.05,0,0,0-48-48h-8V24a8,8,0,0,0-16,0V40h-8a48,48,0,0,0,0,96h8v64H104a32,32,0,0,1-32-32,8,8,0,0,0-16,0,48.05,48.05,0,0,0,48,48h16v16a8,8,0,0,0,16,0V216h16a48,48,0,0,0,0-96Zm-40,0a32,32,0,0,1,0-64h8v64Zm40,80H136V136h16a32,32,0,0,1,0,64Z">
+                                        </path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-[var(--text-primary)]">4. Get paid</h3>
+                                    <p class="mt-1 text-base text-[var(--text-secondary)]">After you complete the job
+                                        and the client verifies it, you get paid securely through the platform.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-12 rounded-lg border border-gray-200 bg-gray-50 p-6">
+                        <div class="flex items-center">
+                            <svg class="text-green-500" fill="currentColor" height="24" viewBox="0 0 256 256" width="24"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z">
+                                </path>
+                            </svg>
+                            <p class="ml-3 text-base font-medium text-[var(--text-primary)]">Your phone number is never
+                                shared. Chat stays on Naafe'.</p>
+                        </div>
+                    </div>
+                    <div class="mt-12 flex justify-center">
+                        <button
+                            class="flex min-w-[120px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-8 bg-[var(--primary-color)] text-white text-lg font-bold leading-normal tracking-wide shadow-md hover:bg-blue-600 transition-colors duration-300">
+                            <span class="truncate">Got it</span>
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+</body>
+
+</html>

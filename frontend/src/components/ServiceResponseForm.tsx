@@ -8,6 +8,7 @@ import BaseCard from './ui/BaseCard';
 import Badge from './ui/Badge';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { FormInput, FormTextarea, FormSelect } from "./ui";
 
 interface FormData {
   price: string;
@@ -247,7 +248,7 @@ const ServiceResponseForm: React.FC = () => {
                     <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500">
                       جنيه
                     </span>
-                    <input
+                    <FormInput
                       id="price"
                       type="number"
                       placeholder="أدخل سعرك"
@@ -267,7 +268,7 @@ const ServiceResponseForm: React.FC = () => {
                   <label htmlFor="timeline" className="text-sm font-medium text-text-primary mb-2 block">
                     متى يمكنك البدء؟
                   </label>
-                  <select 
+                  <FormSelect
                     value={formData.timeline} 
                     onChange={(e) => setFormData(prev => ({ ...prev, timeline: e.target.value }))}
                     className="w-full h-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal bg-white text-text-primary"
@@ -280,7 +281,7 @@ const ServiceResponseForm: React.FC = () => {
                     <option value="this-week">هذا الأسبوع</option>
                     <option value="next-week">الأسبوع القادم</option>
                     <option value="flexible">مرن</option>
-                  </select>
+                  </FormSelect>
                 </div>
               </div>
               
@@ -288,7 +289,7 @@ const ServiceResponseForm: React.FC = () => {
                 <label htmlFor="duration" className="text-sm font-medium text-text-primary mb-2 block">
                   المدة المتوقعة (أيام)
                 </label>
-                <input
+                <FormInput
                   id="duration"
                   type="number"
                   placeholder="مثال: 2 يوم"
@@ -401,7 +402,7 @@ const ServiceResponseForm: React.FC = () => {
                   رسالة شخصية{' '}
                   <span className="text-text-secondary font-normal">(اختياري)</span>
                 </label>
-                <textarea
+                <FormTextarea
                   id="message"
                   placeholder="أخبرهم لماذا أنت الشخص المناسب لهذا العمل..."
                   value={formData.message}

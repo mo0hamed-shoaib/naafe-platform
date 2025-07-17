@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MessageCircle, X, Send, User } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { FormInput } from "../ui";
 
 interface Message {
   type: 'user' | 'assistant';
@@ -92,10 +93,9 @@ const HelpCenterChat: React.FC<HelpCenterChatProps> = ({ className }) => {
 
           <div className="p-4 border-t bg-white">
             <form onSubmit={handleSendMessage} className="relative">
-              <input
+              <FormInput
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="w-full rounded-full py-3 pr-4 pl-12 border-gray-300 focus:ring-2 focus:ring-bright-orange focus:border-transparent transition-all duration-300"
                 placeholder="اكتب رسالتك..."
                 type="text"
                 aria-label="رسالة الدردشة"

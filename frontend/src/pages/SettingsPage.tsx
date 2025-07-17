@@ -17,6 +17,7 @@ import {
   Smartphone,
   Megaphone
 } from 'lucide-react';
+import { FormInput, FormTextarea } from "../components/ui";
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SettingsNavigation from '../components/settings/SettingsNavigation';
@@ -188,24 +189,26 @@ const SettingsPage: React.FC = () => {
             <label className="block text-sm font-medium text-text-primary mb-2" htmlFor="fullName">
               الاسم الكامل
             </label>
-            <input
-              className="input input-bordered w-full bg-white focus:border-deep-teal focus:outline-none text-text-primary"
+            <FormInput
               id="fullName"
               type="text"
+              label="الاسم الكامل"
               placeholder="أدخل اسمك الكامل"
               defaultValue={`${user?.name?.first || ''} ${user?.name?.last || ''}`}
+              className="w-full"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-text-primary mb-2" htmlFor="email">
               البريد الإلكتروني
             </label>
-            <input
-              className="input input-bordered w-full bg-white focus:border-deep-teal focus:outline-none text-text-primary"
+            <FormInput
               id="email"
               type="email"
+              label="البريد الإلكتروني"
               placeholder="أدخل بريدك الإلكتروني"
               defaultValue={user?.email || ''}
+              className="w-full"
               disabled
             />
           </div>
@@ -213,24 +216,26 @@ const SettingsPage: React.FC = () => {
             <label className="block text-sm font-medium text-text-primary mb-2" htmlFor="phone">
               رقم الهاتف
             </label>
-            <input
-              className="input input-bordered w-full bg-white focus:border-deep-teal focus:outline-none text-text-primary"
+            <FormInput
               id="phone"
               type="tel"
+              label="رقم الهاتف"
               placeholder="أدخل رقم هاتفك"
               defaultValue={user?.phone || ''}
+              className="w-full"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-text-primary mb-2" htmlFor="bio">
               نبذة شخصية
             </label>
-            <textarea
-              className="textarea textarea-bordered w-full bg-white focus:border-deep-teal focus:outline-none text-text-primary"
+            <FormTextarea
               id="bio"
-              rows={3}
+              label="نبذة شخصية"
               placeholder="اكتب نبذة عن نفسك"
               defaultValue={user?.profile?.bio || ''}
+              className="w-full"
+              rows={3}
             />
           </div>
         </div>

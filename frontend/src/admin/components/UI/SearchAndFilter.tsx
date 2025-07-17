@@ -1,4 +1,4 @@
-import FormInput from '../../../components/ui/FormInput';
+import { FormInput, FormSelect } from "../../../components/ui";
 import { Search, Filter } from 'lucide-react';
 
 interface SearchAndFilterProps {
@@ -33,19 +33,12 @@ const SearchAndFilter = ({
       <div>
       <div className="relative">
           <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-soft-teal pointer-events-none" />
-        <select
+        <FormSelect
           value={filterValue}
-            onChange={e => onFilterChange(e.target.value)}
-            className="select select-bordered w-full bg-white pl-10 pr-8 py-3 rounded-full text-[#0e1b18] focus:border-[#2D5D4F] focus:ring-2 focus:ring-[#2D5D4F] shadow-sm"
-            title="تصفية حسب الفئة"
-            aria-label="تصفية حسب الفئة"
-        >
-            {filterOptions.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          onChange={e => onFilterChange(e.target.value)}
+          options={filterOptions}
+          className="select select-bordered w-full bg-white pl-10 pr-8 py-3 rounded-full text-[#0e118] focus:border-[#2D5focus:ring-2 focus:ring-[#2D5D4F] shadow-sm"
+        />
         </div>
       </div>
     </div>

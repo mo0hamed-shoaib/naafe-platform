@@ -1,6 +1,7 @@
 import React from 'react';
 import Button from '../components/ui/Button';
 import BaseCard from '../components/ui/BaseCard';
+import { FormInput, FormTextarea, FormSelect } from "../components/ui";
 
 const PostServicePage = () => {
   return (
@@ -18,10 +19,9 @@ const PostServicePage = () => {
               <label className="block text-sm font-semibold text-text-primary mb-2">
                 عنوان الخدمة
               </label>
-              <input
+              <FormInput
                 type="text"
                 placeholder="أدخل عنوان الخدمة"
-                className="input input-bordered w-full"
                 disabled
               />
             </div>
@@ -30,7 +30,7 @@ const PostServicePage = () => {
               <label className="block text-sm font-semibold text-text-primary mb-2">
                 وصف الخدمة
               </label>
-              <textarea
+              <FormTextarea
                 placeholder="أدخل وصف مفصل للخدمة"
                 className="textarea textarea-bordered w-full h-32"
                 disabled
@@ -42,16 +42,16 @@ const PostServicePage = () => {
                 <label className="block text-sm font-semibold text-text-primary mb-2">
                   الفئة
                 </label>
-                <select className="select select-bordered w-full" disabled aria-label="اختر الفئة">
+                <FormSelect className="select select-bordered w-full" disabled aria-label="اختر الفئة">
                   <option>اختر الفئة</option>
-                </select>
+                </FormSelect>
               </div>
               
               <div>
                 <label className="block text-sm font-semibold text-text-primary mb-2">
                   السعر
                 </label>
-                <input
+                <FormInput
                   type="number"
                   placeholder="السعر بالجنيه المصري"
                   className="input input-bordered w-full"

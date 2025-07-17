@@ -6,6 +6,7 @@ import UserDropdown from './ui/UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
 import Modal from '../admin/components/UI/Modal';
 import { useRef } from 'react';
+import { FormInput, FormTextarea } from './ui';
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -189,14 +190,15 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
             <div className="flex items-center gap-3">
               {/* Desktop Search */}
               <form onSubmit={handleSearchSubmit} className="relative hidden md:block">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary h-4 w-4 search-icon" />
-                <input
-                  className="pr-10 pl-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-deep-teal focus:border-deep-teal transition-colors bg-white text-text-primary min-w-[200px] search-input"
-                  placeholder="البحث عن الخدمات..."
+                <FormInput
                   type="text"
+                  placeholder="البحث عن الخدمات..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   aria-label="البحث عن الخدمات"
+                  variant="search"
+                  className="min-w-[200px] pr-10"
+                  icon={<Search className="h-4 w-4 text-text-secondary absolute right-3 top-1/2 -translate-y-1/2 search-icon" />}
                 />
               </form>
               
@@ -243,15 +245,16 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
           {showMobileSearch && (
             <div className="pb-4 md:hidden">
               <form onSubmit={handleSearchSubmit} className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary h-4 w-4 search-icon" />
-                <input
-                  className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-deep-teal focus:border-deep-teal transition-colors bg-white text-text-primary search-input"
-                  placeholder="البحث عن الخدمات..."
+                <FormInput
                   type="text"
+                  placeholder="البحث عن الخدمات..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  autoFocus
                   aria-label="البحث عن الخدمات"
+                  variant="search"
+                  autoFocus
+                  className="w-full pr-10"
+                  icon={<Search className="h-4 w-4 text-text-secondary absolute right-3 top-1/2 -translate-y-1/2 search-icon" />}
                 />
               </form>
             </div>
@@ -339,8 +342,7 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
         <form onSubmit={handleUpgradeSubmit} className="space-y-4" dir="rtl">
           <div>
             <label className="block mb-2 font-semibold">سبب الترقية أو نبذة عن خبرتك (اختياري)</label>
-            <textarea
-              className="w-full border border-gray-300 rounded-lg p-2"
+            <FormTextarea
               value={comment}
               onChange={e => setComment(e.target.value)}
               rows={3}

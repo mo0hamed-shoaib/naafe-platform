@@ -1,12 +1,13 @@
 
 import { Search, X } from 'lucide-react';
-import { cn, translateCategory, translateLocation } from '../../utils/helpers';
+import { cn, translateLocation } from '../../utils/helpers';
 import Button from './Button';
 import AvailabilityFilter from './AvailabilityFilter';
 import { FilterState } from '../../types';
 import { LOCATIONS } from '../../utils/constants';
 import { SearchTab } from './SearchTabs';
 import { useEffect, useState } from 'react';
+import { FormInput, FormSelect } from './';
 
 interface FilterFormProps {
   filters: FilterState;
@@ -51,7 +52,7 @@ const FilterForm = ({
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.data.categories)) {
-          setCategories(data.data.categories.map((cat: any) => cat.name));
+          setCategories(data.data.categories.map((cat: { name: string }) => cat.name));
         } else {
           setCategoriesError('فشل تحميل الفئات');
         }
@@ -84,10 +85,9 @@ const FilterForm = ({
             </label>
             <div className="relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary h-4 w-4 search-icon" />
-              <input
+              <FormInput
                 type="text"
                 placeholder={activeTab === 'services' ? "البحث عن الخدمات..." : "البحث عن طلبات الخدمات..."}
-                className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-teal/20 focus:border-deep-teal transition-colors bg-white text-text-primary search-input hover:border-deep-teal/60"
                 value={filters.search}
                 onChange={(e) => handleInputChange('search', e.target.value)}
               />
@@ -99,19 +99,15 @@ const FilterForm = ({
             <label className="block text-sm font-medium text-text-primary mb-3">
               الفئة
             </label>
-            <select
-              className="select select-bordered w-full bg-white border-gray-300 focus:border-deep-teal focus:ring-2 focus:ring-deep-teal/20 text-text-primary hover:border-deep-teal/60 transition-colors"
+            <FormSelect
               value={filters.category || ''}
               onChange={(e) => handleInputChange('category', e.target.value)}
-              aria-label="تصفية حسب الفئة"
-              title="تصفية حسب الفئة"
+              options={[
+                { value: '', label: 'جميع الفئات' },
+                ...categories.map((cat) => ({ value: cat, label: cat }))
+              ]}
               disabled={categoriesLoading}
-            >
-              <option value="">جميع الفئات</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+            />
             {categoriesError && <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">{categoriesError}</div>}
           </div>
 
@@ -120,20 +116,14 @@ const FilterForm = ({
             <label className="block text-sm font-medium text-text-primary mb-3">
               الموقع
             </label>
-            <select
-              className="select select-bordered w-full bg-white border-gray-300 focus:border-deep-teal focus:ring-2 focus:ring-deep-teal/20 text-text-primary hover:border-deep-teal/60 transition-colors"
+            <FormSelect
               value={filters.location}
               onChange={(e) => handleInputChange('location', e.target.value)}
-              aria-label="تصفية حسب الموقع"
-              title="تصفية حسب الموقع"
-            >
-              <option value="">جميع المواقع</option>
-              {LOCATIONS.map((location) => (
-                <option key={location} value={location}>
-                  {translateLocation(location)}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'جميع المواقع' },
+                ...LOCATIONS.map((location) => ({ value: location, label: translateLocation(location) }))
+              ]}
+            />
           </div>
 
           {/* Price Range Filter */}
@@ -141,18 +131,16 @@ const FilterForm = ({
             <label className="block text-sm font-medium text-text-primary mb-3">
               {activeTab === 'services' ? 'نطاق السعر' : 'نطاق الميزانية'}
             </label>
-            <select
-              className="select select-bordered w-full bg-white border-gray-300 focus:border-deep-teal focus:ring-2 focus:ring-deep-teal/20 text-text-primary hover:border-deep-teal/60 transition-colors"
+            <FormSelect
               value={filters.priceRange}
               onChange={(e) => handleInputChange('priceRange', e.target.value)}
-              aria-label="تصفية حسب نطاق السعر"
-              title="تصفية حسب نطاق السعر"
-            >
-              <option value="">أي سعر</option>
-              <option value="0-50">0 - 200 جنيه</option>
-              <option value="50-100">200 - 400 جنيه</option>
-              <option value="100+">400+ جنيه</option>
-            </select>
+              options={[
+                { value: '', label: 'أي سعر' },
+                { value: '0-50', label: '0 - 200 جنيه' },
+                { value: '50-100', label: '200 - 400 جنيه' },
+                { value: '100+', label: '400+ جنيه' }
+              ]}
+            />
           </div>
 
           {/* Rating Filter - Only for Services */}
@@ -161,18 +149,16 @@ const FilterForm = ({
               <label className="block text-sm font-medium text-text-primary mb-3">
                 الحد الأدنى للتقييم
               </label>
-              <select
-                className="select select-bordered w-full bg-white border-gray-300 focus:border-deep-teal focus:ring-2 focus:ring-deep-teal/20 text-text-primary hover:border-deep-teal/60 transition-colors"
+              <FormSelect
                 value={filters.rating}
                 onChange={(e) => handleInputChange('rating', e.target.value)}
-                aria-label="تصفية حسب الحد الأدنى للتقييم"
-                title="تصفية حسب الحد الأدنى للتقييم"
-              >
-                <option value="">أي تقييم</option>
-                <option value="4+">4+ نجوم</option>
-                <option value="3+">3+ نجوم</option>
-                <option value="any">أي تقييم</option>
-              </select>
+                options={[
+                  { value: '', label: 'أي تقييم' },
+                  { value: '4+', label: '4+ نجوم' },
+                  { value: '3+', label: '3+ نجوم' },
+                  { value: 'any', label: 'أي تقييم' }
+                ]}
+              />
             </div>
           )}
 
@@ -218,10 +204,9 @@ const FilterForm = ({
             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
               <Search className="h-5 w-5 text-text-secondary search-icon" />
             </div>
-            <input
+            <FormInput
               type="text"
               placeholder={activeTab === 'services' ? "البحث عن الخدمات..." : "البحث عن طلبات الخدمات..."}
-              className="input input-bordered w-full pr-10 bg-light-cream focus:border-deep-teal focus:ring-2 focus:ring-deep-teal/20 rounded-full text-text-primary placeholder:text-text-secondary search-input hover:border-deep-teal/60 transition-colors"
               value={filters.search}
               onChange={(e) => handleInputChange('search', e.target.value)}
               onKeyDown={(e) => {
@@ -236,47 +221,37 @@ const FilterForm = ({
             />
           </div>
           
-          <select
-            className="select select-bordered bg-light-cream focus:border-deep-teal focus:ring-2 focus:ring-deep-teal/20 rounded-full text-text-primary hover:border-deep-teal/60 transition-colors"
+          <FormSelect
             value={filters.location}
             onChange={(e) => handleInputChange('location', e.target.value)}
-            aria-label="تصفية حسب الموقع"
-            title="تصفية حسب الموقع"
-          >
-            <option value="">جميع المواقع</option>
-            {LOCATIONS.map((location) => (
-              <option key={location} value={location}>
-                {translateLocation(location)}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: '', label: 'جميع المواقع' },
+              ...LOCATIONS.map((location) => ({ value: location, label: translateLocation(location) }))
+            ]}
+          />
           
-          <select
-            className="select select-bordered bg-light-cream focus:border-deep-teal focus:ring-2 focus:ring-deep-teal/20 rounded-full text-text-primary hover:border-deep-teal/60 transition-colors"
+          <FormSelect
             value={filters.priceRange}
             onChange={(e) => handleInputChange('priceRange', e.target.value)}
-            aria-label="تصفية حسب نطاق السعر"
-            title="تصفية حسب نطاق السعر"
-          >
-            <option value="">نطاق السعر</option>
-            <option value="0-50">$0 - $50</option>
-            <option value="50-100">$50 - $100</option>
-            <option value="100+">$100+</option>
-          </select>
+            options={[
+              { value: '', label: 'نطاق السعر' },
+              { value: '0-50', label: '$0 - $50' },
+              { value: '50-100', label: '$50 - $100' },
+              { value: '100+', label: '$100+' }
+            ]}
+          />
           
           <div className="flex items-center justify-between gap-2">
-            <select
-              className="select select-bordered bg-light-cream focus:border-deep-teal focus:ring-2 focus:ring-deep-teal/20 rounded-full flex-1 text-text-primary hover:border-deep-teal/60 transition-colors"
+            <FormSelect
               value={filters.rating}
               onChange={(e) => handleInputChange('rating', e.target.value)}
-              aria-label="تصفية حسب التقييم"
-              title="تصفية حسب التقييم"
-            >
-              <option value="">التقييم</option>
-              <option value="4+">4+ نجوم</option>
-              <option value="3+">3+ نجوم</option>
-              <option value="any">أي تقييم</option>
-            </select>
+              options={[
+                { value: '', label: 'التقييم' },
+                { value: '4+', label: '4+ نجوم' },
+                { value: '3+', label: '3+ نجوم' },
+                { value: 'any', label: 'أي تقييم' }
+              ]}
+            />
             <Button
               type="button"
               variant="ghost"

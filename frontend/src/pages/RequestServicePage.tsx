@@ -1,6 +1,7 @@
 import React from 'react';
 import Button from '../components/ui/Button';
 import BaseCard from '../components/ui/BaseCard';
+import { FormInput, FormTextarea, FormSelect } from "../components/ui";
 
 const RequestServicePage = () => {
   return (
@@ -18,10 +19,9 @@ const RequestServicePage = () => {
               <label className="block text-sm font-semibold text-text-primary mb-2">
                 عنوان الطلب
               </label>
-              <input
+              <FormInput
                 type="text"
                 placeholder="أدخل عنوان الطلب"
-                className="input input-bordered w-full"
                 disabled
               />
             </div>
@@ -30,7 +30,7 @@ const RequestServicePage = () => {
               <label className="block text-sm font-semibold text-text-primary mb-2">
                 وصف الطلب
               </label>
-              <textarea
+              <FormTextarea
                 placeholder="أدخل وصف مفصل للخدمة المطلوبة"
                 className="textarea textarea-bordered w-full h-32"
                 disabled
@@ -42,16 +42,16 @@ const RequestServicePage = () => {
                 <label className="block text-sm font-semibold text-text-primary mb-2">
                   الفئة
                 </label>
-                <select className="select select-bordered w-full" disabled aria-label="اختر الفئة">
+                <FormSelect className="select select-bordered w-full" disabled aria-label="اختر الفئة">
                   <option>اختر الفئة</option>
-                </select>
+                </FormSelect>
               </div>
               
               <div>
                 <label className="block text-sm font-semibold text-text-primary mb-2">
                   الميزانية الدنيا
                 </label>
-                <input
+                <FormInput
                   type="number"
                   placeholder="الحد الأدنى"
                   className="input input-bordered w-full"
@@ -63,7 +63,7 @@ const RequestServicePage = () => {
                 <label className="block text-sm font-semibold text-text-primary mb-2">
                   الميزانية القصوى
                 </label>
-                <input
+                <FormInput
                   type="number"
                   placeholder="الحد الأقصى"
                   className="input input-bordered w-full"
@@ -76,7 +76,7 @@ const RequestServicePage = () => {
               <label className="block text-sm font-semibold text-text-primary mb-2">
                 الموقع
               </label>
-              <input
+              <FormInput
                 type="text"
                 placeholder="أدخل العنوان أو المنطقة"
                 className="input input-bordered w-full"

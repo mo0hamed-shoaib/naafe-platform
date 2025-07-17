@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import BaseCard from '../components/ui/BaseCard';
 import { User } from '../types';
+import { FormInput } from '../components/ui';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ const LoginPage = () => {
                 البريد الإلكتروني
               </label>
               <div className="relative">
-                <input
+                <FormInput
                   type="email"
                   id="email"
                   name="email"
@@ -72,7 +73,7 @@ const LoginPage = () => {
                 كلمة المرور
               </label>
               <div className="relative">
-                <input
+                <FormInput
                   type={showPassword ? 'text' : 'password'}
                   id="password"
                   name="password"

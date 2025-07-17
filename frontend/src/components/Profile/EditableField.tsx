@@ -1,5 +1,6 @@
 import React from 'react';
 import { Edit2, Save, X } from 'lucide-react';
+import { FormInput, FormTextarea } from "../ui";
 
 interface EditableFieldProps {
   label: string;
@@ -57,7 +58,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
       {isEditing ? (
         <div className="flex gap-2">
           {type === 'textarea' ? (
-            <textarea
+            <FormTextarea
               className="textarea textarea-bordered flex-1 font-jakarta"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
@@ -65,7 +66,7 @@ const EditableField: React.FC<EditableFieldProps> = ({
               dir={rtl ? 'rtl' : 'ltr'}
             />
           ) : (
-            <input
+            <FormInput
               type={type}
               className="input input-bordered flex-1 font-jakarta"
               value={editValue}

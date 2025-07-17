@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { BadgeCheck, XCircle, Clock } from 'lucide-react';
+import { BadgeCheck, XCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import Breadcrumb from '../components/UI/Breadcrumb';
 import Modal from '../components/UI/Modal';
+import { FormInput, FormTextarea } from '../../components/ui';
 
 const STATUS_LABELS = {
   pending: 'قيد الانتظار',
@@ -15,14 +16,27 @@ const STATUS_COLORS = {
   rejected: 'badge-error',
 };
 
+interface UpgradeRequest {
+  _id: string;
+  user: {
+    name: { first: string; last: string };
+    phone: string;
+    email: string;
+    profile?: { location?: { address: string } };
+  };
+  status: 'pending' | 'accepted' | 'rejected';
+  attachments?: string[];
+  rejectionComment?: string;
+}
+
 const AdminUpgradeRequests: React.FC = () => {
   const { accessToken } = useAuth();
-  const [requests, setRequests] = useState([]);
+  const [requests, setRequests] = useState<UpgradeRequest[]>([]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [selectedRequest, setSelectedRequest] = useState<UpgradeRequest | null>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionComment, setRejectionComment] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -42,7 +56,7 @@ const AdminUpgradeRequests: React.FC = () => {
         const data = await res.json();
         if (!data.success) throw new Error(data.error?.message || 'فشل التحميل');
         setRequests(data.data.requests);
-      } catch (err) {
+      } catch {
         setError('فشل تحميل طلبات الترقية');
       }
       setLoading(false);
@@ -101,15 +115,16 @@ const AdminUpgradeRequests: React.FC = () => {
             className="select select-bordered select-sm rounded-lg"
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
+            title="تصفية حسب الحالة"
+            aria-label="تصفية حسب الحالة"
           >
             <option value="all">الكل</option>
             <option value="pending">قيد الانتظار</option>
             <option value="accepted">مقبول</option>
             <option value="rejected">مرفوض</option>
           </select>
-          <input
+          <FormInput
             type="text"
-            className="input input-bordered input-sm rounded-lg"
             placeholder="بحث بالاسم أو البريد أو الهاتف"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -187,8 +202,7 @@ const AdminUpgradeRequests: React.FC = () => {
       {/* Reject Modal */}
       <Modal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} title="سبب الرفض">
         <div className="space-y-4">
-          <textarea
-            className="textarea textarea-bordered w-full"
+          <FormTextarea
             rows={3}
             placeholder="يرجى كتابة سبب الرفض"
             value={rejectionComment}

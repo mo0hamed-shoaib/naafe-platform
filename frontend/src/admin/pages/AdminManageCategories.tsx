@@ -5,12 +5,9 @@ import Modal from '../components/UI/Modal';
 import Pagination from '../components/UI/Pagination';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { TableSkeleton } from '../components/UI/LoadingSkeleton';
 import Breadcrumb from '../components/UI/Breadcrumb';
-import FormInput from '../components/UI/FormInput';
-import FormTextarea from '../components/UI/FormTextarea';
+import { FormInput, FormTextarea } from '../../components/ui';
 import ConfirmationModal from '../components/UI/ConfirmationModal';
-import { useEffect } from 'react';
 
 const CATEGORIES_API = '/api/categories';
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || import.meta.env.IMGBB_API_KEY || '1de1430d74f7eb8b6823ec33be19e651';
@@ -356,6 +353,8 @@ const AdminManageCategories: React.FC = () => {
               onChange={handleIconFileChange}
               disabled={iconUploadLoading}
               className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-bright-orange file:text-white hover:file:bg-orange-600"
+              title="اختر أيقونة الفئة"
+              aria-label="أيقونة الفئة"
             />
             {iconUploadLoading && <div className="text-xs text-deep-teal mt-1">جاري رفع الصورة...</div>}
             {iconUploadError && <div className="text-xs text-red-600 mt-1">{iconUploadError}</div>}

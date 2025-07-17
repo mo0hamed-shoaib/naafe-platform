@@ -3,6 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import BaseCard from '../components/ui/BaseCard';
+import { FormInput } from "../components/ui";
+import ProfileBuilder from '../components/onboarding/ProfileBuilder';
+import OnboardingSlider from '../components/onboarding/OnboardingSlider';
 
 const initialForm = {
   firstName: '',
@@ -13,10 +16,12 @@ const initialForm = {
   confirmPassword: '',
 };
 
+type OnboardingStep = 'register' | 'profile' | 'onboarding' | 'complete';
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { register, loading, error } = useAuth();
   const [formData, setFormData] = useState(initialForm);
+  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('register');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -38,13 +43,54 @@ const RegisterPage = () => {
       password: formData.password,
       name: { first: formData.firstName, last: formData.lastName },
       phone: formData.phoneNumber,
-      role: 'seeker' as const, // Always set as seeker
+      role: 'seeker' as const,
+      roles: ['seeker' as const],
     };
     const success = await register(payload);
     if (success) {
-      navigate('/', { replace: true });
+      setOnboardingStep('profile');
     }
   };
+
+  const handleProfileComplete = () => {
+    setOnboardingStep('onboarding');
+  };
+
+  const handleProfileSkip = () => {
+    setOnboardingStep('onboarding');
+  };
+
+  const handleOnboardingComplete = () => {
+    setOnboardingStep('complete');
+    navigate('/', { replace: true });
+  };
+
+  // Show onboarding components after successful registration
+  if (onboardingStep === 'profile') {
+    return (
+      <div className="min-h-screen bg-[#F5E6D3] flex items-center justify-center p-4 font-cairo" dir="rtl">
+        <ProfileBuilder
+          initialValues={{
+            government: '',
+            city: '',
+            street: '',
+            apartmentNumber: '',
+            additionalInformation: ''
+          }}
+          onComplete={handleProfileComplete}
+          onSkip={handleProfileSkip}
+        />
+      </div>
+    );
+  }
+
+  if (onboardingStep === 'onboarding') {
+    return (
+      <div className="min-h-screen bg-[#F5E6D3] flex items-center justify-center p-4 font-cairo" dir="rtl">
+        <OnboardingSlider onComplete={handleOnboardingComplete} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F5E6D3] flex items-center justify-center p-4 font-cairo" dir="rtl">
@@ -58,7 +104,7 @@ const RegisterPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="firstName">الاسم الأول</label>
-                <input
+                <FormInput
                   type="text"
                   id="firstName"
                   name="firstName"
@@ -71,7 +117,7 @@ const RegisterPage = () => {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="lastName">اسم العائلة</label>
-                <input
+                <FormInput
                   type="text"
                   id="lastName"
                   name="lastName"
@@ -86,7 +132,7 @@ const RegisterPage = () => {
             <div>
               <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="email">البريد الإلكتروني</label>
               <div className="relative">
-                <input
+                <FormInput
                   type="email"
                   id="email"
                   name="email"
@@ -104,7 +150,7 @@ const RegisterPage = () => {
             <div>
               <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="phoneNumber">رقم الهاتف</label>
               <div className="relative">
-                <input
+                <FormInput
                   type="tel"
                   id="phoneNumber"
                   name="phoneNumber"
@@ -122,7 +168,7 @@ const RegisterPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="password">كلمة المرور</label>
-                <input
+                <FormInput
                   type="password"
                   id="password"
                   name="password"
@@ -135,7 +181,7 @@ const RegisterPage = () => {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="confirmPassword">تأكيد كلمة المرور</label>
-                <input
+                <FormInput
                   type="password"
                   id="confirmPassword"
                   name="confirmPassword"

@@ -5,6 +5,7 @@ import Button from './ui/Button';
 import BaseCard from './ui/BaseCard';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { FormInput, FormTextarea, FormSelect } from './ui';
 
 interface PostServiceFormData {
   serviceTitle: string;
@@ -128,73 +129,64 @@ const PostServiceForm: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="serviceTitle">عنوان الخدمة</label>
-                  <input
+                  <FormInput
                     type="text"
                     id="serviceTitle"
                     name="serviceTitle"
                     value={formData.serviceTitle}
                     onChange={handleChange}
                     placeholder="عنوان الخدمة"
-                    className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="category">الفئة</label>
-                  <select
+                  <FormSelect
                     id="category"
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                    className="w-full bg-gray-50 border-2 border-gray-300 px-4 py-3 rounded-xl text-[#0e1b18] text-right focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
+                    options={categories.map(cat => ({ value: cat, label: cat }))}
                     required
                     disabled={categoriesLoading}
-                  >
-                    <option value="">اختر الفئة</option>
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                  />
                   {categoriesError && <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">{categoriesError}</div>}
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="serviceDescription">وصف الخدمة</label>
-                <textarea
+                <FormTextarea
                   id="serviceDescription"
                   name="serviceDescription"
                   value={formData.serviceDescription}
                   onChange={handleChange}
                   placeholder="وصف مفصل للخدمة..."
-                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 min-h-[120px] focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200 resize-none"
                   required
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="minBudget">الحد الأدنى للميزانية (جنيه)</label>
-                  <input
+                  <FormInput
                     type="number"
                     id="minBudget"
                     name="minBudget"
                     value={formData.minBudget}
                     onChange={handleChange}
                     placeholder="مثال: 500"
-                    className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                     min="0"
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="maxBudget">الحد الأقصى للميزانية (جنيه)</label>
-                  <input
+                  <FormInput
                     type="number"
                     id="maxBudget"
                     name="maxBudget"
                     value={formData.maxBudget}
                     onChange={handleChange}
                     placeholder="مثال: 1500"
-                    className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                     min="0"
                     required
                   />
@@ -203,27 +195,25 @@ const PostServiceForm: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="government">المحافظة</label>
-                  <input
+                  <FormInput
                     type="text"
                     id="government"
                     name="government"
                     value={formData.government}
                     onChange={handleChange}
                     placeholder="مثال: القاهرة، الجيزة، الإسكندرية"
-                    className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="city">المدينة</label>
-                  <input
+                  <FormInput
                     type="text"
                     id="city"
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
                     placeholder="مثال: مدينة نصر، المعادي، الزمالك"
-                    className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                     required
                   />
                 </div>
@@ -231,77 +221,71 @@ const PostServiceForm: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="street">الشارع</label>
-                  <input
+                  <FormInput
                     type="text"
                     id="street"
                     name="street"
                     value={formData.street}
                     onChange={handleChange}
                     placeholder="مثال: شارع التحرير، شارع محمد فريد"
-                    className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="apartmentNumber">رقم الشقة</label>
-                  <input
+                  <FormInput
                     type="text"
                     id="apartmentNumber"
                     name="apartmentNumber"
                     value={formData.apartmentNumber}
                     onChange={handleChange}
                     placeholder="مثال: شقة 12، الدور 3"
-                    className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="additionalInformation">معلومات إضافية</label>
-                <textarea
+                <FormTextarea
                   id="additionalInformation"
                   name="additionalInformation"
                   value={formData.additionalInformation}
                   onChange={handleChange}
                   placeholder="أي تفاصيل إضافية..."
-                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 min-h-[80px] focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200 resize-none"
                 />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="preferredDateTime">التاريخ والوقت المفضل</label>
-                <input
+                <FormInput
                   type="datetime-local"
                   id="preferredDateTime"
                   name="preferredDateTime"
                   value={formData.preferredDateTime}
                   onChange={handleChange}
-                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="deliveryTimeDays">مدة التسليم (أيام)</label>
-                  <input
+                  <FormInput
                     type="number"
                     id="deliveryTimeDays"
                     name="deliveryTimeDays"
                     value={formData.deliveryTimeDays}
                     onChange={handleChange}
                     placeholder="مثال: 3"
-                    className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                     min="1"
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="tags">الكلمات المفتاحية (افصل بينها بفاصلة)</label>
-                  <input
+                  <FormInput
                     type="text"
                     id="tags"
                     name="tags"
                     value={formData.tags}
                     onChange={handleChange}
                     placeholder="مثال: تنظيف, سباكة, كهرباء"
-                    className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
                   />
                 </div>
               </div>
