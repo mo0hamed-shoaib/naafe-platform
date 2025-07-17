@@ -5,10 +5,11 @@ import Pagination from '../components/UI/Pagination';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { TableSkeleton } from '../components/UI/LoadingSkeleton';
 import Breadcrumb from '../components/UI/Breadcrumb';
 import SortableTable, { SortDirection } from '../components/UI/SortableTable';
 import ConfirmationModal from '../components/UI/ConfirmationModal';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
 
 // Define types for API response
 interface User extends Record<string, unknown> {
@@ -40,7 +41,7 @@ function mapUser(raw: unknown): User {
     address: obj.profile && typeof obj.profile === 'object' && (obj.profile as Record<string, unknown>).location && typeof (obj.profile as Record<string, unknown>).location === 'object' ? String(((obj.profile as Record<string, unknown>).location as Record<string, unknown>).address || '') : '',
     isVerified: typeof obj.isVerified === 'boolean' ? obj.isVerified : false,
     isBlocked: Boolean(obj.isBlocked),
-    createdAt: obj.createdAt,
+    createdAt: String(obj.createdAt),
   };
 }
 
@@ -82,6 +83,12 @@ const blockUser = async (userId: string, block: boolean, token: string | null) =
   });
   if (!res.ok) throw new Error('فشل تحديث حالة المستخدم');
   return res.json();
+};
+
+const USER_STATUS_VARIANT_MAP: Record<string, 'status' | 'category' | 'premium' | 'top-rated' | 'urgency'> = {
+  blocked: 'urgency',
+  verified: 'category',
+  unverified: 'status',
 };
 
 const AdminManageUsers: React.FC = () => {
@@ -148,27 +155,22 @@ const AdminManageUsers: React.FC = () => {
   const getUserStatus = (user: User) => {
     if (user.isBlocked) {
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500 px-3 py-1 text-xs font-medium text-white">
-          <Shield className="h-3 w-3" />
+        <Badge variant={USER_STATUS_VARIANT_MAP['blocked']} size="sm" icon={Shield}>
           محظور
-        </span>
+        </Badge>
       );
     }
-    
     if (user.isVerified) {
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500 px-3 py-1 text-xs font-medium text-white">
-          <UserCheck className="h-3 w-3" />
+        <Badge variant={USER_STATUS_VARIANT_MAP['verified']} size="sm" icon={UserCheck}>
           موثق
-        </span>
+        </Badge>
       );
     }
-    
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-yellow-500 px-3 py-1 text-xs font-medium text-white">
-        <User className="h-3 w-3" />
+      <Badge variant={USER_STATUS_VARIANT_MAP['unverified']} size="sm" icon={User}>
         غير موثق
-      </span>
+      </Badge>
     );
   };
 
@@ -224,17 +226,15 @@ const AdminManageUsers: React.FC = () => {
       label: 'الإجراء',
       sortable: false,
       render: (value: unknown, user: User) => (
-        <button
+        <Button
+          variant={user.isBlocked ? 'danger' : 'secondary'}
+          size="md"
+          leftIcon={user.isBlocked ? <UserCheck className="h-4 w-4 mr-1" /> : <Shield className="h-4 w-4 mr-1" />}
           onClick={() => handleToggleUserBlock(user)}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            user.isBlocked
-              ? 'bg-green-500 hover:bg-green-600 text-white'
-              : 'bg-red-500 hover:bg-red-600 text-white'
-          }`}
-          disabled={blockMutation.isPending}
+          loading={blockMutation.isPending && selectedUser?.id === user.id}
         >
-          {blockMutation.isPending ? 'جاري...' : (user.isBlocked ? 'إلغاء الحظر' : 'حظر')}
-        </button>
+          {user.isBlocked ? 'إلغاء الحظر' : 'حظر المستخدم'}
+        </Button>
       )
     }
   ];

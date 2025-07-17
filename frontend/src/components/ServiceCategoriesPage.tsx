@@ -88,12 +88,7 @@ const ServiceCategoriesPage = () => {
             categories.map((category) => (
               <CategoryCard
                 key={category._id || category.id || category.name}
-                category={{
-                  ...category,
-                  serviceCount: category.serviceCount || 0,
-                  startingPrice: category.startingPrice || 0,
-                  icon: category.icon || (() => <span />),
-                }}
+                category={category}
                 onClick={handleCategoryClick}
               />
             ))

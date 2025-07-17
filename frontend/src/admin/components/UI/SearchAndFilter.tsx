@@ -1,5 +1,6 @@
-import { FormInput, FormSelect } from "../../../components/ui";
-import { Search, Filter } from 'lucide-react';
+import { FormInput } from "../../../components/ui";
+import UnifiedSelect from "../../../components/ui/UnifiedSelect";
+import { Search } from 'lucide-react';
 
 interface SearchAndFilterProps {
   searchTerm: string;
@@ -30,16 +31,16 @@ const SearchAndFilter = ({
           className="bg-white"
         />
       </div>
-      <div>
-      <div className="relative">
-          <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-soft-teal pointer-events-none" />
-        <FormSelect
+      <div className="flex-1 min-w-[180px] max-w-sm w-full">
+        <label className="block text-sm font-semibold text-text-primary mb-2">تصفية حسب الحالة</label>
+        <UnifiedSelect
           value={filterValue}
-          onChange={e => onFilterChange(e.target.value)}
+          onChange={onFilterChange}
           options={filterOptions}
-          className="select select-bordered w-full bg-white pl-10 pr-8 py-3 rounded-full text-[#0e118] focus:border-[#2D5focus:ring-2 focus:ring-[#2D5D4F] shadow-sm"
+          placeholder="تصفية حسب الحالة"
+          label={undefined}
+          className="w-full"
         />
-        </div>
       </div>
     </div>
   );

@@ -5,7 +5,8 @@ import Button from './ui/Button';
 import BaseCard from './ui/BaseCard';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FormInput, FormTextarea, FormSelect } from './ui';
+import { FormInput, FormTextarea } from './ui';
+import UnifiedSelect from './ui/UnifiedSelect';
 
 interface RequestServiceFormData {
   requestTitle: string;
@@ -141,14 +142,14 @@ const RequestServiceForm: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="category">الفئة</label>
-                  <FormSelect
-                    id="category"
-                    name="category"
+                  <UnifiedSelect
                     value={formData.category}
-                    onChange={handleChange}
-                    options={categories.map(cat => ({ value: cat, label: cat }))}
+                    onChange={val => setFormData(prev => ({ ...prev, category: val }))}
+                    options={categories.map((cat: string) => ({ value: cat, label: cat }))}
+                    placeholder="اختر الفئة"
                     required
                     disabled={categoriesLoading}
+                    className="w-full"
                   />
                   {categoriesError && <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">{categoriesError}</div>}
                 </div>

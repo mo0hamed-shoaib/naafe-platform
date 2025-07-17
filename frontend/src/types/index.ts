@@ -5,6 +5,10 @@ export interface ServiceCategory {
   startingPrice: number;
   icon: React.ComponentType<{ className?: string }>;
   dateAdded?: string; // ISO date string for sorting by recently added
+  numServices?: number;
+  avgServicePrice?: number;
+  numRequests?: number;
+  avgRequestPrice?: number;
 }
 
 export interface ServiceProvider {

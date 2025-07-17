@@ -17,6 +17,7 @@ interface FormSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElem
   size?: 'sm' | 'md' | 'lg';
   required?: boolean;
   containerClassName?: string;
+  placeholder?: string;
 }
 
 const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
@@ -34,6 +35,7 @@ const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
       className = '',
       disabled = false,
       id,
+      placeholder,
       ...props
     },
     ref
@@ -97,7 +99,7 @@ const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
             disabled={disabled}
             {...props}
           >
-            <option value="">اختر...</option>
+            <option value="">{placeholder || 'اختر...'}</option>
             {options.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}

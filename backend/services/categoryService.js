@@ -1,4 +1,6 @@
 import Category from '../models/Category.js';
+import ServiceListing from '../models/ServiceListing.js';
+import JobRequest from '../models/JobRequest.js';
 
 class CategoryService {
   /**
@@ -154,6 +156,41 @@ class CategoryService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async getAllCategoriesWithStats(options = {}) {
+    const { includeInactive = false } = options;
+    let query = {};
+    if (!includeInactive) query.isActive = true;
+
+    const categories = await Category.find(query).sort({ name: 1 });
+
+    // Aggregate stats for each category
+    const stats = await Promise.all(categories.map(async (cat) => {
+      // Services
+      const services = await ServiceListing.find({ category: cat.name });
+      const numServices = services.length;
+      const avgServicePrice = numServices
+        ? services.reduce((sum, s) => sum + ((s.budget.min + s.budget.max) / 2), 0) / numServices
+        : 0;
+
+      // Requests
+      const requests = await JobRequest.find({ category: cat.name });
+      const numRequests = requests.length;
+      const avgRequestPrice = numRequests
+        ? requests.reduce((sum, r) => sum + ((r.budget.min + r.budget.max) / 2), 0) / numRequests
+        : 0;
+
+      return {
+        ...cat.toObject(),
+        numServices,
+        avgServicePrice,
+        numRequests,
+        avgRequestPrice,
+      };
+    }));
+
+    return stats;
   }
 
 

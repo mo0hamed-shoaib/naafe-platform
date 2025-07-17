@@ -13,7 +13,7 @@ class CategoryController {
         includeInactive: includeInactive === 'true'
       };
 
-      const categories = await categoryService.getAllCategories(options);
+      const categories = await categoryService.getAllCategoriesWithStats(options);
 
       res.status(200).json({
         success: true,

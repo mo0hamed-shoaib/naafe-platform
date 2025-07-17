@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FormInput, FormTextarea } from '../ui';
 import { useAuth } from '../../contexts/AuthContext';
 
-const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || import.meta.env.IMGBB_API_KEY || '1de1430d74f7eb8b6823ec33be19e651';
+const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
 
 interface ProfileBuilderProps {
   initialValues?: Partial<ProfileFormData>;

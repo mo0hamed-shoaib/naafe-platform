@@ -16,14 +16,19 @@ router.post('/upgrade-requests/:id/accept', authenticateToken, requireRole(['adm
 router.post('/upgrade-requests/:id/reject', authenticateToken, requireRole(['admin']), AdminController.rejectUpgradeRequest);
 
 // User submits an upgrade request (with attachments)
-router.post('/upgrade-requests', authenticateToken, requireRole(['admin', 'seeker']), upload.uploadUpgradeAttachments, async (req, res) => {
+router.post('/upgrade-requests', authenticateToken, requireRole(['admin', 'seeker']), async (req, res) => {
   try {
     const { user } = req;
-    const files = req.files || [];
-    if (!files.length) {
-      return res.status(400).json({ success: false, error: { message: 'يجب رفع ملف واحد على الأقل' } });
+    const { attachments, comment } = req.body;
+    if (!attachments || !Array.isArray(attachments) || attachments.length === 0) {
+      return res.status(400).json({ success: false, error: { message: 'يجب رفع صورة واحدة على الأقل' } });
     }
-    const attachments = files.map(f => `/uploads/${f.filename}`);
+    // Validate all are image URLs
+    for (const url of attachments) {
+      if (typeof url !== 'string' || !url.match(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i)) {
+        return res.status(400).json({ success: false, error: { message: 'جميع المرفقات يجب أن تكون روابط صور صالحة' } });
+      }
+    }
     const UpgradeRequest = (await import('../models/UpgradeRequest.js')).default;
     // Check for existing pending request
     const existing = await UpgradeRequest.findOne({ userId: user._id, status: 'pending' });
@@ -39,6 +44,7 @@ router.post('/upgrade-requests', authenticateToken, requireRole(['admin', 'seeke
       userId: user._id,
       attachments,
       status: 'pending',
+      comment: comment || '',
     });
     res.json({ success: true, data: { request: newRequest } });
   } catch (error) {

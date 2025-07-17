@@ -8,9 +8,12 @@ import { useToast } from '../contexts/ToastContext';
 import Breadcrumb from '../components/UI/Breadcrumb';
 import { FormInput, FormTextarea } from '../../components/ui';
 import ConfirmationModal from '../components/UI/ConfirmationModal';
+import Button from '../../components/ui/Button';
+import SearchAndFilter from '../components/UI/SearchAndFilter';
+import SortableTable, { SortDirection } from '../components/UI/SortableTable';
 
 const CATEGORIES_API = '/api/categories';
-const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY || import.meta.env.IMGBB_API_KEY || '1de1430d74f7eb8b6823ec33be19e651';
+const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
 
 interface Category {
   id: string;
@@ -113,6 +116,9 @@ const AdminManageCategories: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [iconUploadLoading, setIconUploadLoading] = useState(false);
   const [iconUploadError, setIconUploadError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortKey, setSortKey] = useState<keyof Category>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const { accessToken } = useAuth();
   const { showSuccess, showError } = useToast();
@@ -158,8 +164,8 @@ const AdminManageCategories: React.FC = () => {
     isError,
     error,
   } = useQuery<CategoriesApiResponse, Error>({
-    queryKey: ['categories', currentPage],
-    queryFn: () => fetchCategories({ page: currentPage, search: '' }),
+    queryKey: ['categories', currentPage, searchTerm],
+    queryFn: () => fetchCategories({ page: currentPage, search: searchTerm }),
   });
 
   const categories = data?.categories || [];
@@ -243,11 +249,53 @@ const AdminManageCategories: React.FC = () => {
         throw new Error(data.error?.message || 'فشل رفع الصورة');
       }
       setFormData(prev => ({ ...prev, icon: data.data.url }));
-    } catch (err) {
+    } catch {
       setIconUploadError('فشل رفع الصورة. الرجاء المحاولة مرة أخرى.');
     }
     setIconUploadLoading(false);
   };
+
+  const tableColumns = [
+    {
+      key: 'name',
+      label: 'اسم الفئة',
+      sortable: true,
+      className: 'text-right w-1/4',
+      render: (value: string) => <span className="font-medium text-deep-teal text-right">{value}</span>
+    },
+    {
+      key: 'description',
+      label: 'الوصف',
+      sortable: false,
+      className: 'text-right w-2/4',
+      render: (value: string) => <span className="text-soft-teal text-right">{value}</span>
+    },
+    {
+      key: 'icon',
+      label: 'الأيقونة',
+      sortable: false,
+      className: 'text-right w-20',
+      render: (value: string, category: Category) => (
+        <img src={value} alt={`${category.name} Icon`} className="h-10 w-10 rounded-full object-cover" />
+      )
+    },
+    {
+      key: 'actions',
+      label: 'الإجراءات',
+      sortable: false,
+      className: 'text-center w-1/4',
+      render: (_: any, category: Category) => (
+        <div className="flex items-center gap-4 justify-center">
+          <Button variant="secondary" onClick={() => handleEditCategory(category)} leftIcon={<Edit2 className="h-4 w-4 mr-1" />}>
+            تعديل
+          </Button>
+          <Button variant="danger" onClick={() => handleDeleteCategory(category)} leftIcon={<Trash2 className="h-4 w-4 mr-1" />}>
+            حذف
+          </Button>
+        </div>
+      )
+    }
+  ];
 
   if (isLoading) return (
     <div className="flex items-center justify-center min-h-[300px] text-lg text-deep-teal">جاري التحميل...</div>
@@ -265,57 +313,38 @@ const AdminManageCategories: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-3xl font-bold text-deep-teal">إدارة الفئات</h2>
-        <button
-          onClick={handleAddCategory}
-          className="flex items-center gap-2 bg-bright-orange text-white font-bold py-2 px-4 rounded-xl hover:opacity-90 transition-opacity"
-        >
-          <Plus className="h-5 w-5" />
+        <Button variant="secondary" onClick={handleAddCategory} leftIcon={<Plus className="h-5 w-5 mr-1" />}>
           إضافة فئة جديدة
-        </button>
+        </Button>
       </div>
-      <div className="bg-light-cream rounded-2xl shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-warm-cream border-b border-light-cream">
-              <tr>
-                <th className="px-6 py-4 text-right text-xs font-medium text-deep-teal uppercase tracking-wider">اسم الفئة</th>
-                <th className="px-6 py-4 text-right text-xs font-medium text-deep-teal uppercase tracking-wider">الوصف</th>
-                <th className="px-6 py-4 text-right text-xs font-medium text-deep-teal uppercase tracking-wider">الأيقونة</th>
-                <th className="px-6 py-4 text-right text-xs font-medium text-deep-teal uppercase tracking-wider">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-light-cream text-deep-teal">
-              {categories.map((category: Category) => (
-                <tr key={category.id} className="hover:bg-bright-orange/10">
-                  <td className="px-6 py-4 whitespace-nowrap font-medium text-deep-teal text-right">{category.name}</td>
-                  <td className="px-6 py-4 text-soft-teal text-right">{category.description}</td>
-                  <td className="px-6 py-4 text-right">
-                    <img src={category.icon} alt={`${category.name} Icon`} className="h-10 w-10 rounded-full object-cover" />
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center gap-4 justify-end">
-                      <button onClick={() => handleEditCategory(category)} className="flex items-center gap-1 text-deep-teal hover:text-soft-teal font-semibold transition-colors" title="تعديل الفئة" aria-label="تعديل الفئة">
-                        <Edit2 className="h-4 w-4" />تعديل
-                      </button>
-                      <button onClick={() => handleDeleteCategory(category)} className="flex items-center gap-1 text-bright-orange hover:opacity-80 font-semibold transition-opacity" title="حذف الفئة" aria-label="حذف الفئة">
-                        <Trash2 className="h-4 w-4" />حذف
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="bg-light-cream rounded-2xl shadow-md overflow-hidden p-6">
+        <SearchAndFilter
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          filterValue={''}
+          onFilterChange={() => {}}
+          filterOptions={[]}
+          placeholder="ابحث عن الفئة بالاسم"
+        />
+        <SortableTable
+          data={categories}
+          columns={tableColumns}
+          onSort={(key, direction) => {
+            setSortKey(key as keyof Category);
+            setSortDirection(direction);
+          }}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          emptyMessage={isLoading ? 'جاري التحميل...' : isError ? (error as Error).message : 'لا توجد فئات'}
+        />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
-      {/* Pagination */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalItems={totalItems}
-        itemsPerPage={itemsPerPage}
-        onPageChange={setCurrentPage}
-      />
       {/* Add/Edit/Delete Modals remain as is, to be refactored for backend integration next */}
 
       {/* Add/Edit Category Modal */}
@@ -369,23 +398,19 @@ const AdminManageCategories: React.FC = () => {
           </div>
 
           <div className="flex gap-3 justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                setIsModalOpen(false);
-                setFormErrors({});
-              }}
-              className="px-6 py-2 border border-[#F5E6D3] rounded-lg text-[#0e1b18] hover:bg-[#F5E6D3] transition-colors"
-            >
+            <Button variant="secondary" onClick={() => {
+              setIsModalOpen(false);
+              setFormErrors({});
+            }}>
               إلغاء
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="primary"
               type="submit"
-              className="px-6 py-2 bg-bright-orange text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
               disabled={addMutation.isPending || editMutation.isPending || iconUploadLoading}
             >
               {addMutation.isPending || editMutation.isPending ? 'جاري...' : (selectedCategory ? 'تعديل' : 'إضافة')}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

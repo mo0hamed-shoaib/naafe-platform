@@ -8,7 +8,7 @@ interface CategoryCardProps {
 }
 
 const CategoryCard = ({ category, onClick }: CategoryCardProps) => {
-  const { name, serviceCount, startingPrice, icon } = category;
+  const { name, serviceCount, startingPrice, icon, numServices, avgServicePrice, numRequests, avgRequestPrice } = category;
 
   return (
     <BaseCard
@@ -33,8 +33,18 @@ const CategoryCard = ({ category, onClick }: CategoryCardProps) => {
       </div>
       <div className="flex flex-col gap-2">
         <h3 className="text-lg font-semibold text-text-primary">{name}</h3>
-        <p className="text-sm text-text-secondary">{serviceCount} خدمة</p>
-        <p className="text-sm font-semibold text-deep-teal">يبدأ من ${startingPrice}</p>
+        {typeof numServices === 'number' && (
+          <p className="text-sm text-text-secondary">عدد الخدمات: {numServices}</p>
+        )}
+        {typeof avgServicePrice === 'number' && (
+          <p className="text-sm text-text-secondary">متوسط سعر الخدمة: {avgServicePrice.toFixed(2)} EGP</p>
+        )}
+        {typeof numRequests === 'number' && (
+          <p className="text-sm text-text-secondary">عدد الطلبات: {numRequests}</p>
+        )}
+        {typeof avgRequestPrice === 'number' && (
+          <p className="text-sm text-text-secondary">متوسط سعر الطلب: {avgRequestPrice.toFixed(2)} EGP</p>
+        )}
       </div>
     </BaseCard>
   );

@@ -36,6 +36,9 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [upgradeRequests, setUpgradeRequests] = useState<UpgradeRequest[]>([]);
   const [hasUnviewedResponse, setHasUnviewedResponse] = useState(false);
+  // Add state for uploading images
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{[key: string]: boolean}>({});
 
   // Helper: check if user is provider
   const isProvider = user && user.roles.includes('provider');
@@ -143,17 +146,21 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
     setUpgradeError('');
     setUpgradeSuccess('');
     try {
-      const formData = new FormData();
-      attachments.forEach((file) => formData.append('attachments', file));
-      formData.append('comment', comment);
+      const attachmentUrls = attachments.map(f => f.name || f.toString());
+      const payload = {
+        attachments: attachmentUrls,
+        comment,
+      };
       const res = await fetch('/api/admin/upgrade-requests', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken || localStorage.getItem('accessToken')}` },
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken || localStorage.getItem('accessToken')}`,
+        },
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!data.success) {
-        // If error is due to pending request, update state
         if (data.error?.message?.includes('قيد الانتظار')) {
           setUpgradeError('لديك طلب ترقية قيد الانتظار بالفعل. يرجى انتظار قرار الإدارة.');
         } else {
@@ -172,20 +179,50 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
   };
 
   // File input change handler
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const files = Array.from(e.target.files);
     if (files.length + attachments.length > 3) {
-      setUpgradeError('يمكنك رفع 3 ملفات كحد أقصى');
+      setUpgradeError('يمكنك رفع 3 صور كحد أقصى');
       return;
     }
-    setAttachments((prev) => [...prev, ...files].slice(0, 3));
+    setUploading(true);
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        setUpgradeError('يرجى رفع صور فقط');
+        continue;
+      }
+      setUploadProgress(prev => ({ ...prev, [file.name]: true }));
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_API_KEY}`, {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.success && data.data && data.data.url) {
+          setAttachments((prev) => [...prev, new File([], data.data.url)]);
+        } else {
+          setUpgradeError('فشل رفع الصورة. يرجى المحاولة مرة أخرى.');
+        }
+      } catch {
+        setUpgradeError('فشل رفع الصورة. يرجى المحاولة مرة أخرى.');
+      }
+      setUploadProgress(prev => ({ ...prev, [file.name]: false }));
+    }
+    setUploading(false);
   };
   const handleRemoveFile = (idx: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const attemptsLeft = 3 - upgradeRequests.length;
+
+  // Compute modal state
+  const allRejected = upgradeRequests.length >= 3 && upgradeRequests.every(r => r.status === 'rejected');
+  const latestPending = upgradeRequests[0]?.status === 'pending';
+  const maxAttempts = upgradeRequests.length >= 3;
 
   return (
     <>
@@ -452,8 +489,28 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
             </ul>
           </div>
         )}
-        {/* Show form only if attempts < 3 and latest is not pending */}
-        {upgradeRequests.length < 3 && (upgradeRequests[0]?.status !== 'pending') ? (
+        {allRejected ? (
+          <div className="text-center py-6">
+            <p className="text-text-primary">لقد قمت بطلب الترقية 3 مرات وتم رفض جميع الطلبات. إذا كان لديك اعتراض، يرجى التواصل مع الدعم: <a href="mailto:naafe@support.com" className="text-blue-600 underline">naafe@support.com</a></p>
+            <div className="flex justify-end mt-4">
+              <Button variant="ghost" onClick={() => setShowUpgradeModal(false)}>إغلاق</Button>
+            </div>
+          </div>
+        ) : latestPending ? (
+          <div className="text-center py-6">
+            <p className="text-text-primary">طلبك الحالي قيد المراجعة. يرجى الانتظار حتى تراجع الإدارة طلبك.</p>
+            <div className="flex justify-end mt-4">
+              <Button variant="ghost" onClick={() => setShowUpgradeModal(false)}>إغلاق</Button>
+            </div>
+          </div>
+        ) : maxAttempts ? (
+          <div className="text-center py-6">
+            <p className="text-text-primary">لقد وصلت إلى الحد الأقصى لعدد محاولات الترقية (3 مرات). لا يمكنك إرسال طلب جديد.</p>
+            <div className="flex justify-end mt-4">
+              <Button variant="ghost" onClick={() => setShowUpgradeModal(false)}>إغلاق</Button>
+            </div>
+          </div>
+        ) : (
           <>
             {/* Instructions box */}
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-blue-900 text-sm">
@@ -480,19 +537,24 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
                 <label className="block mb-2 font-semibold">المرفقات (صور أو PDF، حتى 3 ملفات)</label>
                 <input
                   type="file"
-                  accept="image/*,application/pdf"
+                  accept="image/*"
                   multiple
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   className="block w-full border border-gray-300 rounded-lg p-2"
                   disabled={attachments.length >= 3}
-                  placeholder="اختر ملفات (صور أو PDF) حتى 3 ملفات"
+                  placeholder="اختر صور (حتى 3 صور)"
                 />
                 <div className="flex flex-wrap gap-2 mt-2">
                   {attachments.map((file, idx) => (
                     <div key={idx} className="flex items-center gap-1 bg-light-cream px-2 py-1 rounded">
-                      <span className="text-xs">{file.name}</span>
-                      <button type="button" className="text-red-500 ml-1" onClick={() => handleRemoveFile(idx)}>&times;</button>
+                      {file.name.startsWith('http') ? (
+                        <img src={file.name} alt="مرفق" className="h-10 w-10 rounded object-cover border" />
+                      ) : (
+                        <span className="text-xs">{file.name}</span>
+                      )}
+                      {uploadProgress[file.name] && <span className="text-xs text-blue-600 ml-2">جاري رفع الصورة...</span>}
+                      <button type="button" className="text-red-500 ml-1" onClick={() => handleRemoveFile(idx)} disabled={uploadProgress[file.name] || uploading}>&times;</button>
                     </div>
                   ))}
                 </div>
@@ -501,21 +563,10 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
               {upgradeSuccess && <div className="text-green-600 text-sm">{upgradeSuccess}</div>}
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="ghost" onClick={() => setShowUpgradeModal(false)} disabled={upgradeLoading}>إلغاء</Button>
-                <Button type="submit" variant="primary" loading={upgradeLoading} disabled={attachments.length === 0 || upgradeLoading}>إرسال الطلب</Button>
+                <Button type="submit" variant="primary" loading={upgradeLoading || uploading} disabled={attachments.length === 0 || upgradeLoading || uploading}>إرسال الطلب</Button>
               </div>
             </form>
           </>
-        ) : (
-          <div className="text-center py-6">
-            {upgradeRequests[0]?.status === 'pending' ? (
-              <p className="text-text-primary">طلبك الحالي قيد المراجعة. يرجى الانتظار حتى تراجع الإدارة طلبك.</p>
-            ) : upgradeRequests.length >= 3 ? (
-              <p className="text-text-primary">لقد وصلت إلى الحد الأقصى لعدد محاولات الترقية (3 مرات). لا يمكنك إرسال طلب جديد.</p>
-            ) : null}
-            <div className="flex justify-end mt-4">
-              <Button variant="ghost" onClick={() => setShowUpgradeModal(false)}>إغلاق</Button>
-            </div>
-          </div>
         )}
       </Modal>
     </>

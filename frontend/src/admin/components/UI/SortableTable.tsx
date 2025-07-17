@@ -65,15 +65,15 @@ function SortableTable<T extends Record<string, unknown>>({
   return (
     <div className={`bg-light-cream rounded-2xl shadow-md overflow-hidden ${className}`}>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
           <thead className="bg-warm-cream border-b border-light-cream">
             <tr>
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
-                  className={`px-6 py-4 text-center text-xs font-medium text-deep-teal uppercase tracking-wider ${
-                    column.sortable ? 'cursor-pointer hover:bg-soft-teal/20 transition-colors' : ''
-                  } ${column.className || ''}`}
+                  className={`px-6 py-4 text-xs font-medium text-deep-teal uppercase tracking-wider ${
+                    column.className ? column.className : 'text-right'
+                  } ${column.sortable ? 'cursor-pointer hover:bg-soft-teal/20 transition-colors' : ''}`}
                   onClick={() => handleSort(column)}
                 >
                   <div className="flex items-center gap-2 justify-center">
@@ -95,7 +95,7 @@ function SortableTable<T extends Record<string, unknown>>({
               data.map((item, index) => (
                 <tr key={index} className="hover:bg-bright-orange/10 transition-colors">
                   {columns.map((column) => (
-                    <td key={String(column.key)} className={`px-6 py-4 text-center ${column.className || ''}`}>
+                    <td key={String(column.key)} className={`px-6 py-4 ${column.className ? column.className : 'text-right'}`}>
                       {column.render 
                         ? column.render(item[column.key], item)
                         : String(item[column.key] || '')

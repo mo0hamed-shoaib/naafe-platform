@@ -8,7 +8,8 @@ import BaseCard from './ui/BaseCard';
 import Badge from './ui/Badge';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { FormInput, FormTextarea, FormSelect } from "./ui";
+import { FormInput, FormTextarea } from "./ui";
+import UnifiedSelect from "./ui/UnifiedSelect";
 
 interface FormData {
   price: string;
@@ -268,20 +269,21 @@ const ServiceResponseForm: React.FC = () => {
                   <label htmlFor="timeline" className="text-sm font-medium text-text-primary mb-2 block">
                     متى يمكنك البدء؟
                   </label>
-                  <FormSelect
-                    value={formData.timeline} 
-                    onChange={(e) => setFormData(prev => ({ ...prev, timeline: e.target.value }))}
-                    className="w-full h-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-deep-teal focus:border-deep-teal bg-white text-text-primary"
+                  <UnifiedSelect
+                    value={formData.timeline}
+                    onChange={val => setFormData(prev => ({ ...prev, timeline: val }))}
+                    options={[
+                      { value: '', label: 'اختر التوقيت' },
+                      { value: 'today', label: 'اليوم' },
+                      { value: 'tomorrow', label: 'غداً' },
+                      { value: 'this-week', label: 'هذا الأسبوع' },
+                      { value: 'next-week', label: 'الأسبوع القادم' },
+                      { value: 'flexible', label: 'مرن' },
+                    ]}
                     required
+                    className="w-full"
                     aria-label="اختر التوقيت"
-                  >
-                    <option value="">اختر التوقيت</option>
-                    <option value="today">اليوم</option>
-                    <option value="tomorrow">غداً</option>
-                    <option value="this-week">هذا الأسبوع</option>
-                    <option value="next-week">الأسبوع القادم</option>
-                    <option value="flexible">مرن</option>
-                  </FormSelect>
+                  />
                 </div>
               </div>
               
