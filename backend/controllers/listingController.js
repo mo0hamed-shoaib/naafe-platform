@@ -15,6 +15,7 @@ class ListingController {
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [listings, totalCount] = await Promise.all([
         ServiceListing.find(query)
+          .populate('provider', 'name avatarUrl isPremium isVerified totalJobsCompleted')
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(parseInt(limit)),
@@ -179,6 +180,7 @@ class ListingController {
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [listings, totalCount] = await Promise.all([
         ServiceListing.find(query)
+          .populate('provider', 'name avatarUrl isPremium isVerified totalJobsCompleted')
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(parseInt(limit)),

@@ -3,7 +3,7 @@ import BaseCard from './ui/BaseCard';
 import Button from './ui/Button';
 import PremiumBadge from './ui/PremiumBadge';
 import { ServiceRequest } from '../types';
-import { translateLocation } from '../utils/helpers';
+import { translateLocation, translateCategory } from '../utils/helpers';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Tippy from '@tippyjs/react';
@@ -11,12 +11,10 @@ import 'tippy.js/dist/tippy.css';
 
 interface ServiceRequestCardProps {
   request: ServiceRequest;
-  onInterested: (requestId: string) => void;
-  onViewDetails: (requestId: string) => void;
   alreadyApplied?: boolean;
 }
 
-const ServiceRequestCard = ({ request, onInterested, onViewDetails, alreadyApplied }: ServiceRequestCardProps) => {
+const ServiceRequestCard = ({ request, alreadyApplied }: ServiceRequestCardProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const formatDate = (dateString: string) => {
@@ -34,15 +32,6 @@ const ServiceRequestCard = ({ request, onInterested, onViewDetails, alreadyAppli
       case 'high': return 'bg-red-100 text-red-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
       case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open': return 'bg-blue-100 text-blue-800';
-      case 'accepted': return 'bg-green-100 text-green-800';
-      case 'closed': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -79,8 +68,19 @@ const ServiceRequestCard = ({ request, onInterested, onViewDetails, alreadyAppli
             <h3 className="text-lg font-semibold text-text-primary text-right order-1 sm:order-1 sm:flex-1 sm:pr-3">
               {request.title}
             </h3>
-            <div className="flex flex-wrap gap-1 sm:gap-2 flex-shrink-0 order-2 sm:order-2">
-              <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${getStatusColor(request.status)}`}>
+            <div className="flex flex-wrap gap-2 items-center mb-2 order-2 sm:order-2 sm:justify-end">
+              <span className="text-xs sm:text-sm text-text-secondary bg-light-cream px-2 sm:px-3 py-1 sm:py-1.5 rounded-full whitespace-nowrap">
+                {translateCategory(request.category)}
+              </span>
+              <span
+                className={`text-xs sm:text-sm text-text-secondary px-2 sm:px-3 py-1 sm:py-1.5 rounded-full whitespace-nowrap border ${
+                  request.status === 'open'
+                    ? 'bg-blue-100 border-blue-200'
+                    : request.status === 'accepted'
+                    ? 'bg-green-100 border-green-200'
+                    : 'bg-gray-100 border-gray-200'
+                }`}
+              >
                 {request.status === 'open' ? 'مفتوح' : request.status === 'accepted' ? 'مقبول' : 'مغلق'}
               </span>
               {request.urgency && (

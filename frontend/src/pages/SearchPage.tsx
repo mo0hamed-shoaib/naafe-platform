@@ -53,45 +53,55 @@ const SearchPage = () => {
 
   // Map backend data to frontend types
   // Backend response is dynamic; we validate and map at runtime
-  const mappedProviders = (listings as unknown[]).map((listing) => {
-    const l = listing as Record<string, any>;
+  const mappedProviders = (listings as unknown[]).map((listing: unknown) => {
+    const l = listing as Record<string, unknown>;
+    let providerName = 'مزود خدمة غير معروف';
+    if (l.provider && typeof l.provider === 'object' && 'name' in l.provider) {
+      const provider = l.provider as Record<string, unknown>;
+      if (provider.name && typeof provider.name === 'object' && provider.name !== null) {
+        const nameObj = provider.name as { first?: string; last?: string };
+        providerName = `${nameObj.first || ''} ${nameObj.last || ''}`.trim() || providerName;
+      } else if (typeof provider.name === 'string') {
+        providerName = provider.name;
+      }
+    }
     return {
-      id: l._id,
-      name: l.provider?.name?.first && l.provider?.name?.last ? `${l.provider.name.first} ${l.provider.name.last}` : l.provider?.name || '',
-      rating: l.rating ?? 0,
-      category: l.category,
-      description: l.description,
-      location: l.location?.address || '',
-      startingPrice: l.price?.amount ?? 0,
-      imageUrl: l.provider?.avatarUrl || '',
-      isPremium: l.provider?.isPremium || false,
-      isTopRated: (l.rating ?? 0) >= 4.8 && (l.reviewCount ?? 0) > 10, // Example logic
-      completedJobs: l.provider?.totalJobsCompleted ?? 0,
-      isIdentityVerified: l.provider?.isVerified ?? false,
-      availability: l.availability || { days: [], timeSlots: [] },
+      id: l._id as string,
+      name: providerName,
+      rating: l.rating as number ?? 0,
+      category: l.category as string,
+      description: l.description as string,
+      location: l.location && typeof l.location === 'object' && 'address' in l.location ? (l.location as Record<string, unknown>).address as string : '',
+      startingPrice: l.price && typeof l.price === 'object' && 'amount' in l.price ? (l.price as Record<string, unknown>).amount as number : 0,
+      imageUrl: l.provider && typeof l.provider === 'object' && 'avatarUrl' in l.provider ? (l.provider as Record<string, unknown>).avatarUrl as string : '',
+      isPremium: l.provider && typeof l.provider === 'object' && 'isPremium' in l.provider ? (l.provider as Record<string, unknown>).isPremium as boolean : false,
+      isTopRated: (l.rating as number ?? 0) >= 4.8 && (l.reviewCount as number ?? 0) > 10, // Example logic
+      completedJobs: l.provider && typeof l.provider === 'object' && 'totalJobsCompleted' in l.provider ? (l.provider as Record<string, unknown>).totalJobsCompleted as number : 0,
+      isIdentityVerified: l.provider && typeof l.provider === 'object' && 'isVerified' in l.provider ? (l.provider as Record<string, unknown>).isVerified as boolean : false,
+      availability: l.availability as { days: string[]; timeSlots: string[] } || { days: [], timeSlots: [] },
     };
   });
 
   const mappedRequests = (requests as unknown[]).map((req) => {
-    const r = req as Record<string, any>;
+    const r = req as Record<string, unknown>;
     return {
-      id: r._id,
-      title: r.title,
-      description: r.description,
-      budget: r.budget,
-      location: r.location?.address || '',
+      id: r._id as string,
+      title: r.title as string,
+      description: r.description as string,
+      budget: r.budget as number,
+      location: r.location && typeof r.location === 'object' && 'address' in r.location ? (r.location as Record<string, unknown>).address as string : '',
       postedBy: {
-        id: r.seeker?._id || '',
+        id: r.seeker?._id as string || '',
         name: r.seeker?.name ? `${r.seeker.name.first} ${r.seeker.name.last}` : '',
-        avatar: r.seeker?.avatarUrl || '',
-        isPremium: r.seeker?.isPremium || false,
+        avatar: r.seeker?.avatarUrl as string || '',
+        isPremium: r.seeker?.isPremium as boolean || false,
       },
-      createdAt: r.createdAt,
-      preferredDate: r.preferredDate || r.deadline,
-      status: r.status,
-      category: r.category,
-      urgency: r.urgency,
-      availability: r.availability || { days: [], timeSlots: [] },
+      createdAt: r.createdAt as string,
+      preferredDate: r.preferredDate as string || r.deadline as string,
+      status: r.status as string,
+      category: r.category as string,
+      urgency: r.urgency as string,
+      availability: r.availability as { days: string[]; timeSlots: string[] } || { days: [], timeSlots: [] },
     };
   });
 

@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .then(async (res) => {
           if (!res.ok) throw new Error('فشل تحميل بيانات المستخدم');
           const data = await res.json();
-          setUser(data.data.user);
+          setUser({ ...data.data.user, id: data.data.user._id });
           setLoading(false);
         })
         .catch(() => {
@@ -88,7 +88,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setRefreshToken(data.data.refreshToken);
       localStorage.setItem('accessToken', data.data.accessToken);
       localStorage.setItem('refreshToken', data.data.refreshToken);
-      setUser(data.data.user);
+      setUser({ ...data.data.user, id: data.data.user._id });
       setLoading(false);
       return data.data.user; // Return user object
     } catch {

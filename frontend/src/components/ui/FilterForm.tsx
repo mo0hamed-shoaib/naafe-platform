@@ -107,6 +107,7 @@ const FilterForm = ({
                 ...categories.map((cat) => ({ value: cat, label: cat }))
               ]}
               disabled={categoriesLoading}
+              placeholder="اختر الفئة"
             />
             {categoriesError && <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">{categoriesError}</div>}
           </div>
@@ -123,6 +124,7 @@ const FilterForm = ({
                 { value: '', label: 'جميع المواقع' },
                 ...LOCATIONS.map((location) => ({ value: location, label: translateLocation(location) }))
               ]}
+              placeholder="اختر الموقع"
             />
           </div>
 
@@ -135,11 +137,12 @@ const FilterForm = ({
               value={filters.priceRange}
               onChange={(e) => handleInputChange('priceRange', e.target.value)}
               options={[
-                { value: '', label: 'أي سعر' },
+                { value: '', label: 'أي نطاق' },
                 { value: '0-50', label: '0 - 200 جنيه' },
                 { value: '50-100', label: '200 - 400 جنيه' },
                 { value: '100+', label: '400+ جنيه' }
               ]}
+              placeholder="اختر نطاق السعر"
             />
           </div>
 
@@ -158,6 +161,7 @@ const FilterForm = ({
                   { value: '3+', label: '3+ نجوم' },
                   { value: 'any', label: 'أي تقييم' }
                 ]}
+                placeholder="اختر التقييم"
               />
             </div>
           )}
@@ -228,17 +232,19 @@ const FilterForm = ({
               { value: '', label: 'جميع المواقع' },
               ...LOCATIONS.map((location) => ({ value: location, label: translateLocation(location) }))
             ]}
+            placeholder="اختر الموقع"
           />
           
           <FormSelect
             value={filters.priceRange}
             onChange={(e) => handleInputChange('priceRange', e.target.value)}
             options={[
-              { value: '', label: 'نطاق السعر' },
+              { value: '', label: 'أي نطاق' },
               { value: '0-50', label: '$0 - $50' },
               { value: '50-100', label: '$50 - $100' },
               { value: '100+', label: '$100+' }
             ]}
+            placeholder="اختر نطاق السعر"
           />
           
           <div className="flex items-center justify-between gap-2">
@@ -246,11 +252,12 @@ const FilterForm = ({
               value={filters.rating}
               onChange={(e) => handleInputChange('rating', e.target.value)}
               options={[
-                { value: '', label: 'التقييم' },
+                { value: '', label: 'أي تقييم' },
                 { value: '4+', label: '4+ نجوم' },
                 { value: '3+', label: '3+ نجوم' },
                 { value: 'any', label: 'أي تقييم' }
               ]}
+              placeholder="اختر التقييم"
             />
             <Button
               type="button"

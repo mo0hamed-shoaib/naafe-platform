@@ -1,231 +1,344 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import PageLayout from '../components/layout/PageLayout';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import AvatarCard from '../components/Profile/AvatarCard';
-import EditableField from '../components/Profile/EditableField';
-import ServiceCard from '../components/Profile/ServiceCard';
-import ReviewSection from '../components/Profile/ReviewSection';
-import { Button } from '../components/ui';
-import { Service, Review } from '../types/Profile';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-// TODO: Adapt types to your main types/index.ts
+import BaseCard from '../components/ui/BaseCard';
+// import Button from '../components/ui/Button'; // No longer used
+
+const fetchWithAuth = async (url: string, token: string) => {
+  const res = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error((await res.json()).error?.message || 'فشل تحميل البيانات');
+  return res.json();
+};
+
+const TABS = [
+  { key: 'offered', label: 'الخدمات' },
+  { key: 'requested', label: 'الخدمات المطلوبة' },
+  { key: 'reviews', label: 'التقييمات والمراجعات' },
+  { key: 'portfolio', label: 'الأعمال/المعرض' },
+];
+
+const STATUS_FILTERS = [
+  { value: '', label: 'الكل' },
+  { value: 'active', label: 'نشط' },
+  { value: 'inactive', label: 'غير نشط' },
+  { value: 'completed', label: 'مكتمل' },
+  { value: 'pending', label: 'قيد الانتظار' },
+  { value: 'in_progress', label: 'قيد التنفيذ' },
+];
+
+// Minimal types for strict linter compliance
+interface Service {
+  id: string;
+  title: string;
+  description?: string;
+  status?: string;
+  createdAt?: string;
+  price?: number;
+  category?: string;
+}
+interface Review {
+  id: string;
+  reviewerName?: string;
+  rating?: number;
+  comment?: string;
+  createdAt?: string;
+}
+// Update Profile type to match DB schema
+interface Profile {
+  _id: string;
+  email: string;
+  name: { first: string; last: string };
+  phone?: string;
+  avatarUrl?: string | null;
+  roles: string[];
+  seekerProfile?: {
+    totalJobsPosted: number;
+    rating: number;
+    reviewCount: number;
+    totalSpent: number;
+  };
+  providerProfile?: {
+    rating: number;
+    reviewCount: number;
+    totalJobsCompleted: number;
+    totalEarnings: number;
+    verification: { status: string; method: string | null; documents: string[] };
+  };
+  isActive: boolean;
+  isBlocked: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt?: string;
+}
+interface Stats {
+  rating?: number;
+  reviewCount?: number;
+  jobsCount?: number;
+  // Add more fields as needed
+}
 
 const ProfilePage: React.FC = () => {
-  const { user } = useAuth();
-  // TODO: Fetch additional profile data (services, reviews, etc.) from backend
-  // For now, use user from context as base profile
-  const [activeTab, setActiveTab] = useState<'services' | 'reviews' | 'about'>('services');
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [serviceFilter, setServiceFilter] = useState<'all' | 'residential' | 'commercial'>('all');
+  const { user: authUser, accessToken } = useAuth();
+  const { id } = useParams();
+  const isSelf = !id || (authUser && (id === authUser?.id));
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [requestedServices, setRequestedServices] = useState<Service[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [activeTab, setActiveTab] = useState('offered');
+  const [offeredStatus, setOfferedStatus] = useState('');
+  const [requestedStatus, setRequestedStatus] = useState('');
 
-  // TODO: Replace with real editable fields from backend
-  const [editableFields, setEditableFields] = useState({
-    phone: user?.phone || '',
-    email: user?.email || '',
-    location: user?.profile?.location?.address || '',
-    bio: user?.profile?.bio || '',
-  });
+  useEffect(() => {
+    const fetchAll = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = accessToken || localStorage.getItem('accessToken') || '';
+        // Determine userId to use
+        const userId = id || authUser?.id;
+        if (!userId) {
+          setError('تعذر تحديد المستخدم');
+          setLoading(false);
+          return;
+        }
+        const profileUrl = isSelf ? '/api/users/me' : `/api/users/${userId}`;
+        const profileRes = await fetchWithAuth(profileUrl, token);
+        setProfile(profileRes.data.user);
+        const statsRes = await fetchWithAuth(`/api/users/${userId}/stats`, token);
+        setStats(statsRes.data.stats);
+        if (profileRes.data.user.roles?.includes('provider')) {
+          const servicesRes = await fetchWithAuth('/api/users/me/listings', token);
+          setServices(servicesRes.data.listings || []);
+        } else {
+          setServices([]);
+        }
+        if (profileRes.data.user.roles?.includes('seeker')) {
+          const reqRes = await fetchWithAuth('/api/requests?seeker=current', token);
+          setRequestedServices(reqRes.data.jobRequests || []);
+        } else {
+          setRequestedServices([]);
+        }
+        const reviewsRes = await fetchWithAuth(`/api/reviews/user/${userId}`, token);
+        setReviews(reviewsRes.data.reviews || []);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message || 'حدث خطأ أثناء تحميل البيانات');
+        } else {
+          setError('حدث خطأ أثناء تحميل البيانات');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, accessToken, authUser]);
 
-  // TODO: Fetch services and reviews from backend
-  const services: Service[] = [];
-  const reviews: Review[] = [];
-  const rating = 0;
-  const reviewCount = 0;
-  const isVerified = user?.isVerified || false;
-
-  const handleFieldEdit = (field: string) => setEditingField(field);
-  const handleFieldSave = (field: string, value: string) => {
-    setEditableFields((prev) => ({ ...prev, [field]: value }));
-    setEditingField(null);
-    // TODO: Call backend to update profile field
+  // Helper: get full name
+  const getFullName = (user: Profile | null) => {
+    if (!user) return '';
+    return `${user.name?.first || ''} ${user.name?.last || ''}`.trim();
   };
-  const handleFieldCancel = () => setEditingField(null);
 
-  const filteredServices: Service[] = services.filter(
-    (service: Service) => serviceFilter === 'all' || service.category === serviceFilter
-  );
+  // Helper: get roles
+  const getRoles = (user: Profile | null) => {
+    if (!user?.roles) return [];
+    return user.roles;
+  };
 
-  const tabs = [
-    { key: 'services', label: 'الخدمات المقدمة' },
-    { key: 'reviews', label: 'التقييمات والمراجعات' },
-    { key: 'about', label: 'عن المستخدم' },
-  ];
+  // Helper: get rating
+  const getRating = (user: Profile | null) => {
+    if (!user) return 0;
+    if (user.roles.includes('provider')) return user.providerProfile?.rating || 0;
+    if (user.roles.includes('seeker')) return user.seekerProfile?.rating || 0;
+    return 0;
+  };
+  const getReviewCount = (user: Profile | null) => {
+    if (!user) return 0;
+    if (user.roles.includes('provider')) return user.providerProfile?.reviewCount || 0;
+    if (user.roles.includes('seeker')) return user.seekerProfile?.reviewCount || 0;
+    return 0;
+  };
 
   return (
-    <div className="min-h-screen bg-warm-cream flex flex-col" dir="rtl">
-      <Header />
-      <main className="flex-1">
-        <div className="max-w-4xl mx-auto px-4 py-10">
-          {/* Profile Header */}
-          <div className="bg-light-cream rounded-2xl shadow-lg p-6 mb-8">
-            <div className="flex flex-col lg:flex-row gap-6 w-full">
-              <div className="flex-1">
-                <AvatarCard
-                  avatar={user?.avatarUrl || user?.avatar || ''}
-                  name={user ? `${user.name?.first ?? ''} ${user.name?.last ?? ''}` : ''}
-                  title={user?.role || ''}
-                  location={editableFields.location}
-                  rating={rating}
-                  reviewCount={reviewCount}
-                  isVerified={isVerified}
-                  isPremium={user?.isPremium || false}
-                />
-              </div>
-              <div className="flex flex-col gap-3 w-full max-w-xs lg:ml-auto lg:w-60 mt-6 lg:mt-0 self-end">
-                <Button
-                  variant="primary"
-                  size="md"
-                  fullWidth
-                  className="font-jakarta"
-                  // onClick={...}
-                >
-                  تواصل مع المستخدم
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="md"
-                  fullWidth
-                  className="font-jakarta"
-                  // onClick={...}
-                >
-                  مشاركة الملف الشخصي
-                </Button>
-                <Button
-                  variant="primary"
-                  size="md"
-                  fullWidth
-                  className="font-jakarta"
-                  onClick={() => setIsEditing(!isEditing)}
-                >
-                  {isEditing ? 'تم' : 'تعديل الملف الشخصي'}
-                </Button>
+    <PageLayout
+      title="الملف الشخصي"
+      subtitle="عرض معلومات المستخدم"
+      breadcrumbItems={[
+        { label: 'الرئيسية', href: '/' },
+        { label: 'الملف الشخصي', active: true }
+      ]}
+      showHeader
+      showFooter
+      showBreadcrumb
+      className="font-cairo"
+    >
+      <div dir="rtl" className="max-w-4xl mx-auto py-8">
+        {loading ? (
+          <div className="text-center text-deep-teal text-lg" aria-live="polite">جاري تحميل البيانات...</div>
+        ) : error ? (
+          <BaseCard className="max-w-md mx-auto text-center text-red-600 text-lg" aria-live="assertive">
+            {error}
+          </BaseCard>
+        ) : profile && stats ? (
+          <BaseCard className="mb-8 p-6 flex flex-col lg:flex-row gap-8 items-center lg:items-start bg-light-cream">
+            {/* Avatar + Upload */}
+            <div className="relative shrink-0 flex flex-col items-center gap-2">
+              <div className="relative">
+                <div className="w-32 h-32 rounded-full bg-cover bg-center ring-4 ring-white/50" style={{ backgroundImage: `url(${profile.avatarUrl || ''})` }} />
               </div>
             </div>
-            {/* Editable Contact Info */}
-            {isEditing && (
-              <div className="mt-8 pt-8 border-t border-base-300">
-                <h3 className="text-lg font-semibold mb-4 font-jakarta">معلومات التواصل</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <EditableField
-                    label="رقم الهاتف"
-                    value={editableFields.phone}
-                    isEditing={editingField === 'phone'}
-                    onEdit={() => handleFieldEdit('phone')}
-                    onSave={(value) => handleFieldSave('phone', value)}
-                    onCancel={handleFieldCancel}
-                    type="tel"
-                    placeholder="أدخل رقم الهاتف"
-                    rtl
-                  />
-                  <EditableField
-                    label="البريد الإلكتروني"
-                    value={editableFields.email}
-                    isEditing={editingField === 'email'}
-                    onEdit={() => handleFieldEdit('email')}
-                    onSave={(value) => handleFieldSave('email', value)}
-                    onCancel={handleFieldCancel}
-                    type="email"
-                    placeholder="أدخل البريد الإلكتروني"
-                    rtl
-                  />
-                  <EditableField
-                    label="الموقع"
-                    value={editableFields.location}
-                    isEditing={editingField === 'location'}
-                    onEdit={() => handleFieldEdit('location')}
-                    onSave={(value) => handleFieldSave('location', value)}
-                    onCancel={handleFieldCancel}
-                    placeholder="أدخل الموقع"
-                    rtl
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-          {/* Tabs */}
-          <div className="border-b border-base-300 mb-8">
-            <div role="tablist" aria-label="Profile Tabs">
-              <div className="flex gap-6 overflow-x-auto">
-                {tabs.map((tab) => (
-                  <Button
-                    key={tab.key}
-                    variant={activeTab === tab.key ? 'primary' : 'ghost'}
-                    size="sm"
-                    className={`font-jakarta rounded-none border-b-2 ${activeTab === tab.key ? 'border-deep-teal text-deep-teal' : 'border-transparent text-soft-teal hover:border-base-300 hover:text-deep-teal'}`}
-                    aria-selected={activeTab === tab.key}
-                    aria-controls={`tabpanel-${tab.key}`}
-                    role="tab"
-                    onClick={() => setActiveTab(tab.key as 'services' | 'reviews' | 'about')}
-                    style={{ minWidth: 100 }}
-                  >
-                    {tab.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
-          {/* Tab Content */}
-          <div className="space-y-8">
-            {activeTab === 'services' && (
-              <section>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                  <h2 className="text-2xl font-bold text-deep-teal font-jakarta">الخدمات</h2>
-                  <div className="flex gap-2">
-                    {(['all', 'residential', 'commercial'] as const).map((filter) => (
-                      <Button
-                        key={filter}
-                        variant={serviceFilter === filter ? 'primary' : 'ghost'}
-                        size="sm"
-                        className="font-jakarta"
-                        onClick={() => setServiceFilter(filter)}
-                      >
-                        {filter === 'all' ? 'الكل' : filter === 'residential' ? 'سكني' : 'تجاري'}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredServices.map((service: Service) => (
-                    <ServiceCard
-                      key={service.id}
-                      service={service}
-                      onBookNow={() => {}}
-                    />
+            {/* Main Info */}
+            <div className="flex-1 flex flex-col gap-2 items-center lg:items-start">
+              <div className="flex flex-col gap-1 items-center lg:items-start">
+                <h1 className="text-3xl font-bold text-deep-teal font-cairo mb-1">{getFullName(profile)}</h1>
+                <div className="flex flex-wrap gap-2 mb-1">
+                  {getRoles(profile).map((role: string) => (
+                    <span key={role} className="bg-soft-teal/20 text-deep-teal px-3 py-1 rounded-full text-xs font-semibold font-cairo border border-soft-teal/40">{role === 'provider' ? 'مقدم خدمة' : role === 'seeker' ? 'باحث عن خدمة' : role === 'admin' ? 'مشرف' : role}</span>
                   ))}
                 </div>
-              </section>
+                <div className="flex items-center gap-2 text-accent text-lg font-cairo">
+                  <span className="font-bold">{getRating(profile)}</span>
+                  <svg className="w-5 h-5 text-accent" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                  <span className="text-sm text-text-secondary">({getReviewCount(profile)} تقييم)</span>
+                </div>
+              </div>
+          </div>
+          </BaseCard>
+        ) : null}
+        <div className="w-full mt-8">
+          <div className="flex gap-2 md:gap-4 border-b border-[#E5E7EB] mb-4 rtl flex-row-reverse" role="tablist">
+            {TABS.map(tab => (
+              <button
+                    key={tab.key}
+                className={`px-4 py-2 font-semibold rounded-t-lg focus:outline-none transition-colors duration-200 ${activeTab === tab.key ? 'bg-[#FDF8F0] text-[#2D5D4F] border-b-2 border-[#2D5D4F]' : 'text-[#50958A] bg-transparent'}`}
+                onClick={() => setActiveTab(tab.key)}
+                    role="tab"
+                  >
+                    {tab.label}
+              </button>
+                ))}
+          </div>
+          <div className="min-h-[200px]" id="profile-tabs-content">
+            {/* الخدمات (offered services) */}
+            {activeTab === 'offered' && (
+              <div id="tab-panel-offered" role="tabpanel" aria-labelledby="offered">
+                <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
+                  <label htmlFor="offered-status" className="text-[#0E1B18] font-medium">تصفية حسب الحالة:</label>
+                  <select
+                    id="offered-status"
+                    className="rounded-lg border border-[#E5E7EB] px-3 py-2 focus:ring-2 focus:ring-[#2D5D4F] text-[#2D5D4F] bg-white"
+                    value={offeredStatus}
+                    onChange={e => setOfferedStatus(e.target.value)}
+                  >
+                    {STATUS_FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                  </select>
+                </div>
+                {services && services.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(services as Service[]).filter((s: Service) => !offeredStatus || s.status === offeredStatus).length > 0 ? (
+                      (services as Service[]).filter((s: Service) => !offeredStatus || s.status === offeredStatus).map((service: Service, idx: number) => (
+                        <BaseCard key={service.id || idx} className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-[#2D5D4F]">{service.title}</span>
+                            <span className="text-xs text-[#50958A] bg-[#F5E6D3] rounded px-2 py-1">{service.status ? STATUS_FILTERS.find(f => f.value === service.status)?.label : '—'}</span>
+                            {service.category && <span className="text-xs text-[#50958A] bg-[#FDF8F0] rounded px-2 py-1">{service.category}</span>}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-[#50958A]">
+                            {service.createdAt && <span>تاريخ الإضافة: {new Date(service.createdAt).toLocaleDateString('ar-EG')}</span>}
+                            {service.price && <span>السعر: {service.price} جنيه</span>}
+                          </div>
+                          <div className="text-[#0E1B18] text-sm line-clamp-2">{service.description}</div>
+                          {/* Add more service info as needed */}
+                        </BaseCard>
+                      ))
+                    ) : (
+                      <div className="text-[#50958A] text-center w-full py-8 flex flex-col items-center justify-center gap-2">
+                        <svg className="w-8 h-8 mb-2 text-[#50958A]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01" /></svg>
+                        لا توجد خدمات بهذه الحالة.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-[#50958A] text-center w-full py-8">لا توجد خدمات معروضة بعد.</div>
+                )}
+              </div>
             )}
+            {/* الخدمات المطلوبة (requested services) */}
+            {activeTab === 'requested' && (
+              <div id="tab-panel-requested" role="tabpanel" aria-labelledby="requested">
+                <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
+                  <label htmlFor="requested-status" className="text-[#0E1B18] font-medium">تصفية حسب الحالة:</label>
+                  <select
+                    id="requested-status"
+                    className="rounded-lg border border-[#E5E7EB] px-3 py-2 focus:ring-2 focus:ring-[#2D5D4F] text-[#2D5D4F] bg-white"
+                    value={requestedStatus}
+                    onChange={e => setRequestedStatus(e.target.value)}
+                  >
+                    {STATUS_FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                  </select>
+                </div>
+                {requestedServices && requestedServices.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(requestedServices as Service[]).filter((s: Service) => !requestedStatus || s.status === requestedStatus).length > 0 ? (
+                      (requestedServices as Service[]).filter((s: Service) => !requestedStatus || s.status === requestedStatus).map((service: Service, idx: number) => (
+                        <BaseCard key={service.id || idx} className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-[#2D5D4F]">{service.title}</span>
+                            <span className="text-xs text-[#50958A] bg-[#F5E6D3] rounded px-2 py-1">{service.status ? STATUS_FILTERS.find(f => f.value === service.status)?.label : '—'}</span>
+                          </div>
+                          <div className="text-[#0E1B18] text-sm line-clamp-2">{service.description}</div>
+                          {/* Add more requested service info as needed */}
+                        </BaseCard>
+                      ))
+                    ) : (
+                      <div className="text-[#50958A] text-center w-full py-8">لا توجد خدمات مطلوبة بهذه الحالة.</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-[#50958A] text-center w-full py-8">لا توجد خدمات مطلوبة بعد.</div>
+                )}
+                </div>
+            )}
+            {/* التقييمات والمراجعات (reviews) */}
             {activeTab === 'reviews' && (
-              <ReviewSection
-                rating={rating}
-                reviewCount={reviewCount}
-                reviews={reviews as Review[]}
-                ratingDistribution={{}}
-              />
+              <div id="tab-panel-reviews" role="tabpanel" aria-labelledby="reviews">
+                {reviews && reviews.length > 0 ? (
+                  <div className="flex flex-col gap-4">
+                    {(reviews as Review[]).map((review: Review, idx: number) => (
+                      <BaseCard key={review.id || idx} className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-[#2D5D4F]">{review.reviewerName}</span>
+                          <span className="text-xs text-[#50958A] bg-[#F5E6D3] rounded px-2 py-1">{review.rating} ★</span>
+                        </div>
+                        <div className="text-[#0E1B18] text-sm">{review.comment}</div>
+                        <div className="text-xs text-[#50958A]">{review.createdAt && new Date(review.createdAt).toLocaleDateString('ar-EG')}</div>
+                      </BaseCard>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[#50958A] text-center w-full py-8">لا توجد تقييمات أو مراجعات بعد.</div>
+                )}
+              </div>
             )}
-            {activeTab === 'about' && (
-              <section className="bg-light-cream rounded-2xl shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-deep-teal mb-4 font-jakarta">عن المستخدم</h2>
-                <EditableField
-                  label="السيرة الذاتية"
-                  value={editableFields.bio}
-                  isEditing={editingField === 'bio'}
-                  onEdit={() => handleFieldEdit('bio')}
-                  onSave={(value) => handleFieldSave('bio', value)}
-                  onCancel={handleFieldCancel}
-                  type="textarea"
-                  placeholder="اكتب عن نفسك..."
-                  rtl
-                />
-                {/* Portfolio Section (optional) */}
-              </section>
+            {/* الأعمال/المعرض (portfolio) */}
+            {activeTab === 'portfolio' && (
+              <div id="tab-panel-portfolio" role="tabpanel" aria-labelledby="portfolio">
+                {/* TODO: Integrate portfolio API if available */}
+                <div className="text-[#50958A] text-center w-full py-8">لم يتم إضافة أعمال أو معرض بعد.</div>
+              </div>
             )}
           </div>
         </div>
-      </main>
-      <Footer />
     </div>
+    </PageLayout>
   );
 };
 
