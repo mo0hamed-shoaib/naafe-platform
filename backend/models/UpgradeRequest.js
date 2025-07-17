@@ -17,12 +17,23 @@ const UpgradeRequestSchema = new mongoose.Schema({
     default: 'pending',
     index: true,
   },
+  adminExplanation: {
+    type: String,
+    default: '',
+  },
   rejectionComment: {
     type: String,
     default: '',
   },
+  viewedByUser: {
+    type: Boolean,
+    default: false,
+  },
 }, {
   timestamps: true,
 });
+
+// Enforce one pending request per user
+UpgradeRequestSchema.index({ userId: 1, status: 1 }, { unique: true, partialFilterExpression: { status: 'pending' } });
 
 export default mongoose.model('UpgradeRequest', UpgradeRequestSchema); 

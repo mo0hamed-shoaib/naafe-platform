@@ -25,6 +25,16 @@ router.post('/upgrade-requests', authenticateToken, requireRole(['admin', 'seeke
     }
     const attachments = files.map(f => `/uploads/${f.filename}`);
     const UpgradeRequest = (await import('../models/UpgradeRequest.js')).default;
+    // Check for existing pending request
+    const existing = await UpgradeRequest.findOne({ userId: user._id, status: 'pending' });
+    // Enforce max 3 requests per user
+    const totalRequests = await UpgradeRequest.countDocuments({ userId: user._id });
+    if (totalRequests >= 3) {
+      return res.status(400).json({ success: false, error: { message: 'لقد وصلت إلى الحد الأقصى لعدد محاولات الترقية (3 مرات)' } });
+    }
+    if (existing) {
+      return res.status(400).json({ success: false, error: { message: 'لديك طلب ترقية قيد الانتظار بالفعل' }, data: { request: existing } });
+    }
     const newRequest = await UpgradeRequest.create({
       userId: user._id,
       attachments,

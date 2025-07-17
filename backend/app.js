@@ -11,6 +11,7 @@ import verificationRoutes from './routes/verificationRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
+import upgradeRequestRoutes from './routes/upgradeRequestRoutes.js';
 import { requestLogger, errorLogger, performanceLogger, securityLogger } from './middlewares/logging.middleware.js';
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/offers', offerRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/upgrade-requests', upgradeRequestRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api', listingRoutes);
 

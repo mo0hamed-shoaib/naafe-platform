@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Button from './ui/Button';
@@ -7,6 +7,14 @@ import { useAuth } from '../contexts/AuthContext';
 import Modal from '../admin/components/UI/Modal';
 import { useRef } from 'react';
 import { FormInput, FormTextarea } from './ui';
+
+interface UpgradeRequest {
+  _id: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  adminExplanation?: string;
+  createdAt: string;
+  viewedByUser?: boolean;
+}
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -26,11 +34,74 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [comment, setComment] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [upgradeRequests, setUpgradeRequests] = useState<UpgradeRequest[]>([]);
+  const [hasUnviewedResponse, setHasUnviewedResponse] = useState(false);
 
   // Helper: check if user is provider
   const isProvider = user && user.roles.includes('provider');
-  // Helper: check if user has a pending upgrade request (optional, can be improved)
-  // For now, just disable after submit
+
+  // Hide dot as soon as modal opens
+  useEffect(() => {
+    if (showUpgradeModal) setHasUnviewedResponse(false);
+  }, [showUpgradeModal]);
+
+  // Fetch upgrade requests on mount/user change for notification dot
+  useEffect(() => {
+    if (user && !isProvider) {
+      fetch('/api/upgrade-requests/me', {
+        headers: { Authorization: `Bearer ${accessToken || localStorage.getItem('accessToken')}` },
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && Array.isArray(data.data.requests)) {
+            const hasUnviewed = data.data.requests.some(
+              (r: UpgradeRequest) => !r.viewedByUser && (r.status === 'accepted' || r.status === 'rejected')
+            );
+            setHasUnviewedResponse(hasUnviewed);
+          }
+        });
+    }
+  }, [user, isProvider, accessToken]);
+
+  // Hide dot and mark as viewed as soon as modal opens
+  useEffect(() => {
+    if (showUpgradeModal && hasUnviewedResponse) {
+      setHasUnviewedResponse(false);
+      fetch('/api/upgrade-requests/viewed', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${accessToken || localStorage.getItem('accessToken')}` },
+      });
+    }
+  }, [showUpgradeModal, hasUnviewedResponse, accessToken]);
+
+  // Fetch all upgrade requests when modal opens
+  useEffect(() => {
+    if (showUpgradeModal && user && !isProvider) {
+      setUpgradeRequests([]);
+      setHasUnviewedResponse(false);
+      fetch('/api/upgrade-requests/me', {
+        headers: { Authorization: `Bearer ${accessToken || localStorage.getItem('accessToken')}` },
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && Array.isArray(data.data.requests)) {
+            setUpgradeRequests(data.data.requests);
+            // Notification dot logic
+            const hasUnviewed = data.data.requests.some(
+              (r: UpgradeRequest) => !r.viewedByUser && (r.status === 'accepted' || r.status === 'rejected')
+            );
+            setHasUnviewedResponse(hasUnviewed);
+            // Mark as viewed
+            if (hasUnviewed) {
+              fetch('/api/upgrade-requests/viewed', {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${accessToken || localStorage.getItem('accessToken')}` },
+              });
+            }
+          }
+        });
+    }
+  }, [showUpgradeModal, user, isProvider, accessToken]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,13 +152,21 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
         body: formData,
       });
       const data = await res.json();
-      if (!data.success) throw new Error(data.error?.message || 'فشل إرسال الطلب');
+      if (!data.success) {
+        // If error is due to pending request, update state
+        if (data.error?.message?.includes('قيد الانتظار')) {
+          setUpgradeError('لديك طلب ترقية قيد الانتظار بالفعل. يرجى انتظار قرار الإدارة.');
+        } else {
+          throw new Error(data.error?.message || 'فشل إرسال الطلب');
+        }
+        return;
+      }
       setUpgradeSuccess('تم إرسال طلب الترقية بنجاح! سيتم مراجعته من قبل الإدارة.');
       setAttachments([]);
       setComment('');
       setShowUpgradeModal(false);
-    } catch (err: any) {
-      setUpgradeError(err.message || 'حدث خطأ أثناء إرسال الطلب');
+    } catch (err: unknown) {
+      setUpgradeError(err instanceof Error ? err.message : 'حدث خطأ أثناء إرسال الطلب');
     }
     setUpgradeLoading(false);
   };
@@ -105,6 +184,8 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
   const handleRemoveFile = (idx: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== idx));
   };
+
+  const attemptsLeft = 3 - upgradeRequests.length;
 
   return (
     <>
@@ -156,15 +237,21 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
                     </Link>
                   </li>
                 ))}
-                <li>
+                <li className="relative">
                   {user && !isProvider ? (
                     <button
                       type="button"
-                      className="font-medium text-text-primary hover:text-deep-teal/90 transition-colors duration-200 rounded-lg px-3 py-2 hover:bg-bright-orange/10 focus:outline-none focus:ring-2 focus:ring-deep-teal/50"
+                      className="font-medium text-text-primary hover:text-deep-teal/90 transition-colors duration-200 rounded-lg px-3 py-2 hover:bg-bright-orange/10 focus:outline-none focus:ring-2 focus:ring-deep-teal/50 relative"
                       onClick={() => setShowUpgradeModal(true)}
                       disabled={upgradeLoading}
                     >
                       كن مقدم خدمات
+                      {hasUnviewedResponse && (
+                        <span
+                          className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 border-2 border-white rounded-full z-10"
+                          title="لديك رد جديد من الإدارة"
+                        />
+                      )}
                     </button>
                   ) : (
                     <Link 
@@ -339,43 +426,97 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
 
       {/* Upgrade Modal */}
       <Modal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} title="طلب الترقية إلى مقدم خدمات">
-        <form onSubmit={handleUpgradeSubmit} className="space-y-4" dir="rtl">
-          <div>
-            <label className="block mb-2 font-semibold">سبب الترقية أو نبذة عن خبرتك (اختياري)</label>
-            <FormTextarea
-              value={comment}
-              onChange={e => setComment(e.target.value)}
-              rows={3}
-              placeholder="اكتب سبب طلب الترقية أو خبرتك..."
-            />
-          </div>
-          <div>
-            <label className="block mb-2 font-semibold">المرفقات (صور أو PDF، حتى 3 ملفات)</label>
-            <input
-              type="file"
-              accept="image/*,application/pdf"
-              multiple
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="block w-full border border-gray-300 rounded-lg p-2"
-              disabled={attachments.length >= 3}
-            />
-            <div className="flex flex-wrap gap-2 mt-2">
-              {attachments.map((file, idx) => (
-                <div key={idx} className="flex items-center gap-1 bg-light-cream px-2 py-1 rounded">
-                  <span className="text-xs">{file.name}</span>
-                  <button type="button" className="text-red-500 ml-1" onClick={() => handleRemoveFile(idx)}>&times;</button>
-                </div>
+        {upgradeRequests.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold mb-2">سجل طلبات الترقية:</h3>
+            <ul className="space-y-2">
+              {upgradeRequests.map((req, idx) => (
+                <li key={req._id} className="p-2 rounded border bg-light-cream">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold">{idx + 1}.</span>
+                    <span className="text-xs text-gray-500">{new Date(req.createdAt).toLocaleDateString('ar-EG')}</span>
+                  </div>
+                  <div className="mt-1">
+                    <span className="font-semibold">الحالة: </span>
+                    {req.status === 'pending' && 'قيد الانتظار'}
+                    {req.status === 'accepted' && 'تم القبول'}
+                    {req.status === 'rejected' && 'تم الرفض'}
+                  </div>
+                  {req.adminExplanation && (
+                    <div className="text-xs mt-1 text-blue-700">
+                      <span className="font-semibold">شرح الإدارة:</span> {req.adminExplanation}
+                    </div>
+                  )}
+                </li>
               ))}
+            </ul>
+          </div>
+        )}
+        {/* Show form only if attempts < 3 and latest is not pending */}
+        {upgradeRequests.length < 3 && (upgradeRequests[0]?.status !== 'pending') ? (
+          <>
+            {/* Instructions box */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-blue-900 text-sm">
+              <strong>تعليمات هامة:</strong>
+              <ul className="list-disc pr-5 mt-2 space-y-1 text-right">
+                <li>يرجى رفع صورة شخصية أثناء تقديمك لخدمة أو صورة توضح خبرتك.</li>
+                <li>يرجى رفع صورة بطاقة الهوية الخاصة بك.</li>
+                <li>كلما زادت التفاصيل، زادت فرص قبول طلبك.</li>
+              </ul>
+            </div>
+            {/* Attempts left */}
+            <div className="mb-2 text-sm text-gray-700">المحاولات المتبقية: {attemptsLeft} من 3</div>
+            <form onSubmit={handleUpgradeSubmit} className="space-y-4" dir="rtl">
+              <div>
+                <label className="block mb-2 font-semibold">سبب الترقية أو نبذة عن خبرتك (اختياري)</label>
+                <FormTextarea
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
+                  rows={3}
+                  placeholder="اكتب سبب طلب الترقية أو خبرتك..."
+                />
+              </div>
+              <div>
+                <label className="block mb-2 font-semibold">المرفقات (صور أو PDF، حتى 3 ملفات)</label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  multiple
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="block w-full border border-gray-300 rounded-lg p-2"
+                  disabled={attachments.length >= 3}
+                  placeholder="اختر ملفات (صور أو PDF) حتى 3 ملفات"
+                />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {attachments.map((file, idx) => (
+                    <div key={idx} className="flex items-center gap-1 bg-light-cream px-2 py-1 rounded">
+                      <span className="text-xs">{file.name}</span>
+                      <button type="button" className="text-red-500 ml-1" onClick={() => handleRemoveFile(idx)}>&times;</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {upgradeError && <div className="text-red-600 text-sm">{upgradeError}</div>}
+              {upgradeSuccess && <div className="text-green-600 text-sm">{upgradeSuccess}</div>}
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={() => setShowUpgradeModal(false)} disabled={upgradeLoading}>إلغاء</Button>
+                <Button type="submit" variant="primary" loading={upgradeLoading} disabled={attachments.length === 0 || upgradeLoading}>إرسال الطلب</Button>
+              </div>
+            </form>
+          </>
+        ) : (
+          <div className="text-center py-6">
+            {upgradeRequests[0]?.status === 'pending' ? (
+              <p className="text-text-primary">طلبك الحالي قيد المراجعة. يرجى الانتظار حتى تراجع الإدارة طلبك.</p>
+            ) : upgradeRequests.length >= 3 ? (
+              <p className="text-text-primary">لقد وصلت إلى الحد الأقصى لعدد محاولات الترقية (3 مرات). لا يمكنك إرسال طلب جديد.</p>
+            ) : null}
+            <div className="flex justify-end mt-4">
+              <Button variant="ghost" onClick={() => setShowUpgradeModal(false)}>إغلاق</Button>
             </div>
           </div>
-          {upgradeError && <div className="text-red-600 text-sm">{upgradeError}</div>}
-          {upgradeSuccess && <div className="text-green-600 text-sm">{upgradeSuccess}</div>}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setShowUpgradeModal(false)} disabled={upgradeLoading}>إلغاء</Button>
-            <Button type="submit" variant="primary" loading={upgradeLoading} disabled={attachments.length === 0 || upgradeLoading}>إرسال الطلب</Button>
-          </div>
-        </form>
+        )}
       </Modal>
     </>
   );

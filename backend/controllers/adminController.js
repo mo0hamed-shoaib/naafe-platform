@@ -87,10 +87,15 @@ class AdminController {
   /**
    * Accept an upgrade request
    * POST /admin/upgrade-requests/:id/accept
+   * Body: { adminExplanation }
    */
   static async acceptUpgradeRequest(req, res) {
     try {
       const { id } = req.params;
+      const { adminExplanation } = req.body;
+      if (!adminExplanation || !adminExplanation.trim()) {
+        return res.status(400).json({ success: false, error: { message: 'يجب إدخال شرح من الإدارة للموافقة' } });
+      }
       const request = await UpgradeRequest.findById(id);
       if (!request) return res.status(404).json({ success: false, error: { message: 'الطلب غير موجود' } });
       if (request.status === 'accepted') {
@@ -104,6 +109,7 @@ class AdminController {
         await user.save();
       }
       request.status = 'accepted';
+      request.adminExplanation = adminExplanation;
       await request.save();
       res.json({ success: true, data: { request } });
     } catch (error) {
@@ -114,19 +120,22 @@ class AdminController {
   /**
    * Reject an upgrade request
    * POST /admin/upgrade-requests/:id/reject
-   * Body: { rejectionComment }
+   * Body: { adminExplanation }
    */
   static async rejectUpgradeRequest(req, res) {
     try {
       const { id } = req.params;
-      const { rejectionComment } = req.body;
+      const { adminExplanation } = req.body;
+      if (!adminExplanation || !adminExplanation.trim()) {
+        return res.status(400).json({ success: false, error: { message: 'يجب إدخال شرح من الإدارة للرفض' } });
+      }
       const request = await UpgradeRequest.findById(id);
       if (!request) return res.status(404).json({ success: false, error: { message: 'الطلب غير موجود' } });
       if (request.status === 'accepted') {
         return res.status(400).json({ success: false, error: { message: 'لا يمكن رفض طلب تم قبوله بالفعل' } });
       }
       request.status = 'rejected';
-      request.rejectionComment = rejectionComment || '';
+      request.adminExplanation = adminExplanation;
       await request.save();
       res.json({ success: true, data: { request } });
     } catch (error) {

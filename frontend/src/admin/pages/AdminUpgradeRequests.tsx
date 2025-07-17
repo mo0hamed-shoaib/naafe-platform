@@ -27,6 +27,7 @@ interface UpgradeRequest {
   status: 'pending' | 'accepted' | 'rejected';
   attachments?: string[];
   rejectionComment?: string;
+  adminExplanation?: string; // Added for explanations
 }
 
 const AdminUpgradeRequests: React.FC = () => {
@@ -40,6 +41,9 @@ const AdminUpgradeRequests: React.FC = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionComment, setRejectionComment] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [adminExplanation, setAdminExplanation] = useState('');
+  const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
 
   // Fetch upgrade requests
   useEffect(() => {
@@ -64,24 +68,37 @@ const AdminUpgradeRequests: React.FC = () => {
     fetchRequests();
   }, [accessToken, statusFilter, search]);
 
-  // Accept request
-  const handleAccept = async (id: string) => {
+  // Accept request (with explanation)
+  const handleAccept = (id: string) => {
+    setAcceptingRequestId(id);
+    setAdminExplanation('');
+    setShowAcceptModal(true);
+  };
+  const handleAcceptConfirm = async () => {
+    if (!acceptingRequestId) return;
     setActionLoading(true);
     try {
-      const res = await fetch(`/api/admin/upgrade-requests/${id}/accept`, {
+      const res = await fetch(`/api/admin/upgrade-requests/${acceptingRequestId}/accept`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ adminExplanation }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error?.message || 'فشل القبول');
-      setRequests((prev) => prev.map((r) => r._id === id ? { ...r, status: 'accepted' } : r));
+      setRequests((prev) => prev.map((r) => r._id === acceptingRequestId ? { ...r, status: 'accepted', adminExplanation } : r));
+      setShowAcceptModal(false);
+      setAdminExplanation('');
+      setAcceptingRequestId(null);
     } catch {
       alert('فشل قبول الطلب');
     }
     setActionLoading(false);
   };
 
-  // Reject request
+  // Reject request (with explanation)
   const handleReject = async () => {
     if (!selectedRequest) return;
     setActionLoading(true);
@@ -92,13 +109,13 @@ const AdminUpgradeRequests: React.FC = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ rejectionComment }),
+        body: JSON.stringify({ adminExplanation }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error?.message || 'فشل الرفض');
-      setRequests((prev) => prev.map((r) => r._id === selectedRequest._id ? { ...r, status: 'rejected', rejectionComment } : r));
+      setRequests((prev) => prev.map((r) => r._id === selectedRequest._id ? { ...r, status: 'rejected', adminExplanation } : r));
       setShowRejectModal(false);
-      setRejectionComment('');
+      setAdminExplanation('');
     } catch {
       alert('فشل رفض الطلب');
     }
@@ -168,6 +185,11 @@ const AdminUpgradeRequests: React.FC = () => {
                 </td>
                 <td className="px-4 py-3">
                   <span className={`badge ${STATUS_COLORS[req.status] || 'badge-ghost'} text-xs px-3 py-1 rounded-full`}>{STATUS_LABELS[req.status]}</span>
+                  {(req.status === 'accepted' || req.status === 'rejected') && req.adminExplanation && (
+                    <div className="text-xs mt-1 text-blue-700" title={req.adminExplanation}>
+                      <span className="font-semibold">شرح الإدارة:</span> {req.adminExplanation}
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2 justify-end">
@@ -182,15 +204,12 @@ const AdminUpgradeRequests: React.FC = () => {
                         </button>
                         <button
                           className="btn btn-xs bg-red-500 text-white hover:bg-red-700 rounded"
-                          onClick={() => { setSelectedRequest(req); setShowRejectModal(true); }}
+                          onClick={() => { setSelectedRequest(req); setShowRejectModal(true); setAdminExplanation(''); }}
                           disabled={actionLoading}
                         >
                           <XCircle className="inline h-4 w-4 mr-1" /> رفض
                         </button>
                       </>
-                    )}
-                    {req.status === 'rejected' && req.rejectionComment && (
-                      <span className="text-xs text-red-600" title={req.rejectionComment}>سبب الرفض</span>
                     )}
                   </div>
                 </td>
@@ -199,14 +218,37 @@ const AdminUpgradeRequests: React.FC = () => {
           </tbody>
         </table>
       </div>
-      {/* Reject Modal */}
-      <Modal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} title="سبب الرفض">
+      {/* Accept Modal */}
+      <Modal isOpen={showAcceptModal} onClose={() => setShowAcceptModal(false)} title="شرح الإدارة للموافقة">
         <div className="space-y-4">
           <FormTextarea
             rows={3}
-            placeholder="يرجى كتابة سبب الرفض"
-            value={rejectionComment}
-            onChange={e => setRejectionComment(e.target.value)}
+            placeholder="يرجى كتابة شرح سبب الموافقة"
+            value={adminExplanation}
+            onChange={e => setAdminExplanation(e.target.value)}
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              className="btn btn-outline"
+              onClick={() => setShowAcceptModal(false)}
+              disabled={actionLoading}
+            >إلغاء</button>
+            <button
+              className="btn bg-bright-orange text-white hover:bg-orange-600"
+              onClick={handleAcceptConfirm}
+              disabled={actionLoading || !adminExplanation.trim()}
+            >تأكيد الموافقة</button>
+          </div>
+        </div>
+      </Modal>
+      {/* Reject Modal */}
+      <Modal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} title="شرح الإدارة للرفض">
+        <div className="space-y-4">
+          <FormTextarea
+            rows={3}
+            placeholder="يرجى كتابة شرح سبب الرفض"
+            value={adminExplanation}
+            onChange={e => setAdminExplanation(e.target.value)}
           />
           <div className="flex gap-2 justify-end">
             <button
@@ -217,7 +259,7 @@ const AdminUpgradeRequests: React.FC = () => {
             <button
               className="btn bg-red-500 text-white hover:bg-red-700"
               onClick={handleReject}
-              disabled={actionLoading || !rejectionComment.trim()}
+              disabled={actionLoading || !adminExplanation.trim()}
             >رفض الطلب</button>
           </div>
         </div>
