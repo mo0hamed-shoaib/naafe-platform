@@ -5,7 +5,7 @@ import Button from './ui/Button';
 import BaseCard from './ui/BaseCard';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FormInput, FormTextarea } from './ui';
+import { FormInput, FormTextarea, AIAssistant, PricingGuidance, AITestComponent } from './ui';
 import UnifiedSelect from './ui/UnifiedSelect';
 
 interface PostServiceFormData {
@@ -55,7 +55,7 @@ const PostServiceForm: React.FC = () => {
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.data.categories)) {
-          setCategories(data.data.categories.map((cat: any) => cat.name));
+          setCategories(data.data.categories.map((cat: { name: string }) => cat.name));
         } else {
           setCategoriesError('فشل تحميل الفئات');
         }
@@ -67,6 +67,26 @@ const PostServiceForm: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleAISuggestion = (field: string, value: string) => {
+    if (field === 'title') {
+      setFormData(prev => ({ ...prev, serviceTitle: value }));
+    } else if (field === 'description') {
+      setFormData(prev => ({ ...prev, serviceDescription: value }));
+    } else if (field === 'keywords') {
+      setFormData(prev => ({ ...prev, tags: value }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
+  };
+
+  const handlePricingApply = (min: number, max: number) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      minBudget: min.toString(),
+      maxBudget: max.toString()
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -163,6 +183,25 @@ const PostServiceForm: React.FC = () => {
                   onChange={handleChange}
                   placeholder="وصف مفصل للخدمة..."
                   required
+                />
+              </div>
+              <div className="my-6">
+                <AIAssistant
+                  formType="service"
+                  category={formData.category}
+                  currentFields={formData as unknown as Record<string, unknown>}
+                  onSuggestionApply={handleAISuggestion}
+                  inputPlaceholder="مثال: أعلن عن خدمة تنظيف منازل باحترافية..."
+                />
+                <PricingGuidance
+                  formType="service"
+                  category={formData.category}
+                  location={formData.government}
+                  userBudget={formData.minBudget && formData.maxBudget ? {
+                    min: Number(formData.minBudget),
+                    max: Number(formData.maxBudget)
+                  } : null}
+                  onPricingApply={handlePricingApply}
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -292,6 +331,10 @@ const PostServiceForm: React.FC = () => {
               </div>
               {error && <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>}
               {success && <div className="text-green-600 text-sm text-right bg-green-50 p-3 rounded-lg border border-green-200">تم إرسال الطلب بنجاح!</div>}
+              
+              {/* AI Test Component */}
+              <AITestComponent />
+              
               <Button
                 type="submit"
                 variant="primary"

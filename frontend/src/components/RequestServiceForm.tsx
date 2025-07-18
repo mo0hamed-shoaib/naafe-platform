@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FormInput, FormTextarea } from './ui';
 import UnifiedSelect from './ui/UnifiedSelect';
+import { AIAssistant } from './ui';
+import { PricingGuidance } from './ui';
 
 interface RequestServiceFormData {
   requestTitle: string;
@@ -55,7 +57,7 @@ const RequestServiceForm: React.FC = () => {
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.data.categories)) {
-          setCategories(data.data.categories.map((cat: any) => cat.name));
+          setCategories(data.data.categories.map((cat: { name: string }) => cat.name));
         } else {
           setCategoriesError('فشل تحميل الفئات');
         }
@@ -119,6 +121,28 @@ const RequestServiceForm: React.FC = () => {
     }
   };
 
+  // Add this handler to map AI fields to form fields
+  const handleAISuggestion = (field: string, value: string) => {
+    if (field === 'title') {
+      setFormData(prev => ({ ...prev, requestTitle: value }));
+    } else if (field === 'description') {
+      setFormData(prev => ({ ...prev, requestDescription: value }));
+    } else if (field === 'keywords') {
+      setFormData(prev => ({ ...prev, tags: value }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
+  };
+
+  // Add this handler for pricing guidance
+  const handlePricingApply = (min: number, max: number) => {
+    setFormData(prev => ({
+      ...prev,
+      minBudget: min.toString(),
+      maxBudget: max.toString()
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-[#F5E6D3] flex flex-col font-cairo" dir="rtl">
       <Header />
@@ -163,6 +187,24 @@ const RequestServiceForm: React.FC = () => {
                   onChange={handleChange}
                   placeholder="وصف مفصل للخدمة المطلوبة..."
                   required
+                />
+              </div>
+              <div className="my-6">
+                <AIAssistant
+                  formType="request"
+                  category={formData.category}
+                  currentFields={formData as unknown as Record<string, unknown>}
+                  onSuggestionApply={handleAISuggestion}
+                />
+                <PricingGuidance
+                  formType="request"
+                  category={formData.category}
+                  location={formData.government}
+                  userBudget={formData.minBudget && formData.maxBudget ? {
+                    min: Number(formData.minBudget),
+                    max: Number(formData.maxBudget)
+                  } : null}
+                  onPricingApply={handlePricingApply}
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
