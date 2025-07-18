@@ -4,6 +4,8 @@ import Category from './Category.js';
 import JobRequest from './JobRequest.js';
 import Offer from './Offer.js';
 import Review from './Review.js';
+import Conversation from './Conversation.js';
+import Message from './Message.js';
 
 // Ensure discriminators are registered
 // This is important because the discriminator models need to be imported
@@ -15,7 +17,9 @@ export {
   Category,
   JobRequest,
   Offer,
-  Review
+  Review,
+  Conversation,
+  Message
 };
 
 export default User; 

@@ -21,6 +21,7 @@ interface Offer {
   availableDates?: string[];
   timePreferences?: string[];
   createdAt?: string;
+  jobRequestSeekerId?: string;
 }
 
 const RequestServiceDetailsPage = () => {
@@ -52,6 +53,12 @@ const RequestServiceDetailsPage = () => {
             specialties?: string[];
             verified?: boolean
           };
+          jobRequest?: {
+            _id?: string;
+            seeker?: string;
+            title?: string;
+            status?: string;
+          };
           budget?: { min?: number };
           message?: string;
           estimatedTimeDays?: number;
@@ -74,6 +81,7 @@ const RequestServiceDetailsPage = () => {
           availableDates: offer.availableDates || [],
           timePreferences: offer.timePreferences || [],
           createdAt: offer.createdAt,
+          jobRequestSeekerId: offer.jobRequest?.seeker,
         }));
         setOffers(mappedOffers);
       }

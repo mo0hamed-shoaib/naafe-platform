@@ -30,7 +30,7 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
   onOfferAdded, 
   onOffersRefresh 
 }) => {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   if (!responses || responses.length === 0) return null;
 
   const formatDate = (dateString: string) => {
@@ -49,6 +49,62 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
       case 'evening': return 'مساءً';
       case 'flexible': return 'مرن';
       default: return pref;
+    }
+  };
+
+  const handleAcceptOffer = async (offerId: string) => {
+    if (!accessToken) return;
+    
+    try {
+      const response = await fetch(`/api/offers/${offerId}/accept`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Refresh offers to show updated status
+        if (onOffersRefresh) {
+          await onOffersRefresh();
+        }
+        alert('تم قبول العرض بنجاح');
+      } else {
+        alert(data.error?.message || 'فشل في قبول العرض');
+      }
+    } catch (error) {
+      console.error('Error accepting offer:', error);
+      alert('حدث خطأ أثناء قبول العرض');
+    }
+  };
+
+  const handleRejectOffer = async (offerId: string) => {
+    if (!accessToken) return;
+    
+    try {
+      const response = await fetch(`/api/offers/${offerId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Refresh offers to show updated status
+        if (onOffersRefresh) {
+          await onOffersRefresh();
+        }
+        alert('تم رفض العرض بنجاح');
+      } else {
+        alert(data.error?.message || 'فشل في رفض العرض');
+      }
+    } catch (error) {
+      console.error('Error rejecting offer:', error);
+      alert('حدث خطأ أثناء رفض العرض');
     }
   };
 
@@ -167,10 +223,16 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
             {/* Action Buttons */}
             {user && user._id === resp.jobRequestSeekerId && (
               <div className="flex gap-3 pt-4 border-t border-deep-teal/10">
-                <button className="flex-1 bg-deep-teal text-white py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors font-medium shadow">
+                <button 
+                  onClick={() => handleAcceptOffer(resp.id)}
+                  className="flex-1 bg-deep-teal text-white py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors font-medium shadow"
+                >
                   قبول العرض
                 </button>
-                <button className="flex-1 bg-warm-cream text-deep-teal py-2 px-4 rounded-lg hover:bg-deep-teal/10 transition-colors font-medium border border-deep-teal/20">
+                <button 
+                  onClick={() => handleRejectOffer(resp.id)}
+                  className="flex-1 bg-warm-cream text-deep-teal py-2 px-4 rounded-lg hover:bg-deep-teal/10 transition-colors font-medium border border-deep-teal/20"
+                >
                   رفض العرض
                 </button>
               </div>

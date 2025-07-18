@@ -1,6 +1,7 @@
 import Offer from '../models/Offer.js';
 import JobRequest from '../models/JobRequest.js';
 import User from '../models/User.js';
+import chatService from './chatService.js';
 
 class OfferService {
   // Create a new offer
@@ -264,6 +265,13 @@ class OfferService {
         status: 'assigned',
         assignedTo: offer.provider
       });
+      
+      // Create conversation for chat between seeker and provider
+      await chatService.getOrCreateConversation(
+        offer.jobRequest._id,
+        offer.jobRequest.seeker,
+        offer.provider
+      );
       
       // Reject all other pending offers for this job
       await Offer.updateMany(

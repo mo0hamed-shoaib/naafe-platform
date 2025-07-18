@@ -363,6 +363,7 @@ class JobRequestService {
 
       const offers = await Offer.find(query)
         .populate('provider', 'name email phone rating reviewCount')
+        .populate('jobRequest', 'seeker title status')
         .sort({ createdAt: -1 });
 
       return offers;
