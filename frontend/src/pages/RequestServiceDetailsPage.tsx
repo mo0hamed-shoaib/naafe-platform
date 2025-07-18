@@ -9,6 +9,7 @@ import { useOfferContext } from '../contexts/OfferContext';
 
 interface Offer {
   id: string;
+  providerId?: string;
   name: string;
   avatar: string;
   rating: number;
@@ -43,12 +44,13 @@ const RequestServiceDetailsPage = () => {
         // Map backend offers to frontend responses model
         const mappedOffers = (offersData.data?.offers || []).map((offer: {
           _id: string;
-          provider?: { 
-            name?: { first?: string; last?: string } | string; 
-            avatarUrl?: string; 
-            rating?: number; 
-            specialties?: string[]; 
-            verified?: boolean 
+          provider?: {
+            _id?: string;
+            name?: { first?: string; last?: string } | string;
+            avatarUrl?: string;
+            rating?: number;
+            specialties?: string[];
+            verified?: boolean
           };
           budget?: { min?: number };
           message?: string;
@@ -58,7 +60,8 @@ const RequestServiceDetailsPage = () => {
           createdAt: string;
         }): Offer => ({
           id: offer._id,
-          name: typeof offer.provider?.name === 'object' 
+          providerId: offer.provider?._id,
+          name: typeof offer.provider?.name === 'object'
             ? `${offer.provider.name.first || ''} ${offer.provider.name.last || ''}`.trim()
             : offer.provider?.name || '',
           avatar: offer.provider?.avatarUrl || '',

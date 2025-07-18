@@ -42,15 +42,17 @@ class OfferController {
       logger.info(`Getting offers for user ${userId} with roles ${userRoles}`);
       
       const offers = await offerService.getAllOffers(userId, userRoles, filters);
+      const mappedOffers = offers.map(offer => ({
+        ...offer.toObject(),
+        jobRequest: offer.jobRequest && offer.jobRequest._id ? offer.jobRequest._id.toString() : offer.jobRequest,
+        providerId: offer.provider && offer.provider._id ? offer.provider._id.toString() : undefined
+      }));
       
       logger.info(`Found ${offers.length} offers for user ${userId}`);
       
       res.status(200).json({
         success: true,
-        data: {
-          offers,
-          totalCount: offers.length
-        },
+        data: mappedOffers,
         message: 'Offers retrieved successfully'
       });
     } catch (error) {
