@@ -2,10 +2,16 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
+import { User } from '../../types';
 
 interface ServiceSidebarProps {
-  service: any; // TODO: type
-  onInterested?: () => void;
+  service: {
+    postedBy?: { id?: string };
+    status?: string;
+    budget?: { min?: number; max?: number };
+    deadline?: string;
+    [key: string]: unknown;
+  };
   onShare?: () => void;
   onBookmark?: () => void;
   onReport?: () => void;
@@ -14,7 +20,6 @@ interface ServiceSidebarProps {
 
 const ServiceSidebar: React.FC<ServiceSidebarProps> = ({
   service,
-  onInterested,
   onShare,
   onBookmark,
   onReport,
@@ -22,9 +27,12 @@ const ServiceSidebar: React.FC<ServiceSidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: User | null };
   
   if (!service) return null;
+  const userId = user?.id;
+  const ownerId = service.postedBy?.id;
+  const isOwner = userId && ownerId && userId === ownerId;
   return (
     <aside className="bg-white rounded-lg shadow p-4 mb-6 sticky top-24 text-right">
       <div className="mb-4">
@@ -47,10 +55,14 @@ const ServiceSidebar: React.FC<ServiceSidebarProps> = ({
           <Button
             variant="primary"
             onClick={() => navigate(`/requests/${id}/respond`)}
-            disabled={alreadyApplied}
-            title={alreadyApplied ? 'لقد قدمت عرضاً بالفعل لهذا الطلب' : undefined}
+            disabled={!!alreadyApplied || !!isOwner}
+            title={alreadyApplied ? 'لقد قدمت عرضاً بالفعل لهذا الطلب' : isOwner ? 'لا يمكنك التقديم على طلبك' : undefined}
           >
-            {alreadyApplied ? 'تم التقديم' : 'أنا مهتم'}
+            {isOwner
+              ? 'هذا طلبك'
+              : alreadyApplied
+                ? 'تم التقديم'
+                : 'أنا مهتم'}
           </Button>
         ) : (
           <Button

@@ -100,6 +100,7 @@ const RequestServiceDetailsPage = () => {
         // TODO: Map backend jobRequest to frontend service model as needed
         setService({
           ...data.data.jobRequest,
+          postedBy: { id: data.data.jobRequest.seeker?._id || data.data.jobRequest.seeker?.id, name: data.data.jobRequest.seeker?.name },
           // Map location/address fields, images, requester, etc. as needed
           images: (data.data.jobRequest.attachments || []).map((a: { url: string }) => a.url),
           requester: data.data.jobRequest.seeker ? {

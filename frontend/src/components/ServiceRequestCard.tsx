@@ -36,6 +36,10 @@ const ServiceRequestCard = ({ request, alreadyApplied }: ServiceRequestCardProps
     }
   };
 
+  const userId = user?.id;
+  const ownerId = request.postedBy?.id;
+  const isOwner = userId && ownerId && userId === ownerId;
+
   return (
     <BaseCard className={`
       hover:shadow-md border-l-4 border-l-blue-500 transition-all duration-300
@@ -156,10 +160,14 @@ const ServiceRequestCard = ({ request, alreadyApplied }: ServiceRequestCardProps
                   size="sm"
                   onClick={() => navigate(`/requests/${request.id}/respond`)}
                       className="w-full"
-                      disabled={alreadyApplied}
-                      title={alreadyApplied ? 'لقد قدمت عرضاً بالفعل لهذا الطلب' : undefined}
+                      disabled={!!alreadyApplied || !!isOwner}
+                      title={alreadyApplied ? 'لقد قدمت عرضاً بالفعل لهذا الطلب' : isOwner ? 'لا يمكنك التقديم على طلبك' : undefined}
                     >
-                      {alreadyApplied ? 'تم التقديم' : 'أنا مهتم'}
+                      {isOwner
+                        ? 'هذا طلبك'
+                        : alreadyApplied
+                          ? 'تم التقديم'
+                          : 'أنا مهتم'}
                     </Button>
                   ) : (
                     <Tippy
