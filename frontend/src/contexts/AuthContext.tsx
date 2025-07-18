@@ -12,6 +12,7 @@ interface AuthContextType {
   register: (data: RegisterPayload) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  updateUser: (user: User) => void; // <-- Add this
 }
 
 interface RegisterPayload {
@@ -184,6 +185,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         register,
         logout,
         isAuthenticated,
+        updateUser: (user: User) => setUser(user), // <-- Add this
       }}
     >
       {children}

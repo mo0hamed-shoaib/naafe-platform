@@ -33,7 +33,7 @@ const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
   onComplete, 
   onSkip 
 }) => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [formData, setFormData] = useState<ProfileFormData>({
     ...defaultFormData,
     ...initialValues,
@@ -91,7 +91,7 @@ const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
 
     const updateData: Record<string, unknown> = {
       profile: {
-        ...addressData,
+        location: addressData,
       }
     };
 
@@ -131,7 +131,10 @@ const ProfileBuilder: React.FC<ProfileBuilderProps> = ({
       }
 
       // Save profile data to backend
-      await saveProfileToBackend(avatarUrl);
+      const response = await saveProfileToBackend(avatarUrl);
+      if (response && response.data && response.data.user && updateUser) {
+        updateUser({ ...response.data.user, id: response.data.user._id });
+      }
 
       setSuccess(true);
       setTimeout(() => {
