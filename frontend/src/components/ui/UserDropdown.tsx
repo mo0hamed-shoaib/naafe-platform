@@ -114,7 +114,13 @@ const UserDropdown = ({ user, onLogout, className = '' }: UserDropdownProps) => 
         aria-label="قائمة المستخدم"
       >
         <div className="w-8 h-8 rounded-full overflow-hidden bg-deep-teal flex items-center justify-center">
-          {user.avatar ? (
+          {user.avatarUrl ? (
+            <img 
+              src={user.avatarUrl} 
+              alt={`${getUserFullName(user.name)} profile`}
+              className="w-full h-full object-cover"
+            />
+          ) : user.avatar ? (
             <img 
               src={user.avatar} 
               alt={`${getUserFullName(user.name)} profile`}
@@ -140,7 +146,13 @@ const UserDropdown = ({ user, onLogout, className = '' }: UserDropdownProps) => 
           <div className="px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full overflow-hidden bg-deep-teal flex items-center justify-center">
-                {user.avatar ? (
+                {user.avatarUrl ? (
+                  <img 
+                    src={user.avatarUrl} 
+                    alt={`${getUserFullName(user.name)} profile`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : user.avatar ? (
                   <img 
                     src={user.avatar} 
                     alt={`${getUserFullName(user.name)} profile`}

@@ -107,8 +107,14 @@ const userSchema = new Schema({
             type: String,
             maxlength: 1000,
             trim: true
+        },
+        location: {
+            government: { type: String, default: '' },
+            city: { type: String, default: '' },
+            street: { type: String, default: '' },
+            apartmentNumber: { type: String, default: '' },
+            additionalInformation: { type: String, default: '' }
         }
-        // location field removed for simplicity and to avoid redundancy
     },
     isActive: {
         type: Boolean,

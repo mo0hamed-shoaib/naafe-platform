@@ -26,6 +26,14 @@ interface RequestServiceFormData {
   tags: string;
 }
 
+interface AddressFields {
+  government: string;
+  city: string;
+  street: string;
+  apartmentNumber: string;
+  additionalInformation: string;
+}
+
 const RequestServiceForm: React.FC = () => {
   const { accessToken } = useAuth();
   const [formData, setFormData] = useState<RequestServiceFormData>({
@@ -50,6 +58,8 @@ const RequestServiceForm: React.FC = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [profileAddress, setProfileAddress] = useState<AddressFields | null>(null);
+  const [showAutofillSuccess, setShowAutofillSuccess] = useState(false);
 
   useEffect(() => {
     setCategoriesLoading(true);
@@ -65,6 +75,18 @@ const RequestServiceForm: React.FC = () => {
       .catch(() => setCategoriesError('فشل تحميل الفئات'))
       .finally(() => setCategoriesLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetch('/api/users/me', {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data.user?.profile?.location) {
+          setProfileAddress(data.data.user.profile.location);
+        }
+      });
+  }, [accessToken]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -141,6 +163,20 @@ const RequestServiceForm: React.FC = () => {
       minBudget: min.toString(),
       maxBudget: max.toString()
     }));
+  };
+
+  const handleAutofillAddress = () => {
+    if (!profileAddress) return;
+    setFormData(prev => ({
+      ...prev,
+      government: profileAddress.government || '',
+      city: profileAddress.city || '',
+      street: profileAddress.street || '',
+      apartmentNumber: profileAddress.apartmentNumber || '',
+      additionalInformation: profileAddress.additionalInformation || '',
+    }));
+    setShowAutofillSuccess(true);
+    setTimeout(() => setShowAutofillSuccess(false), 2000);
   };
 
   return (
@@ -235,6 +271,18 @@ const RequestServiceForm: React.FC = () => {
                   />
                 </div>
               </div>
+              {profileAddress && (
+                <div className="mb-4 flex items-center gap-4">
+                  <button
+                    type="button"
+                    className="bg-bright-orange text-white font-semibold py-2 px-6 rounded-xl hover:bg-bright-orange/90 transition-all duration-300 shadow"
+                    onClick={handleAutofillAddress}
+                  >
+                    استخدم العنوان المحفوظ
+                  </button>
+                  {showAutofillSuccess && <span className="text-green-600 font-semibold">تم تعبئة العنوان!</span>}
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="government">المحافظة</label>

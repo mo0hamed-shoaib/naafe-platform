@@ -67,12 +67,18 @@ interface Profile {
     totalJobsCompleted: number;
     totalEarnings: number;
     verification: { status: string; method: string | null; documents: string[] };
+    skills?: string[]; // Added skills to the interface
+    location?: { city: string; government: string }; // Added location to the interface
   };
   isActive: boolean;
   isBlocked: boolean;
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string;
+  bio?: string; // Added bio to the interface
+  profile?: { // Added profile to the interface
+    bio?: string;
+  };
 }
 interface Stats {
   rating?: number;
@@ -259,6 +265,11 @@ const ProfilePage: React.FC = () => {
             <div className="flex-1 flex flex-col gap-2 items-center lg:items-start">
               <div className="flex flex-col gap-1 items-center lg:items-start">
                 <h1 className="text-3xl font-bold text-deep-teal font-cairo mb-1">{getFullName(profile)}</h1>
+                {profile?.profile?.bio && (
+                  <p className="text-text-secondary text-base text-center lg:text-right mt-2 mb-1 whitespace-pre-line">
+                    {profile.profile.bio}
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2 mb-1">
                   {getRoles(profile).map((role: string) => (
                     <span key={role} className="bg-soft-teal/20 text-deep-teal px-3 py-1 rounded-full text-xs font-semibold font-cairo border border-soft-teal/40">{role === 'provider' ? 'مقدم خدمة' : role === 'seeker' ? 'باحث عن خدمة' : role === 'admin' ? 'مشرف' : role}</span>
@@ -270,7 +281,37 @@ const ProfilePage: React.FC = () => {
                   <span className="text-sm text-text-secondary">({getReviewCount(profile)} تقييم)</span>
                 </div>
               </div>
-          </div>
+              {/* Location */}
+              {profile?.profile?.location?.city && profile?.profile?.location?.government && (
+                <div className="text-text-secondary text-sm flex items-center gap-2">
+                  <span className="inline-block">{profile.profile.location.city}, {profile.profile.location.government}</span>
+                  <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" /><circle cx="12" cy="9" r="2.5" /></svg>
+                </div>
+              )}
+              {/* Verified Badge */}
+              {profile?.providerProfile?.verification?.status === 'verified' && (
+                <div className="flex items-center gap-1 text-green-600 text-xs font-semibold bg-green-50 px-2 py-1 rounded-full">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  تم التحقق من الهوية
+                </div>
+              )}
+              {/* Member Since */}
+              {profile?.createdAt && (
+                <div className="text-text-secondary text-xs">عضو منذ: {new Date(profile.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long' })}</div>
+              )}
+              {/* Last Active */}
+              {profile?.lastLoginAt && (
+                <div className="text-text-secondary text-xs">آخر تواجد: {new Date(profile.lastLoginAt).toLocaleString('ar-EG')}</div>
+              )}
+              {/* Skills */}
+              {profile?.providerProfile?.skills && profile.providerProfile.skills.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {profile.providerProfile.skills.map((skill: string) => (
+                    <span key={skill} className="bg-[#F5A623]/10 text-[#F5A623] px-3 py-1 rounded-full text-xs font-cairo border border-[#F5A623]/30">{skill}</span>
+                  ))}
+                </div>
+              )}
+            </div>
           </BaseCard>
         ) : null}
         {profile && profile.roles.includes('provider') && isSelf && (
