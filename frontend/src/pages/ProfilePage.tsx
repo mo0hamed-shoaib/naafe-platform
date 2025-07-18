@@ -3,7 +3,8 @@ import PageLayout from '../components/layout/PageLayout';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import BaseCard from '../components/ui/BaseCard';
-// import Button from '../components/ui/Button'; // No longer used
+import Button from '../components/ui/Button';
+import FormInput from '../components/ui/FormInput';
 
 const fetchWithAuth = async (url: string, token: string) => {
   const res = await fetch(url, {
@@ -94,6 +95,11 @@ const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('offered');
   const [offeredStatus, setOfferedStatus] = useState('');
   const [requestedStatus, setRequestedStatus] = useState('');
+  const [skills, setSkills] = useState<string[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState(false);
+  const [skillsError, setSkillsError] = useState<string | null>(null);
+  const [newSkill, setNewSkill] = useState('');
+  const [skillsSuccess, setSkillsSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -140,6 +146,60 @@ const ProfilePage: React.FC = () => {
     fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, accessToken, authUser]);
+
+  // Fetch provider skills if provider
+  useEffect(() => {
+    if (profile && profile.roles.includes('provider') && isSelf && accessToken) {
+      setSkillsLoading(true);
+      fetch('/api/users/me/skills', {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) setSkills(data.data.skills || []);
+          else setSkillsError('فشل تحميل المهارات');
+        })
+        .catch(() => setSkillsError('فشل تحميل المهارات'))
+        .finally(() => setSkillsLoading(false));
+    }
+  }, [profile, isSelf, accessToken]);
+
+  const handleAddSkill = () => {
+    const trimmed = newSkill.trim();
+    if (trimmed && !skills.includes(trimmed)) {
+      setSkills([...skills, trimmed]);
+      setNewSkill('');
+    }
+  };
+  const handleRemoveSkill = (skill: string) => {
+    setSkills(skills.filter(s => s !== skill));
+  };
+  const handleSaveSkills = async () => {
+    setSkillsLoading(true);
+    setSkillsError(null);
+    setSkillsSuccess(null);
+    try {
+      const res = await fetch('/api/users/me/skills', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ skills })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSkillsSuccess('تم حفظ المهارات بنجاح');
+      } else {
+        setSkillsError(data.error?.message || 'فشل حفظ المهارات');
+      }
+    } catch {
+      setSkillsError('فشل حفظ المهارات');
+    } finally {
+      setSkillsLoading(false);
+      setTimeout(() => setSkillsSuccess(null), 2000);
+    }
+  };
 
   // Helper: get full name
   const getFullName = (user: Profile | null) => {
@@ -213,6 +273,39 @@ const ProfilePage: React.FC = () => {
           </div>
           </BaseCard>
         ) : null}
+        {profile && profile.roles.includes('provider') && isSelf && (
+          <BaseCard className="mb-8 p-6 bg-white border border-gray-200">
+            <h2 className="text-xl font-bold text-[#2D5D4F] mb-4">المهارات</h2>
+            {skillsLoading ? (
+              <div className="text-center text-deep-teal">جاري تحميل المهارات...</div>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {skills.map(skill => (
+                    <span key={skill} className="bg-[#F5A623]/10 text-[#F5A623] px-3 py-1 rounded-full text-sm font-cairo border border-[#F5A623]/30 flex items-center gap-1">
+                      {skill}
+                      <button type="button" className="ml-1 text-red-500 hover:text-red-700" onClick={() => handleRemoveSkill(skill)} title="حذف المهارة">×</button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2 mb-4">
+                  <FormInput
+                    type="text"
+                    value={newSkill}
+                    onChange={e => setNewSkill(e.target.value)}
+                    placeholder="أضف مهارة جديدة..."
+                    className="flex-1 text-right"
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddSkill(); } }}
+                  />
+                  <Button type="button" onClick={handleAddSkill} disabled={!newSkill.trim()} variant="secondary">إضافة</Button>
+                </div>
+                <Button type="button" onClick={handleSaveSkills} loading={skillsLoading} variant="primary">حفظ المهارات</Button>
+                {skillsError && <div className="text-red-600 mt-2">{skillsError}</div>}
+                {skillsSuccess && <div className="text-green-600 mt-2">{skillsSuccess}</div>}
+              </>
+            )}
+          </BaseCard>
+        )}
         <div className="w-full mt-8">
           <div className="flex gap-2 md:gap-4 border-b border-[#E5E7EB] mb-4 rtl flex-row-reverse" role="tablist">
             {TABS.map(tab => (

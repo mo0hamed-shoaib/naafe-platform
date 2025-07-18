@@ -11,6 +11,7 @@ interface AIAssistantProps {
   onSuggestionApply: (field: string, value: string) => void;
   className?: string;
   inputPlaceholder?: string;
+  skills?: string[];
 }
 
 interface AISuggestion {
@@ -35,7 +36,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
   currentFields,
   onSuggestionApply,
   className = '',
-  inputPlaceholder
+  inputPlaceholder,
+  skills = [],
 }) => {
   const { accessToken } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +64,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
         formType,
         category,
         userInput,
-        currentFields
+        currentFields,
+        skills,
       };
       
       console.log('AI Assistant Request:', requestBody);
@@ -92,7 +95,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [userInput, formType, category, currentFields, accessToken]);
+  }, [userInput, formType, category, currentFields, accessToken, skills]);
 
   const handleApplySuggestion = (suggestion: AISuggestion) => {
     onSuggestionApply(suggestion.type, suggestion.content);

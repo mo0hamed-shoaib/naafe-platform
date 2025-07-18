@@ -167,6 +167,27 @@ class UserService {
     await user.save();
   }
 
+  /**
+   * Get provider skills for current user
+   */
+  async getProviderSkills(userId) {
+    const user = await User.findById(userId).lean();
+    if (!user || !user.roles.includes('provider')) throw new Error('User is not a provider');
+    return user.providerProfile?.skills || [];
+  }
+
+  /**
+   * Update provider skills for current user
+   */
+  async updateProviderSkills(userId, skills) {
+    if (!Array.isArray(skills)) throw new Error('Skills must be an array');
+    const user = await User.findById(userId);
+    if (!user || !user.roles.includes('provider')) throw new Error('User is not a provider');
+    user.providerProfile.skills = skills;
+    await user.save();
+    return user.providerProfile.skills;
+  }
+
   // Admin: Get all users (paginated, filterable)
   async getAllUsers({ page = 1, limit = 20, search = '', role }) {
     const query = {};

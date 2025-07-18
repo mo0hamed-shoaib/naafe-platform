@@ -28,6 +28,20 @@ router.patch('/me', authenticateToken, validateUpdateProfile, userController.upd
 router.get('/me/requests', authenticateToken, jobRequestController.getMyJobRequests);
 
 /**
+ * @route   GET /api/users/me/skills
+ * @desc    Get current user's provider skills
+ * @access  Private
+ */
+router.get('/me/skills', authenticateToken, userController.getProviderSkills);
+
+/**
+ * @route   PATCH /api/users/me/skills
+ * @desc    Update current user's provider skills
+ * @access  Private
+ */
+router.patch('/me/skills', authenticateToken, userController.updateProviderSkills);
+
+/**
  * @route   GET /api/users/:id
  * @desc    Get public user profile by ID
  * @access  Public (with optional auth)

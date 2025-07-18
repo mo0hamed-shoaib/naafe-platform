@@ -54,7 +54,8 @@ const providerProfileSchema = new Schema({
   reviewCount: { type: Number, default: 0, min: 0 },
   totalJobsCompleted: { type: Number, default: 0, min: 0 },
   totalEarnings: { type: Number, default: 0, min: 0 },
-  verification: { type: verificationSchema, default: () => ({}) }
+  verification: { type: verificationSchema, default: () => ({}) },
+  skills: { type: [String], default: [] } // Added skills array
 }, { _id: false });
 
 const userSchema = new Schema({

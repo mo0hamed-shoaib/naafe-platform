@@ -10,6 +10,7 @@ interface PricingGuidanceProps {
   location: string;
   userBudget: { min: number; max: number } | null;
   onPricingApply: (min: number, max: number) => void;
+  skills?: string[];
   className?: string;
 }
 
@@ -30,6 +31,7 @@ interface PricingAnalysis {
 interface PricingGuidanceData {
   recommendation: PricingRecommendation | null;
   analysis: PricingAnalysis | null;
+  warning?: string;
 }
 
 const PricingGuidance: React.FC<PricingGuidanceProps> = ({
@@ -38,6 +40,7 @@ const PricingGuidance: React.FC<PricingGuidanceProps> = ({
   location,
   userBudget,
   onPricingApply,
+  skills = [],
   className = ''
 }) => {
   const { accessToken } = useAuth();
@@ -65,7 +68,8 @@ const PricingGuidance: React.FC<PricingGuidanceProps> = ({
           category,
           serviceType: formType,
           location,
-          userBudget
+          userBudget,
+          skills,
         })
       });
 
@@ -81,7 +85,7 @@ const PricingGuidance: React.FC<PricingGuidanceProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [category, formType, location, userBudget, accessToken]);
+  }, [category, formType, location, userBudget, accessToken, skills]);
 
   const handleApplyRecommendation = () => {
     if (guidance?.recommendation) {
@@ -163,14 +167,20 @@ const PricingGuidance: React.FC<PricingGuidanceProps> = ({
         {/* Pricing Guidance Results */}
         {guidance && (
           <div className="space-y-4">
+            {/* Warning */}
+            {guidance.warning && (
+              <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-lg text-yellow-800 text-right">
+                <AlertTriangle className="w-4 h-4 inline-block mr-2 text-yellow-600" />
+                {guidance.warning}
+              </div>
+            )}
             {/* Recommendation */}
-            {guidance.recommendation && (
+            {guidance.recommendation ? (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center gap-2 mb-3">
                   <CheckCircle className="w-4 h-4 text-blue-600" />
                   <h4 className="font-semibold text-blue-800">التوصية الذكية</h4>
                 </div>
-                
                 <div className="space-y-2">
                   <div className="text-right">
                     <p className="text-sm text-blue-700 mb-1">النطاق المقترح:</p>
@@ -178,7 +188,6 @@ const PricingGuidance: React.FC<PricingGuidanceProps> = ({
                       {guidance.recommendation.suggestedMin} - {guidance.recommendation.suggestedMax} جنيه
                     </p>
                   </div>
-                  
                   <div className="text-right">
                     <p className="text-sm text-blue-700 mb-1">مستوى الثقة:</p>
                     <div className="flex items-center gap-2 justify-end">
@@ -193,23 +202,25 @@ const PricingGuidance: React.FC<PricingGuidanceProps> = ({
                       </span>
                     </div>
                   </div>
-                  
                   <p className="text-sm text-blue-700 text-right mt-3">
                     {guidance.recommendation.reasoning}
                   </p>
-                  
                   <Button
+                    type="button"
                     onClick={handleApplyRecommendation}
                     variant="primary"
                     size="sm"
                     className="w-full mt-3"
                   >
-                    تطبيق التوصية
+                    تطبيق
                   </Button>
                 </div>
               </div>
+            ) : (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-center">
+                لم يتم اقتراح سعر من الذكاء الاصطناعي. يرجى مراجعة البيانات والمحاولة مرة أخرى.
+              </div>
             )}
-
             {/* Analysis */}
             {guidance.analysis && (
               <div className="space-y-3">
@@ -232,7 +243,6 @@ const PricingGuidance: React.FC<PricingGuidanceProps> = ({
                     </span>
                   </div>
                 </div>
-
                 {/* Market Position */}
                 <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
@@ -242,7 +252,6 @@ const PricingGuidance: React.FC<PricingGuidanceProps> = ({
                     </span>
                   </div>
                 </div>
-
                 {/* Factors */}
                 {guidance.analysis.factors.length > 0 && (
                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
@@ -254,7 +263,6 @@ const PricingGuidance: React.FC<PricingGuidanceProps> = ({
                     </ul>
                   </div>
                 )}
-
                 {/* Tips */}
                 {guidance.analysis.tips.length > 0 && (
                   <div className="p-3 bg-[#FDF8F0] border border-[#F5A623] rounded-lg">

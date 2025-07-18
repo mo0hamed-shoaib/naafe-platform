@@ -243,7 +243,7 @@ Remember: Return ONLY the JSON object, no additional text or explanations.`;
    * AI Pricing Guidance
    * Provides intelligent pricing recommendations
    */
-  async providePricingGuidance(category, serviceType, location, userBudget = null, marketData = {}) {
+  async providePricingGuidance(category, serviceType, location, userBudget = null, marketData = {}, skills = []) {
     if (!this.config.services.pricingGuidance) {
       return { recommendation: null, analysis: null };
     }
@@ -251,13 +251,14 @@ Remember: Return ONLY the JSON object, no additional text or explanations.`;
     try {
       const categoryArabic = this.config.formAssistance.categories[category] || category;
       const priceRange = this.config.pricingGuidance.priceRanges[category];
-      
+      const skillsText = Array.isArray(skills) && skills.length > 0 ? `\nمهارات مقدم الخدمة:\n- ${skills.join('\n- ')}` : '';
       const prompt = `
-        أنت خبير في تسعير الخدمات في مصر. ساعد المستخدم في تحديد سعر عادل ومناسب.
+        أنت خبير في تسعير الخدمات في مصر. ساعد المستخدم في تحديد سعر عادل ومناسب بناءً على مهارات مقدم الخدمة والسوق.
 
-        نوع الخدمة: ${serviceType === 'service' ? 'نشر خدمة' : 'طلب خدمة'}
+        نوع الخدمة: ${serviceType === 'service' ? 'نشر خدمة (مقدم خدمة)' : 'طلب خدمة (باحث عن خدمة)'}
         الفئة: ${category} (${categoryArabic})
         الموقع: ${location}
+        ${skillsText}
         
         نطاق الأسعار المرجعي للفئة:
         - الحد الأدنى: ${priceRange?.min || 0} جنيه
@@ -270,26 +271,36 @@ Remember: Return ONLY the JSON object, no additional text or explanations.`;
         ${JSON.stringify(marketData, null, 2)}
         
         المطلوب:
-        1. حلل السعر المقترح
-        2. اقترح نطاق سعر مناسب
-        3. اشرح الأسباب
-        4. اعطِ نصائح للتسعير
-        
-        أعد النتيجة بتنسيق JSON:
+        1. إذا كانت الميزانية المدخلة من المستخدم أقل بكثير أو أعلى بكثير من نطاق السوق، حذّر المستخدم وأخبره أن الميزانية غير واقعية واقترح نطاقاً مناسباً.
+        2. إذا لم يحدد المستخدم ميزانية، اقترح نطاق سعر مناسب بناءً على السوق ومهارات مقدم الخدمة.
+        3. اقترح دائماً نطاق سعر (حد أدنى وحد أقصى) بالجنيه المصري فقط.
+        4. اشرح الأسباب.
+        5. اعطِ نصائح للتسعير.
+
+        ❗️ مهم جدًا: يجب أن تكون جميع الأسعار بالجنيه المصري فقط (جنيه)، ولا تستخدم أي عملة أخرى مثل الريال أو الدولار.
+        أمثلة:
+        - ❌ "500 ريال"
+        - ❌ "100 دولار"
+        - ✅ "500 جنيه"
+
+        أعد النتيجة بتنسيق JSON فقط، دون أي نص خارجي:
         {
           "recommendation": {
-            "suggestedMin": number,
-            "suggestedMax": number,
-            "confidence": number (0-1),
-            "reasoning": "التبرير"
+            "suggestedMin": 500,
+            "suggestedMax": 800,
+            "confidence": 0.9,
+            "reasoning": "لأن مقدم الخدمة لديه خبرة في ... ويمتلك مهارات ..."
           },
           "analysis": {
-            "isReasonable": boolean,
-            "marketPosition": "low|average|high",
-            "factors": ["عامل 1", "عامل 2"],
-            "tips": ["نصيحة 1", "نصيحة 2"]
-          }
+            "isReasonable": true,
+            "marketPosition": "average",
+            "factors": ["مهارات مقدم الخدمة", "الأسعار في السوق"],
+            "tips": ["حدد نطاق سعرك بوضوح", "اذكر خبراتك لرفع السعر"]
+          },
+          "warning": "الميزانية التي أدخلتها غير واقعية مقارنة بالسوق. يرجى مراجعة الأسعار المقترحة."
         }
+        
+        إذا لم يكن هناك تحذير، اجعل حقل warning فارغاً أو لا تضعه.
       `;
 
       const response = await this.makeRequest([
@@ -300,7 +311,41 @@ Remember: Return ONLY the JSON object, no additional text or explanations.`;
         { role: 'user', content: prompt }
       ]);
 
-      return JSON.parse(response);
+      let parsed;
+      try {
+        parsed = JSON.parse(response);
+      } catch {
+        // Try to extract JSON if malformed
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            parsed = JSON.parse(jsonMatch[0]);
+          } catch {}
+        }
+      }
+
+      // Fallback if no valid recommendation
+      if (!parsed || !parsed.recommendation || typeof parsed.recommendation.suggestedMin !== 'number' || typeof parsed.recommendation.suggestedMax !== 'number') {
+        const fallbackMin = priceRange?.min || 100;
+        const fallbackMax = priceRange?.max || 2000;
+        return {
+          recommendation: {
+            suggestedMin: fallbackMin,
+            suggestedMax: fallbackMax,
+            confidence: 0.5,
+            reasoning: 'تم اقتراح هذا النطاق بناءً على بيانات السوق لأن الذكاء الاصطناعي لم يقترح سعراً.'
+          },
+          analysis: {
+            isReasonable: false,
+            marketPosition: 'average',
+            factors: ['الذكاء الاصطناعي لم يقترح سعراً', 'تم استخدام بيانات السوق'],
+            tips: ['راجع ميزانيتك', 'استخدم النطاق المقترح']
+          },
+          warning: 'لم يتم اقتراح سعر من الذكاء الاصطناعي. تم عرض نطاق تقريبي بناءً على السوق.'
+        };
+      }
+
+      return parsed;
     } catch (error) {
       logger.error('AI pricing guidance error:', error);
       return { recommendation: null, analysis: null };

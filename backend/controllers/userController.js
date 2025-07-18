@@ -263,6 +263,53 @@ class UserController {
     }
   }
 
+  /**
+   * Get provider skills for current user
+   * GET /api/users/me/skills
+   */
+  async getProviderSkills(req, res) {
+    try {
+      const userId = req.user._id;
+      const skills = await userService.getProviderSkills(userId);
+      res.status(200).json({
+        success: true,
+        data: { skills },
+        message: 'Provider skills retrieved successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: error.message },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Update provider skills for current user
+   * PATCH /api/users/me/skills
+   */
+  async updateProviderSkills(req, res) {
+    try {
+      const userId = req.user._id;
+      const { skills } = req.body;
+      const updatedSkills = await userService.updateProviderSkills(userId, skills);
+      res.status(200).json({
+        success: true,
+        data: { skills: updatedSkills },
+        message: 'Provider skills updated successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: error.message },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
   // Admin: Get all users (paginated, filterable)
   async getAllUsers(req, res) {
     try {

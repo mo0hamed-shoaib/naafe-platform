@@ -48,6 +48,7 @@ const PostServiceForm: React.FC = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [providerSkills, setProviderSkills] = useState<string[]>([]);
 
   useEffect(() => {
     setCategoriesLoading(true);
@@ -63,6 +64,17 @@ const PostServiceForm: React.FC = () => {
       .catch(() => setCategoriesError('فشل تحميل الفئات'))
       .finally(() => setCategoriesLoading(false));
   }, []);
+
+  // Fetch provider skills on mount
+  useEffect(() => {
+    fetch('/api/users/me/skills', {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setProviderSkills(data.data.skills || []);
+      });
+  }, [accessToken]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -185,6 +197,16 @@ const PostServiceForm: React.FC = () => {
                   required
                 />
               </div>
+              {providerSkills.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">مهاراتك</label>
+                  <div className="flex flex-wrap gap-2">
+                    {providerSkills.map(skill => (
+                      <span key={skill} className="bg-[#F5A623]/10 text-[#F5A623] px-3 py-1 rounded-full text-sm font-cairo border border-[#F5A623]/30">{skill}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="my-6">
                 <AIAssistant
                   formType="service"
@@ -192,6 +214,7 @@ const PostServiceForm: React.FC = () => {
                   currentFields={formData as unknown as Record<string, unknown>}
                   onSuggestionApply={handleAISuggestion}
                   inputPlaceholder="مثال: أعلن عن خدمة تنظيف منازل باحترافية..."
+                  skills={providerSkills}
                 />
                 <PricingGuidance
                   formType="service"
@@ -202,6 +225,7 @@ const PostServiceForm: React.FC = () => {
                     max: Number(formData.maxBudget)
                   } : null}
                   onPricingApply={handlePricingApply}
+                  skills={providerSkills}
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
