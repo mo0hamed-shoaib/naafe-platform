@@ -21,13 +21,11 @@ interface Response {
 
 interface ResponsesSectionProps {
   responses: Response[];
-  onOfferAdded?: (newOffer: Response) => void;
   onOffersRefresh?: () => Promise<void>;
 }
 
 const ResponsesSection: React.FC<ResponsesSectionProps> = ({ 
   responses, 
-  onOfferAdded, 
   onOffersRefresh 
 }) => {
   const { user, accessToken } = useAuth();
@@ -221,7 +219,7 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
             )}
 
             {/* Action Buttons */}
-            {user && user._id === resp.jobRequestSeekerId && (
+            {user && user.id === resp.jobRequestSeekerId && (
               <div className="flex gap-3 pt-4 border-t border-deep-teal/10">
                 <button 
                   onClick={() => handleAcceptOffer(resp.id)}

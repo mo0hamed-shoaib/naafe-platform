@@ -24,6 +24,9 @@ import AdminUpgradeRequests from './admin/pages/AdminUpgradeRequests';
 import HelpCenterPage from './pages/HelpCenterPage';
 import SettingsPage from './pages/SettingsPage';
 import PricingPage from './pages/PricingPage';
+import NotificationPage from './pages/NotificationPage';
+import ChatPage from './pages/ChatPage';
+import ConversationsPage from './pages/ConversationsPage';
 
 const App = () => {
   return (
@@ -69,6 +72,21 @@ const App = () => {
                 <Route path="/requests/:id/respond" element={<ServiceResponseForm />} />
               <Route path="/help" element={<HelpCenterPage />} />
               <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/notifications" element={
+                <ProtectedRoute>
+                  <NotificationPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/conversations" element={
+                <ProtectedRoute>
+                  <ConversationsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/chat/:chatId" element={
+                <ProtectedRoute>
+                  <ChatPage />
+                </ProtectedRoute>
+              } />
               <Route path="/provider/:id" element={<div className="min-h-screen bg-warm-cream flex items-center justify-center"><p className="text-2xl text-text-secondary">Provider Details Page (Coming Soon)</p></div>} />
                 <Route path="/admin" element={
                   <ProtectedRoute requiredRoles={['admin']}>

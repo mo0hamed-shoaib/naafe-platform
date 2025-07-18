@@ -55,7 +55,7 @@ class ChatService {
       await message.save();
 
       // Determine which user type to increment unread count for
-      const receiverType = receiverId.equals(conversation.participants.seeker) ? 'seeker' : 'provider';
+      const receiverType = receiverId.toString() === conversation.participants.seeker.toString() ? 'seeker' : 'provider';
 
       // Update conversation metadata
       await Conversation.findByIdAndUpdate(conversationId, {
@@ -87,9 +87,8 @@ class ChatService {
       const messages = await Message.find({ conversationId })
         .sort({ timestamp: -1 })
         .skip(skip)
-        .limit(limit)
-        .populate('senderId', 'firstName lastName email')
-        .populate('receiverId', 'firstName lastName email');
+        .limit(limit);
+        // Removed population of senderId and receiverId to keep them as ObjectId strings
 
       const total = await Message.countDocuments({ conversationId });
       
@@ -128,7 +127,7 @@ class ChatService {
       // Reset unread count for the user
       const conversation = await Conversation.findById(conversationId);
       if (conversation) {
-        const userType = userId.equals(conversation.participants.seeker) ? 'seeker' : 'provider';
+        const userType = userId.toString() === conversation.participants.seeker.toString() ? 'seeker' : 'provider';
         await Conversation.findByIdAndUpdate(conversationId, {
           [`unreadCount.${userType}`]: 0
         });
@@ -156,9 +155,9 @@ class ChatService {
         ],
         isActive: true
       })
-      .populate('participants.seeker', 'firstName lastName email')
-      .populate('participants.provider', 'firstName lastName email')
-      .populate('lastMessage.senderId', 'firstName lastName')
+      .populate('participants.seeker', 'name email')
+      .populate('participants.provider', 'name email')
+      .populate('lastMessage.senderId', 'name')
       .populate('jobRequestId', 'title status')
       .sort({ 'lastMessage.timestamp': -1 })
       .skip(skip)
@@ -193,13 +192,31 @@ class ChatService {
   async getConversationByJobRequest(jobRequestId) {
     try {
       const conversation = await Conversation.findOne({ jobRequestId })
-        .populate('participants.seeker', 'firstName lastName email')
-        .populate('participants.provider', 'firstName lastName email')
-        .populate('lastMessage.senderId', 'firstName lastName');
+        .populate('participants.seeker', 'name email')
+        .populate('participants.provider', 'name email')
+        .populate('lastMessage.senderId', 'name');
 
       return conversation;
     } catch (error) {
       logger.error('Error in getConversationByJobRequest:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a single conversation by ID
+   */
+  async getConversationById(conversationId) {
+    try {
+      const conversation = await Conversation.findById(conversationId)
+        .populate('participants.seeker', 'name email')
+        .populate('participants.provider', 'name email')
+        .populate('lastMessage.senderId', 'name')
+        .populate('jobRequestId', 'title status');
+
+      return conversation;
+    } catch (error) {
+      logger.error('Error in getConversationById:', error);
       throw error;
     }
   }
@@ -212,8 +229,8 @@ class ChatService {
       const conversation = await Conversation.findById(conversationId);
       if (!conversation) return false;
 
-      return conversation.participants.seeker.equals(userId) || 
-             conversation.participants.provider.equals(userId);
+      return conversation.participants.seeker.toString() === userId.toString() || 
+             conversation.participants.provider.toString() === userId.toString();
     } catch (error) {
       logger.error('Error in canAccessConversation:', error);
       return false;
@@ -235,7 +252,7 @@ class ChatService {
 
       let totalUnread = 0;
       conversations.forEach(conv => {
-        if (conv.participants.seeker.equals(userId)) {
+        if (conv.participants.seeker.toString() === userId.toString()) {
           totalUnread += conv.unreadCount.seeker;
         } else {
           totalUnread += conv.unreadCount.provider;

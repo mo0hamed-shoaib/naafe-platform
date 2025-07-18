@@ -218,6 +218,105 @@ class OfferController {
     }
   }
   
+  // Accept an offer (called by job request owner/seeker)
+  async acceptOffer(req, res) {
+    try {
+      const { offerId } = req.params;
+      const seekerId = req.user._id;
+      
+      logger.info(`Accepting offer ${offerId} by seeker ${seekerId}`);
+      
+      const offer = await offerService.acceptOffer(offerId, seekerId);
+      
+      logger.info(`Offer ${offerId} accepted successfully`);
+      
+      res.status(200).json({
+        success: true,
+        data: offer,
+        message: 'Offer accepted successfully'
+      });
+    } catch (error) {
+      logger.error(`Error accepting offer: ${error.message}`);
+      
+      if (error.message === 'Offer not found') {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'OFFER_NOT_FOUND',
+            message: 'Offer not found'
+          }
+        });
+      }
+      
+      if (error.message === 'Access denied') {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Access denied'
+          }
+        });
+      }
+      
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'OFFER_ACCEPTANCE_ERROR',
+          message: error.message
+        }
+      });
+    }
+  }
+  
+  // Reject an offer (called by job request owner/seeker)
+  async rejectOffer(req, res) {
+    try {
+      const { offerId } = req.params;
+      const seekerId = req.user._id;
+      
+      logger.info(`Rejecting offer ${offerId} by seeker ${seekerId}`);
+      
+      const offer = await offerService.rejectOffer(offerId, seekerId);
+      
+      logger.info(`Offer ${offerId} rejected successfully`);
+      
+      res.status(200).json({
+        success: true,
+        data: offer,
+        message: 'Offer rejected successfully'
+      });
+    } catch (error) {
+      logger.error(`Error rejecting offer: ${error.message}`);
+      
+      if (error.message === 'Offer not found') {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'OFFER_NOT_FOUND',
+            message: 'Offer not found'
+          }
+        });
+      }
+      
+      if (error.message === 'Access denied') {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Access denied'
+          }
+        });
+      }
+      
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'OFFER_REJECTION_ERROR',
+          message: error.message
+        }
+      });
+    }
+  }
 
 }
 

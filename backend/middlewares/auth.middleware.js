@@ -60,7 +60,7 @@ export const requireRole = (roles) => {
         success: false,
         error: {
           code: 'FORBIDDEN',
-          message: 'Insufficient permissions'
+          message: 'Access denied'
         },
         timestamp: new Date().toISOString()
       });

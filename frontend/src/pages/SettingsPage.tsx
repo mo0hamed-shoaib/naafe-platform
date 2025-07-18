@@ -295,7 +295,7 @@ const SettingsPage: React.FC = () => {
     >
       <SettingsCard title="المعلومات الشخصية">
         <form onSubmit={handlePersonalInfoSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col items-center gap-4">
               <img
                 src={avatarPreview || '/default-avatar.png'}
@@ -321,31 +321,31 @@ const SettingsPage: React.FC = () => {
               )}
             </div>
             <div className="grid grid-cols-1 gap-4">
-              <FormInput
-                id="fullName"
+            <FormInput
+              id="fullName"
                 name="fullName"
-                type="text"
-                label="الاسم الكامل"
-                placeholder="أدخل اسمك الكامل"
+              type="text"
+              label="الاسم الكامل"
+              placeholder="أدخل اسمك الكامل"
                 value={personalInfo.fullName}
                 onChange={handlePersonalInfoChange}
-                className="w-full"
-              />
-              <FormInput
-                id="email"
-                type="email"
-                label="البريد الإلكتروني"
-                placeholder="أدخل بريدك الإلكتروني"
-                defaultValue={user?.email || ''}
-                className="w-full"
-                disabled
-              />
-              <FormInput
-                id="phone"
+              className="w-full"
+            />
+            <FormInput
+              id="email"
+              type="email"
+              label="البريد الإلكتروني"
+              placeholder="أدخل بريدك الإلكتروني"
+              defaultValue={user?.email || ''}
+              className="w-full"
+              disabled
+            />
+            <FormInput
+              id="phone"
                 name="phone"
-                type="tel"
-                label="رقم الهاتف"
-                placeholder="أدخل رقم هاتفك"
+              type="tel"
+              label="رقم الهاتف"
+              placeholder="أدخل رقم هاتفك"
                 value={personalInfo.phone}
                 onChange={handlePersonalInfoChange}
                 className="w-full"
@@ -409,16 +409,16 @@ const SettingsPage: React.FC = () => {
               className="w-full"
               rows={2}
             />
-          </div>
-          <div className="flex justify-end mt-8">
-            <button 
+        </div>
+        <div className="flex justify-end mt-8">
+          <button 
               type="submit"
-              className="bg-deep-teal text-white font-semibold py-3 px-8 rounded-xl hover:bg-deep-teal/90 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50"
-              disabled={saving}
-            >
-              {saving ? 'جاري التحديث...' : 'تحديث المعلومات'}
-            </button>
-          </div>
+            className="bg-deep-teal text-white font-semibold py-3 px-8 rounded-xl hover:bg-deep-teal/90 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50"
+            disabled={saving}
+          >
+            {saving ? 'جاري التحديث...' : 'تحديث المعلومات'}
+          </button>
+        </div>
         </form>
       </SettingsCard>
     </SettingsSection>

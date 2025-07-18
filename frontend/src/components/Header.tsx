@@ -7,6 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 import Modal from '../admin/components/UI/Modal';
 import { useRef } from 'react';
 import { FormInput, FormTextarea } from './ui';
+import NotificationBell, { NotificationItem } from './ui/NotificationBell';
+import { useSocket } from '../hooks/useSocket';
 
 interface UpgradeRequest {
   _id: string;
@@ -39,6 +41,11 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
   // Add state for uploading images
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{[key: string]: boolean}>({});
+
+  // --- Notification state ---
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const { connected, on } = useSocket(accessToken || undefined);
 
   // Helper: check if user is provider
   const isProvider = user && user.roles.includes('provider');
@@ -105,6 +112,55 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
         });
     }
   }, [showUpgradeModal, user, isProvider, accessToken]);
+
+  // Fetch notifications on mount and when user changes
+  useEffect(() => {
+    if (!accessToken) return;
+    fetch('/api/notifications?limit=10', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.data.notifications)) {
+          setNotifications(data.data.notifications);
+        }
+      });
+  }, [accessToken, user]);
+
+  // Listen for real-time notification events
+  useEffect(() => {
+    if (!connected) return;
+    
+    // Listen for offer accepted notifications
+    const offOfferAccepted = on('notify:offerAccepted', (...args: unknown[]) => {
+      const payload = args[0] as { notification: NotificationItem };
+      if (payload && payload.notification) {
+        setNotifications(prev => [payload.notification, ...prev].slice(0, 10));
+      }
+    });
+
+    // Listen for offer received notifications
+    const offOfferReceived = on('notify:offerReceived', (...args: unknown[]) => {
+      const payload = args[0] as { notification: NotificationItem };
+      if (payload && payload.notification) {
+        setNotifications(prev => [payload.notification, ...prev].slice(0, 10));
+      }
+    });
+
+    // Listen for new message notifications
+    const offNewMessage = on('notify:newMessage', (...args: unknown[]) => {
+      const payload = args[0] as { notification: NotificationItem };
+      if (payload && payload.notification) {
+        setNotifications(prev => [payload.notification, ...prev].slice(0, 10));
+      }
+    });
+
+    return () => {
+      offOfferAccepted?.();
+      offOfferReceived?.();
+      offNewMessage?.();
+    };
+  }, [connected, on]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -338,30 +394,34 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
               </Button>
               
               {/* Authentication Section */}
-              {user ? (
-                // Logged in user - show dropdown
-                <UserDropdown user={user} onLogout={logout} />
-              ) : (
-                // Not logged in - show login/register buttons
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate('/login')}
-                    className="hidden sm:inline-flex"
-                  >
-                    تسجيل الدخول
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => navigate('/register')}
-                    className="hidden sm:inline-flex"
-                  >
-                    إنشاء حساب
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <NotificationBell
+                  unreadCount={unreadCount}
+                  notifications={notifications}
+                />
+                {user ? (
+                  <UserDropdown user={user} onLogout={logout} />
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate('/login')}
+                      className="hidden sm:inline-flex"
+                    >
+                      تسجيل الدخول
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => navigate('/register')}
+                      className="hidden sm:inline-flex"
+                    >
+                      إنشاء حساب
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           

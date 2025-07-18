@@ -193,4 +193,57 @@ export const getUnreadCount = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
+};
+
+/**
+ * Get a single conversation by ID
+ */
+export const getConversationById = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user._id;
+
+    // Check if user can access this conversation
+    const canAccess = await chatService.canAccessConversation(conversationId, userId);
+    if (!canAccess) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Access denied to this conversation'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const conversation = await chatService.getConversationById(conversationId);
+    
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Conversation not found'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { conversation },
+      message: 'Conversation retrieved successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Error in getConversationById controller:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to retrieve conversation'
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
 }; 

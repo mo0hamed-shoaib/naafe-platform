@@ -9,7 +9,7 @@ export { default as FilterForm } from './FilterForm';
 export { default as BackButton } from './BackButton';
 
 // Layout Components
-export { default as PageLayout } from '../layout/PageLayout';
+export { default as PageLayout } from '../layout/PageLayout'; 
 
 // AI Components
 export { default as AIAssistant } from './AIAssistant';

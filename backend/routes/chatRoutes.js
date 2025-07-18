@@ -5,7 +5,8 @@ import {
   getMessages,
   markMessagesAsRead,
   getConversationByJobRequest,
-  getUnreadCount
+  getUnreadCount,
+  getConversationById
 } from '../controllers/chatController.js';
 
 const router = express.Router();
@@ -15,6 +16,9 @@ router.use(authenticateToken);
 
 // Get user's conversations
 router.get('/conversations', getUserConversations);
+
+// Get a single conversation by ID
+router.get('/conversations/:conversationId', getConversationById);
 
 // Get messages for a conversation
 router.get('/conversations/:conversationId/messages', getMessages);

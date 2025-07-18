@@ -1,6 +1,8 @@
 import { Server } from 'socket.io';
 import chatService from './chatService.js';
 import { logger } from '../middlewares/logging.middleware.js';
+import Notification from '../models/Notification.js';
+import User from '../models/User.js';
 
 class SocketService {
   constructor() {
@@ -149,24 +151,59 @@ class SocketService {
     // Send message via chat service
     const message = await chatService.sendMessage(conversationId, senderId, receiverId, content);
 
+    // Create notification for receiver
+    try {
+      const sender = await User.findById(senderId).select('name.first name.last');
+      const senderName = sender ? `${sender.name.first} ${sender.name.last}` : 'شخص ما';
+      
+      const notification = new Notification({
+        userId: receiverId,
+        type: 'new_message',
+        message: `${senderName} أرسل لك رسالة جديدة`,
+        relatedChatId: conversationId,
+        isRead: false
+      });
+      await notification.save();
+
+      // Emit notification to receiver if online
+      const receiverSocketId = this.connectedUsers.get(receiverId);
+      if (receiverSocketId) {
+        this.io.to(receiverSocketId).emit('notify:newMessage', {
+          notification: {
+            _id: notification._id,
+            type: notification.type,
+            message: notification.message,
+            relatedChatId: notification.relatedChatId,
+            isRead: notification.isRead,
+            createdAt: notification.createdAt
+          }
+        });
+      }
+
+      logger.info(`Notification created for new message: ${notification._id}`);
+    } catch (error) {
+      logger.error('Error creating notification for new message:', error);
+      // Don't throw error here as the message was already sent successfully
+    }
+
     // Emit to sender (confirmation)
-    socket.emit('message-sent', {
-      messageId: message._id,
-      conversationId,
-      content,
-      timestamp: message.timestamp
-    });
+    const messageData = {
+      _id: message._id,
+      conversationId: message.conversationId,
+      senderId: message.senderId,
+      receiverId: message.receiverId,
+      content: message.content,
+      timestamp: message.timestamp,
+      read: message.read,
+      readAt: message.readAt
+    };
+
+    socket.emit('message-sent', messageData);
 
     // Emit to receiver if online
     const receiverSocketId = this.connectedUsers.get(receiverId);
     if (receiverSocketId) {
-      this.io.to(receiverSocketId).emit('receive-message', {
-        messageId: message._id,
-        conversationId,
-        senderId,
-        content,
-        timestamp: message.timestamp
-      });
+      this.io.to(receiverSocketId).emit('receive-message', messageData);
     }
 
     logger.info(`Message sent via socket: ${message._id} from ${senderId} to ${receiverId}`);

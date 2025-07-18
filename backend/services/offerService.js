@@ -2,6 +2,9 @@ import Offer from '../models/Offer.js';
 import JobRequest from '../models/JobRequest.js';
 import User from '../models/User.js';
 import chatService from './chatService.js';
+import Notification from '../models/Notification.js';
+import socketService from './socketService.js';
+import { logger } from '../middlewares/logging.middleware.js';
 
 class OfferService {
   // Create a new offer
@@ -56,8 +59,41 @@ class OfferService {
       // Populate provider and job request details
       await offer.populate([
         { path: 'provider', select: 'name email phone' },
-        { path: 'jobRequest', select: 'title description budget deadline' }
+        { path: 'jobRequest', select: 'title description budget deadline seeker' }
       ]);
+      
+      // --- Notification logic for new offer ---
+      try {
+        const provider = await User.findById(providerId).select('name.first name.last');
+        const providerName = provider ? `${provider.name.first} ${provider.name.last}` : 'مقدم خدمة';
+        
+        const notification = new Notification({
+          userId: offer.jobRequest.seeker,
+          type: 'offer_received',
+          message: `${providerName} أرسل لك عرض جديد على طلبك "${offer.jobRequest.title}"`,
+          relatedChatId: null, // No chat yet, will be created when offer is accepted
+          isRead: false
+        });
+        await notification.save();
+
+        // Emit Socket.IO event to seeker's room
+        socketService.io.to(`user:${offer.jobRequest.seeker}`).emit('notify:offerReceived', {
+          notification: {
+            _id: notification._id,
+            type: notification.type,
+            message: notification.message,
+            relatedChatId: notification.relatedChatId,
+            isRead: notification.isRead,
+            createdAt: notification.createdAt
+          }
+        });
+
+        logger.info(`Notification created for new offer: ${notification._id}`);
+      } catch (error) {
+        logger.error('Error creating notification for new offer:', error);
+        // Don't throw error here as the offer was already created successfully
+      }
+      // --- End notification logic ---
       
       return offer;
     } catch (error) {
@@ -247,7 +283,7 @@ class OfferService {
       }
       
       // Only job request owner can accept offers
-      if (offer.jobRequest.seeker.toString() !== seekerId) {
+      if (offer.jobRequest.seeker.toString() !== seekerId.toString()) {
         throw new Error('Access denied');
       }
       
@@ -267,7 +303,7 @@ class OfferService {
       });
       
       // Create conversation for chat between seeker and provider
-      await chatService.getOrCreateConversation(
+      const conversation = await chatService.getOrCreateConversation(
         offer.jobRequest._id,
         offer.jobRequest.seeker,
         offer.provider
@@ -282,6 +318,33 @@ class OfferService {
         },
         { status: 'rejected' }
       );
+
+      // --- Notification logic ---
+      // Get seeker name for message
+      const seeker = await User.findById(seekerId);
+      const providerId = offer.provider;
+      const message = seeker ? `${seeker.name.first} قبل عرضك` : 'تم قبول عرضك';
+      // Create notification in DB
+      const notification = new Notification({
+        userId: providerId,
+        type: 'offer_accepted',
+        message,
+        relatedChatId: conversation._id,
+        isRead: false
+      });
+      await notification.save();
+      // Emit Socket.IO event to provider's room
+      socketService.io.to(`user:${providerId}`).emit('notify:offerAccepted', {
+        notification: {
+          _id: notification._id,
+          type: notification.type,
+          message: notification.message,
+          relatedChatId: notification.relatedChatId,
+          isRead: notification.isRead,
+          createdAt: notification.createdAt
+        }
+      });
+      // --- End notification logic ---
       
       return offer;
     } catch (error) {
@@ -300,7 +363,7 @@ class OfferService {
       }
       
       // Only job request owner can reject offers
-      if (offer.jobRequest.seeker.toString() !== seekerId) {
+      if (offer.jobRequest.seeker.toString() !== seekerId.toString()) {
         throw new Error('Access denied');
       }
       

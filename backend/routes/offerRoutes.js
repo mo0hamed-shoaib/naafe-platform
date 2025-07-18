@@ -8,8 +8,6 @@ import {
   handleValidationErrors 
 } from '../validation/offerValidation.js';
 
-
-
 /**
  * @route   GET /api/offers
  * @desc    Retrieve all offers (with filtering)
@@ -55,6 +53,34 @@ router.patch('/:offerId',
   updateOfferValidation,
   handleValidationErrors,
   offerController.updateOffer
+);
+
+/**
+ * @route   POST /api/offers/:offerId/accept
+ * @desc    Accept an offer (only job request owner can accept)
+ * @access  Private (Job request owner only - can be seeker or provider)
+ * @param   {string} offerId - ID of the offer to accept
+ * @returns {object} Accepted offer with updated status and conversation details
+ */
+router.post('/:offerId/accept', 
+  authenticateToken, 
+  offerIdValidation,
+  handleValidationErrors,
+  offerController.acceptOffer
+);
+
+/**
+ * @route   POST /api/offers/:offerId/reject
+ * @desc    Reject an offer (only job request owner can reject)
+ * @access  Private (Job request owner only - can be seeker or provider)
+ * @param   {string} offerId - ID of the offer to reject
+ * @returns {object} Rejected offer with updated status
+ */
+router.post('/:offerId/reject', 
+  authenticateToken, 
+  offerIdValidation,
+  handleValidationErrors,
+  offerController.rejectOffer
 );
 
 /**

@@ -311,7 +311,7 @@ const ProfilePage: React.FC = () => {
                   ))}
                 </div>
               )}
-            </div>
+          </div>
           </BaseCard>
         ) : null}
         {profile && profile.roles.includes('provider') && isSelf && (
