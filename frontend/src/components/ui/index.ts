@@ -18,5 +18,6 @@ export { default as AITestComponent } from './AITestComponent';
 
 // Payment Components
 export { default as PaymentModal } from './PaymentModal';
-export { default as OrderSummary } from './OrderSummary';
-export { default as MarkCompletedButton } from './MarkCompletedButton'; 
+
+// Review Components
+export { default as ReviewModal } from './ReviewModal'; 

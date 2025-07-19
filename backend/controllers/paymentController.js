@@ -1,508 +1,321 @@
-import paymobService from '../services/paymobService.js';
-import socketService from '../services/socketService.js';
+import Stripe from 'stripe';
+import dotenv from 'dotenv';
+import Payment from '../models/Payment.js';
+import Conversation from '../models/Conversation.js';
 import JobRequest from '../models/JobRequest.js';
-import Offer from '../models/Offer.js';
-import User from '../models/User.js';
-import Notification from '../models/Notification.js';
-import { logger } from '../middlewares/logging.middleware.js';
 
-class PaymentController {
-  /**
-   * Create payment order
-   */
-  async createPaymentOrder(req, res) {
-    try {
-      const { jobRequestId, offerId } = req.body;
-      const seekerId = req.user.id;
+dotenv.config();
 
-      // Validate input
-      if (!jobRequestId || !offerId) {
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: 'MISSING_FIELDS',
-            message: 'Job request ID and offer ID are required'
-          }
-        });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-12-18.acacia',
+});
+
+export const createCheckoutSession = async (req, res) => {
+  try {
+    console.log('Creating checkout session with data:', req.body);
+    const { conversationId, amount, serviceTitle, providerId } = req.body;
+    const userId = req.user._id;
+
+    if (!conversationId || !amount || !serviceTitle || !providerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'جميع الحقول مطلوبة'
+      });
+    }
+
+    // Validate amount (should be positive and in cents)
+    const amountInCents = Math.round(parseFloat(amount) * 100);
+    if (amountInCents <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'المبلغ غير صحيح'
+      });
+    }
+
+    // Verify conversation exists and user is the seeker
+    const conversation = await Conversation.findById(conversationId)
+      .populate('jobRequestId')
+      .populate('participants.seeker')
+      .populate('participants.provider');
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: 'المحادثة غير موجودة'
+      });
+    }
+
+    console.log('Authorization check:');
+    console.log('User ID from request:', userId, 'Type:', typeof userId);
+    console.log('Seeker ID from conversation:', conversation.participants.seeker._id, 'Type:', typeof conversation.participants.seeker._id);
+    console.log('User ID as string:', userId.toString());
+    console.log('Seeker ID as string:', conversation.participants.seeker._id.toString());
+    console.log('Comparison result:', userId.toString() === conversation.participants.seeker._id.toString());
+    
+    if (userId.toString() !== conversation.participants.seeker._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'غير مصرح لك بإنشاء الدفع لهذه المحادثة'
+      });
+    }
+
+    // Check if payment already exists and is completed
+    const existingPayment = await Payment.findOne({
+      conversationId,
+      status: 'completed'
+    });
+
+    if (existingPayment) {
+      return res.status(400).json({
+        success: false,
+        message: 'تم الدفع مسبقاً لهذه الخدمة'
+      });
+    }
+
+    // Create Stripe checkout session
+    console.log('Creating Stripe session with amount:', amountInCents, 'cents');
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: serviceTitle,
+              description: `دفع مقابل الخدمة: ${serviceTitle}`,
+            },
+            unit_amount: amountInCents,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/chat/${conversationId}`,
+      metadata: {
+        conversationId,
+        userId: userId.toString(),
+        providerId,
+        serviceTitle,
+        amount: amountInCents.toString(),
+        originalCurrency: 'EGP',
+        originalAmount: (amountInCents / 100).toString(),
+      },
+      customer_email: req.user.email,
+    });
+    
+    console.log('Stripe session created:', session.id);
+
+    // Create payment record in database
+    const payment = new Payment({
+      conversationId,
+      jobRequestId: conversation.jobRequestId._id,
+      seekerId: userId,
+      providerId,
+      stripeSessionId: session.id,
+      amount: amountInCents,
+      currency: 'usd',
+      originalCurrency: 'EGP',
+      originalAmount: parseFloat(amount),
+      serviceTitle,
+      status: 'pending'
+    });
+
+    await payment.save();
+
+    res.json({
+      success: true,
+      data: {
+        sessionId: session.id,
+        url: session.url
       }
+    });
 
-      // Get job request and offer details
-      const jobRequest = await JobRequest.findById(jobRequestId)
-        .populate('seeker', 'name email phone');
+  } catch (error) {
+    console.error('Error creating checkout session:', error);
+    res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء إنشاء جلسة الدفع'
+    });
+  }
+};
+
+export const handleWebhook = async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case 'checkout.session.completed':
+      const session = event.data.object;
       
-      if (!jobRequest) {
-        return res.status(404).json({
-          success: false,
-          error: {
-            code: 'JOB_REQUEST_NOT_FOUND',
-            message: 'Job request not found'
-          }
-        });
+      // Handle successful payment
+      try {
+        // Here you would typically:
+        // 1. Update the conversation status
+        // 2. Create a payment record
+        // 3. Send notifications
+        // 4. Update job request status
+        
+        console.log('Payment completed for session:', session.id);
+        console.log('Metadata:', session.metadata);
+        
+        // Handle payment completion
+        await handlePaymentCompletion(session);
+        
+      } catch (error) {
+        console.error('Error handling payment completion:', error);
       }
-
-      // Verify seeker owns the job request
-      if (jobRequest.seeker._id.toString() !== seekerId) {
-        return res.status(403).json({
-          success: false,
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'You can only pay for your own job requests'
-          }
-        });
-      }
-
-      const offer = await Offer.findById(offerId)
-        .populate('provider', 'name email phone');
+      break;
       
-      if (!offer) {
-        return res.status(404).json({
-          success: false,
-          error: {
-            code: 'OFFER_NOT_FOUND',
-            message: 'Offer not found'
-          }
-        });
-      }
+    case 'payment_intent.succeeded':
+      console.log('Payment succeeded:', event.data.object.id);
+      break;
+      
+    case 'payment_intent.payment_failed':
+      console.log('Payment failed:', event.data.object.id);
+      break;
+      
+    default:
+      console.log(`Unhandled event type: ${event.type}`);
+  }
 
-      // Verify offer belongs to the job request
-      if (offer.jobRequest.toString() !== jobRequestId) {
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: 'INVALID_OFFER',
-            message: 'Offer does not belong to this job request'
-          }
-        });
-      }
+  res.json({ received: true });
+};
 
-      // Verify offer is accepted
-      if (offer.status !== 'accepted') {
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: 'OFFER_NOT_ACCEPTED',
-            message: 'Can only pay for accepted offers'
-          }
-        });
-      }
+// Helper function to handle payment completion
+const handlePaymentCompletion = async (session) => {
+  try {
+    // Find the payment record
+    const payment = await Payment.findBySessionId(session.id);
+    if (!payment) {
+      console.error('Payment record not found for session:', session.id);
+      return;
+    }
 
-      // Calculate amounts
-      const amount = offer.budget.max; // Use max budget as final amount
-      const commission = Math.round(amount * 0.10); // 10% commission
-      const totalAmount = amount + commission;
+    // Mark payment as completed
+    await payment.markCompleted(session.payment_intent);
 
-      // Generate unique order ID
-      const orderId = `NAAFE_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Update job request status to completed
+    await JobRequest.findByIdAndUpdate(payment.jobRequestId, {
+      status: 'completed',
+      completedAt: new Date()
+    });
 
-      // Prepare payment data
-      const paymentData = {
-        orderId,
-        jobRequestId,
-        offerId,
-        seekerId,
-        providerId: offer.provider._id,
-        amount,
-        commission,
-        totalAmount,
-        currency: offer.budget.currency,
-        jobTitle: jobRequest.title,
-        seekerEmail: jobRequest.seeker.email,
-        seekerFirstName: jobRequest.seeker.name.first,
-        seekerLastName: jobRequest.seeker.name.last,
-        seekerPhone: jobRequest.seeker.phone
-      };
+    // Update conversation status
+    await Conversation.findByIdAndUpdate(payment.conversationId, {
+      isActive: false
+    });
 
-      // Process payment with Paymob
-      const paymentResult = await paymobService.processPayment(paymentData);
+    console.log('Payment completion processed successfully for session:', session.id);
+  } catch (error) {
+    console.error('Error processing payment completion:', error);
+  }
+};
 
-      // Update job request status to in_progress
-      await JobRequest.findByIdAndUpdate(jobRequestId, {
-        status: 'in_progress',
-        assignedTo: offer.provider._id
+// Check payment status by conversation ID
+export const checkPaymentStatus = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+
+    if (!conversationId) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف المحادثة مطلوب'
       });
+    }
 
-      // Create notifications
-      const seekerNotification = new Notification({
-        userId: seekerId,
-        type: 'payment_initiated',
-        message: `تم بدء عملية الدفع للخدمة: ${jobRequest.title}`,
-        relatedJobId: jobRequestId,
-        isRead: false
-      });
-      await seekerNotification.save();
+    // Find payment by conversation ID
+    const payment = await Payment.findOne({ conversationId });
 
-      const providerNotification = new Notification({
-        userId: offer.provider._id,
-        type: 'payment_initiated',
-        message: `تم بدء عملية الدفع للخدمة: ${jobRequest.title}`,
-        relatedJobId: jobRequestId,
-        isRead: false
-      });
-      await providerNotification.save();
-
-      // Emit socket events
-      socketService.emitToUser(seekerId, 'payment:initiated', {
-        jobRequestId,
-        orderId: paymentResult.payment.orderId,
-        amount: paymentResult.payment.totalAmount
-      });
-
-      socketService.emitToUser(offer.provider._id, 'payment:initiated', {
-        jobRequestId,
-        orderId: paymentResult.payment.orderId,
-        amount: paymentResult.payment.amount
-      });
-
-      res.status(200).json({
+    if (!payment) {
+      return res.json({
         success: true,
         data: {
-          orderId: paymentResult.payment.orderId,
-          iframeUrl: paymentResult.iframeUrl,
-          paymentKey: paymentResult.paymentKey,
-          amount: paymentResult.payment.amount,
-          commission: paymentResult.payment.commission,
-          totalAmount: paymentResult.payment.totalAmount,
-          currency: paymentResult.payment.currency
-        },
-        message: 'Payment order created successfully'
+          status: 'not_found',
+          exists: false
+        }
       });
+    }
 
-    } catch (error) {
-      logger.error('Payment order creation error:', error);
-      res.status(500).json({
+    res.json({
+      success: true,
+      data: {
+        status: payment.status,
+        exists: true,
+        completedAt: payment.completedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Error checking payment status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء التحقق من حالة الدفع'
+    });
+  }
+};
+
+// Get payment details by session ID
+export const getPaymentDetails = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    if (!sessionId) {
+      return res.status(400).json({
         success: false,
-        error: {
-          code: 'PAYMENT_ERROR',
-          message: 'Failed to create payment order'
-        }
+        message: 'معرف الجلسة مطلوب'
       });
     }
-  }
 
-  /**
-   * Create test payment order (for testing only)
-   */
-  async createTestPaymentOrder(req, res) {
-    try {
-      const { jobRequestId, offerId } = req.body;
+    // Find payment by session ID
+    const payment = await Payment.findOne({ stripeSessionId: sessionId })
+      .populate('seekerId', 'name email')
+      .populate('providerId', 'name email');
 
-      // Validate input
-      if (!jobRequestId || !offerId) {
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: 'MISSING_FIELDS',
-            message: 'Job request ID and offer ID are required'
-          }
-        });
-      }
-
-      // Use test data for development
-      const amount = 500;
-      const commission = 50;
-      const totalAmount = 550;
-
-      // Generate unique order ID
-      const orderId = `TEST_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      // Prepare payment data
-      const paymentData = {
-        orderId,
-        jobRequestId: '507f1f77bcf86cd799439011',
-        offerId: '507f1f77bcf86cd799439012',
-        seekerId: '507f1f77bcf86cd799439013',
-        providerId: '507f1f77bcf86cd799439014',
-        amount,
-        commission,
-        totalAmount,
-        currency: 'EGP',
-        jobTitle: 'خدمة تجريبية - اختبار الدفع',
-        seekerEmail: 'test@example.com',
-        seekerFirstName: 'Test',
-        seekerLastName: 'User',
-        seekerPhone: '+201234567890'
-      };
-
-      // Process payment with Paymob
-      const paymentResult = await paymobService.processPayment(paymentData);
-
-      res.status(200).json({
-        success: true,
-        data: {
-          orderId: paymentResult.payment.orderId,
-          iframeUrl: paymentResult.iframeUrl,
-          paymentKey: paymentResult.paymentKey,
-          amount: paymentResult.payment.amount,
-          commission: paymentResult.payment.commission,
-          totalAmount: paymentResult.payment.totalAmount,
-          currency: paymentResult.payment.currency
-        },
-        message: 'Test payment order created successfully'
-      });
-
-    } catch (error) {
-      logger.error('Test payment order creation error:', error);
-      res.status(500).json({
+    if (!payment) {
+      return res.status(404).json({
         success: false,
-        error: {
-          code: 'PAYMENT_ERROR',
-          message: 'Failed to create test payment order'
-        }
+        message: 'لم يتم العثور على تفاصيل الدفع'
       });
     }
-  }
 
-  /**
-   * Handle Paymob webhook
-   */
-  async handleWebhook(req, res) {
-    try {
-      const {
-        type,
-        obj: {
-          id: transactionId,
-          amount_cents,
-          currency,
-          order: { id: paymobOrderId },
-          hmac
-        }
-      } = req.body;
-
-      logger.info(`Paymob webhook received: ${type} for transaction ${transactionId}`);
-
-      // Verify HMAC signature
-      const isValidHmac = paymobService.verifyHmacSignature(
-        hmac,
-        transactionId,
-        amount_cents,
-        currency,
-        paymobOrderId
-      );
-
-      if (!isValidHmac) {
-        logger.error('Invalid HMAC signature in webhook');
-        return res.status(400).json({ error: 'Invalid signature' });
-      }
-
-      // Find payment by Paymob order ID
-      const payment = await paymobService.getPaymentByOrderId(paymobOrderId);
-      
-      if (!payment) {
-        logger.error(`Payment not found for Paymob order: ${paymobOrderId}`);
-        return res.status(404).json({ error: 'Payment not found' });
-      }
-
-      // Handle different webhook types
-      switch (type) {
-        case 'TRANSACTION':
-          await this.handleTransactionWebhook(payment, req.body);
-          break;
-        case 'TOKEN':
-          // Handle token webhook if needed
-          break;
-        default:
-          logger.info(`Unhandled webhook type: ${type}`);
-      }
-
-      res.status(200).json({ success: true });
-
-    } catch (error) {
-      logger.error('Webhook handling error:', error);
-      res.status(500).json({ error: 'Webhook processing failed' });
-    }
-  }
-
-  /**
-   * Handle transaction webhook
-   */
-  async handleTransactionWebhook(payment, webhookData) {
-    try {
-      const { success, pending, is_void, is_refunded, is_3d_secure, is_captured } = webhookData.obj;
-
-      let status = 'pending';
-      let failureReason = null;
-
-      if (success && is_captured) {
-        status = 'completed';
-      } else if (is_void || is_refunded) {
-        status = 'cancelled';
-        failureReason = is_void ? 'Payment voided' : 'Payment refunded';
-      } else if (!success) {
-        status = 'failed';
-        failureReason = webhookData.obj.error_occured || 'Payment failed';
-      }
-
-      // Update payment status
-      const updatedPayment = await paymobService.updatePaymentStatus(
-        payment.orderId,
-        status,
-        webhookData.obj
-      );
-
-      // Update job request status if payment completed
-      if (status === 'completed') {
-        await JobRequest.findByIdAndUpdate(payment.jobRequestId, {
-          status: 'completed',
-          'completionProof.completedAt': new Date()
-        });
-      }
-
-      // Create notifications
-      const seekerNotification = new Notification({
-        userId: payment.seeker._id,
-        type: status === 'completed' ? 'payment_completed' : 'payment_failed',
-        message: status === 'completed' 
-          ? `تم إتمام الدفع بنجاح للخدمة: ${payment.jobRequestId.title}`
-          : `فشل في إتمام الدفع للخدمة: ${payment.jobRequestId.title}`,
-        relatedJobId: payment.jobRequestId._id,
-        isRead: false
-      });
-      await seekerNotification.save();
-
-      const providerNotification = new Notification({
-        userId: payment.provider._id,
-        type: status === 'completed' ? 'payment_completed' : 'payment_failed',
-        message: status === 'completed'
-          ? `تم إتمام الدفع بنجاح للخدمة: ${payment.jobRequestId.title}`
-          : `فشل في إتمام الدفع للخدمة: ${payment.jobRequestId.title}`,
-        relatedJobId: payment.jobRequestId._id,
-        isRead: false
-      });
-      await providerNotification.save();
-
-      // Emit socket events
-      const eventType = status === 'completed' ? 'payment:completed' : 'payment:failed';
-      
-      socketService.emitToUser(payment.seeker._id, eventType, {
-        jobRequestId: payment.jobRequestId._id,
-        orderId: payment.orderId,
-        amount: payment.totalAmount,
-        status
-      });
-
-      socketService.emitToUser(payment.provider._id, eventType, {
-        jobRequestId: payment.jobRequestId._id,
-        orderId: payment.orderId,
-        amount: payment.amount,
-        status
-      });
-
-      logger.info(`Payment ${status}: ${payment.orderId}`);
-
-    } catch (error) {
-      logger.error('Transaction webhook handling error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get payment status
-   */
-  async getPaymentStatus(req, res) {
-    try {
-      const { orderId } = req.params;
-      const userId = req.user.id;
-
-      const payment = await paymobService.getPaymentByOrderId(orderId);
-      
-      if (!payment) {
-        return res.status(404).json({
-          success: false,
-          error: {
-            code: 'PAYMENT_NOT_FOUND',
-            message: 'Payment not found'
-          }
-        });
-      }
-
-      // Verify user has access to this payment
-      if (payment.seeker._id.toString() !== userId && payment.provider._id.toString() !== userId) {
-        return res.status(403).json({
-          success: false,
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'You do not have access to this payment'
-          }
-        });
-      }
-
-      res.status(200).json({
-        success: true,
-        data: {
-          orderId: payment.orderId,
-          status: payment.status,
-          amount: payment.amount,
-          commission: payment.commission,
-          totalAmount: payment.totalAmount,
-          currency: payment.currency,
-          completedAt: payment.completedAt,
-          failureReason: payment.failureReason
-        },
-        message: 'Payment status retrieved successfully'
-      });
-
-    } catch (error) {
-      logger.error('Get payment status error:', error);
-      res.status(500).json({
+    // Check if user is authorized to view this payment
+    if (req.user._id.toString() !== payment.seekerId._id.toString()) {
+      return res.status(403).json({
         success: false,
-        error: {
-          code: 'PAYMENT_ERROR',
-          message: 'Failed to get payment status'
-        }
+        message: 'غير مصرح لك بعرض تفاصيل هذا الدفع'
       });
     }
+
+    res.json({
+      success: true,
+      data: {
+        sessionId: payment.stripeSessionId,
+        amount: (payment.amount / 100).toFixed(2),
+        serviceTitle: payment.serviceTitle,
+        providerName: payment.providerId.name.first + ' ' + payment.providerId.name.last,
+        providerId: payment.providerId._id.toString(),
+        jobRequestId: payment.jobRequestId.toString(),
+        completedAt: payment.completedAt || payment.createdAt,
+        status: payment.status
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting payment details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء جلب تفاصيل الدفع'
+    });
   }
-
-  /**
-   * Get user's payment history
-   */
-  async getPaymentHistory(req, res) {
-    try {
-      const userId = req.user.id;
-      const { page = 1, limit = 10 } = req.query;
-
-      const skip = (page - 1) * limit;
-
-      const payments = await Payment.find({
-        $or: [{ seeker: userId }, { provider: userId }]
-      })
-        .populate('jobRequestId', 'title')
-        .populate('offerId', 'budget')
-        .populate('seeker', 'name')
-        .populate('provider', 'name')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit));
-
-      const total = await Payment.countDocuments({
-        $or: [{ seeker: userId }, { provider: userId }]
-      });
-
-      res.status(200).json({
-        success: true,
-        data: {
-          payments,
-          pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total,
-            pages: Math.ceil(total / limit)
-          }
-        },
-        message: 'Payment history retrieved successfully'
-      });
-
-    } catch (error) {
-      logger.error('Get payment history error:', error);
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'PAYMENT_ERROR',
-          message: 'Failed to get payment history'
-        }
-      });
-    }
-  }
-}
-
-export default new PaymentController(); 
+}; 

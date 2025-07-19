@@ -27,8 +27,7 @@ import PricingPage from './pages/PricingPage';
 import NotificationPage from './pages/NotificationPage';
 import ChatPage from './pages/ChatPage';
 import ConversationsPage from './pages/ConversationsPage';
-import PaymentTestPage from './pages/PaymentTestPage';
-import PaymobDirectTest from './pages/PaymobDirectTest';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
 
 const App = () => {
   return (
@@ -41,8 +40,6 @@ const App = () => {
               <Route path="/" element={<LandingPage />} />
               <Route path="/test" element={<TestPage />} />
               <Route path="/minimal" element={<MinimalTest />} />
-              <Route path="/payment-test" element={<PaymentTestPage />} />
-        <Route path="/paymob-direct-test" element={<PaymobDirectTest />} />
               <Route path="/categories" element={<ServiceCategoriesPage />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/login" element={<LoginPage />} />
@@ -89,6 +86,11 @@ const App = () => {
               <Route path="/chat/:chatId" element={
                 <ProtectedRoute>
                   <ChatPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/payment/success" element={
+                <ProtectedRoute>
+                  <PaymentSuccessPage />
                 </ProtectedRoute>
               } />
               <Route path="/provider/:id" element={<div className="min-h-screen bg-warm-cream flex items-center justify-center"><p className="text-2xl text-text-secondary">Provider Details Page (Coming Soon)</p></div>} />

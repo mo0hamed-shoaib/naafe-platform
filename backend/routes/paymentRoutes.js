@@ -1,23 +1,19 @@
 import express from 'express';
-import paymentController from '../controllers/paymentController.js';
+import { createCheckoutSession, handleWebhook, getPaymentDetails, checkPaymentStatus } from '../controllers/paymentController.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
-import { validatePaymentOrder } from '../validation/paymentValidation.js';
 
 const router = express.Router();
 
-// Create payment order (requires authentication)
-router.post('/orders', authenticateToken, validatePaymentOrder, paymentController.createPaymentOrder);
+// Create checkout session (protected route)
+router.post('/create-checkout-session', authenticateToken, createCheckoutSession);
 
-// Create test payment order (no authentication required - for testing only)
-router.post('/test-orders', paymentController.createTestPaymentOrder);
+// Webhook endpoint (no auth required, Stripe handles verification)
+router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 
-// Get payment status (requires authentication)
-router.get('/status/:orderId', authenticateToken, paymentController.getPaymentStatus);
+// Get payment details by session ID (protected route)
+router.get('/details/:sessionId', authenticateToken, getPaymentDetails);
 
-// Get payment history (requires authentication)
-router.get('/history', authenticateToken, paymentController.getPaymentHistory);
-
-// Paymob webhook (no authentication required)
-router.post('/webhook', paymentController.handleWebhook);
+// Check payment status by conversation ID (protected route)
+router.get('/check-status/:conversationId', authenticateToken, checkPaymentStatus);
 
 export default router; 

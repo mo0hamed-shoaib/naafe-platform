@@ -22,9 +22,18 @@ const app = express();
 
 // Middleware
 // app.use(morgan('dev')); // HTTP request logging
-app.use(cors()); // Enable CORS
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  credentials: true
+})); // Enable CORS
 app.use(express.json()); // Parse JSON
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - ${new Date().toISOString()}`);
+  next();
+});
 
 // Custom logging middleware
 app.use(requestLogger); // Request/response logging
@@ -45,7 +54,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/paymob', paymentRoutes);
+app.use('/api/payment', paymentRoutes);
 app.use('/api', listingRoutes);
 
 // Health check endpoint
@@ -58,6 +67,15 @@ app.get('/api/health', (req, res) => {
       timestamp: new Date().toISOString()
     },
     message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Test payment endpoint
+app.get('/api/payment/test', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Payment routes are working',
     timestamp: new Date().toISOString()
   });
 });

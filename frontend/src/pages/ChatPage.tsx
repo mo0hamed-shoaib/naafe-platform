@@ -7,8 +7,8 @@ import BaseCard from '../components/ui/BaseCard';
 import Button from '../components/ui/Button';
 import FormTextarea from '../components/ui/FormTextarea';
 import PaymentModal from '../components/ui/PaymentModal';
-import MarkCompletedButton from '../components/ui/MarkCompletedButton';
-import { Send, ArrowLeft, MessageCircle, User, CreditCard } from 'lucide-react';
+import { createCheckoutSession, testPaymentConnection } from '../services/paymentService';
+import { Send, ArrowLeft, MessageCircle, User, CreditCard, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface Message {
   _id: string;
@@ -67,15 +67,8 @@ const ChatPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentData, setPaymentData] = useState<{
-    orderId: string;
-    iframeUrl: string;
-    paymentKey: string;
-    amount: number;
-    commission: number;
-    totalAmount: number;
-    currency: string;
-  } | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -98,6 +91,28 @@ const ChatPage: React.FC = () => {
       .catch(() => setError('فشل الاتصال بالخادم'))
       .finally(() => setLoading(false));
   }, [chatId, accessToken]);
+
+  // Check if payment is completed for this conversation
+  useEffect(() => {
+    if (!chatId || !accessToken || !user) return;
+
+    const checkPaymentStatus = async () => {
+      try {
+        const response = await fetch(`/api/payment/check-status/${chatId}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setPaymentCompleted(data.success && data.data?.status === 'completed');
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+      }
+    };
+
+    checkPaymentStatus();
+  }, [chatId, accessToken, user]);
 
   // Fetch messages
   useEffect(() => {
@@ -189,33 +204,6 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  const handlePaymentInitiated = (data: {
-    orderId: string;
-    iframeUrl: string;
-    paymentKey: string;
-    amount: number;
-    commission: number;
-    totalAmount: number;
-    currency: string;
-  }) => {
-    setPaymentData(data);
-    setShowPaymentModal(true);
-  };
-
-  const handlePaymentSuccess = () => {
-    setShowPaymentModal(false);
-    // Refresh conversation data
-    window.location.reload();
-  };
-
-  const handlePaymentFailure = () => {
-    setShowPaymentModal(false);
-  };
-
-  const isSeeker = user?.id === conversation?.participants.seeker._id;
-  const isJobCompleted = conversation?.jobRequestId.status === 'completed';
-  const isJobInProgress = conversation?.jobRequestId.status === 'in_progress';
-
   const loadMoreMessages = () => {
     if (hasMore && !loading) {
       setPage(prev => prev + 1);
@@ -251,6 +239,45 @@ const ChatPage: React.FC = () => {
       return date.toLocaleDateString('ar-EG');
     }
   };
+
+  const handlePaymentConfirm = async (amount: number) => {
+    if (!conversation || !user || !accessToken) return;
+
+    setPaymentLoading(true);
+    try {
+      const response = await createCheckoutSession({
+        conversationId: chatId!,
+        amount,
+        serviceTitle: conversation.jobRequestId.title,
+        providerId: conversation.participants.provider._id
+      }, accessToken);
+
+      if (response.success && response.data.url) {
+        window.location.href = response.data.url;
+      } else {
+        setError(response.message || 'فشل في إنشاء جلسة الدفع');
+        setShowPaymentModal(false);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      setError('حدث خطأ أثناء إنشاء جلسة الدفع');
+      setShowPaymentModal(false);
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const handleReportIssue = () => {
+    // TODO: Implement issue reporting functionality
+    alert('سيتم إضافة ميزة الإبلاغ عن المشاكل قريباً');
+  };
+
+  const handleTestConnection = async () => {
+    const isConnected = await testPaymentConnection();
+    alert(isConnected ? '✅ Payment connection working!' : '❌ Payment connection failed!');
+  };
+
+  const isSeeker = user?.id === conversation?.participants.seeker._id;
 
   const breadcrumbItems = [
     { label: 'الرئيسية', href: '/' },
@@ -335,18 +362,55 @@ const ChatPage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <div className="text-sm text-text-secondary">
-              {connected ? (
-                <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  متصل
-                </span>
-              ) : (
-                <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                  غير متصل
-                </span>
+            <div className="flex items-center gap-3">
+              {/* Payment and Report Buttons */}
+              {isSeeker && ['assigned', 'in_progress'].includes(conversation.jobRequestId.status) && !paymentCompleted && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setShowPaymentModal(true)}
+                  className="flex items-center gap-2"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  إتمام الدفع
+                </Button>
               )}
+              {isSeeker && paymentCompleted && (
+                <div className="flex items-center gap-2 text-green-600 text-sm">
+                  <CheckCircle className="w-4 h-4" />
+                  تم الدفع
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReportIssue}
+                className="flex items-center gap-2"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                الإبلاغ عن مشكلة
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTestConnection}
+                className="flex items-center gap-2"
+              >
+                Test Payment
+              </Button>
+              <div className="text-sm text-text-secondary">
+                {connected ? (
+                  <span className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    متصل
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                    غير متصل
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -430,39 +494,18 @@ const ChatPage: React.FC = () => {
               </Button>
             </div>
           </form>
-
-          {/* Payment Section - Only show for seeker when job is in progress */}
-          {isSeeker && isJobInProgress && !isJobCompleted && (
-            <div className="p-4 border-t border-gray-100 bg-warm-cream">
-              <div className="flex items-center gap-2 mb-3">
-                <CreditCard className="w-5 h-5 text-deep-teal" />
-                <h3 className="font-medium text-text-primary">إتمام الخدمة والدفع</h3>
-              </div>
-              <MarkCompletedButton
-                jobRequestId={conversation.jobRequestId._id}
-                offerId={conversation._id} // This should be the accepted offer ID
-                jobTitle={conversation.jobRequestId.title}
-                amount={1000} // This should come from the accepted offer
-                onPaymentInitiated={handlePaymentInitiated}
-              />
-            </div>
-          )}
         </BaseCard>
       </div>
 
       {/* Payment Modal */}
-      {showPaymentModal && paymentData && (
+      {conversation && (
         <PaymentModal
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
-          iframeUrl={paymentData.iframeUrl}
-          orderId={paymentData.orderId}
-          amount={paymentData.amount}
-          commission={paymentData.commission}
-          totalAmount={paymentData.totalAmount}
-          currency={paymentData.currency}
-          onPaymentSuccess={handlePaymentSuccess}
-          onPaymentFailure={handlePaymentFailure}
+          onConfirm={handlePaymentConfirm}
+          serviceTitle={conversation.jobRequestId.title}
+          providerName={`${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`}
+          loading={paymentLoading}
         />
       )}
     </PageLayout>
