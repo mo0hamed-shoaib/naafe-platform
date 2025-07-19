@@ -122,6 +122,23 @@ class SocketService {
         }
       });
 
+      // Handle payment events
+      socket.on('payment:initiated', (data) => {
+        try {
+          this.handlePaymentInitiated(socket, data);
+        } catch (error) {
+          logger.error('Error handling payment initiated:', error);
+        }
+      });
+
+      socket.on('payment:completed', (data) => {
+        try {
+          this.handlePaymentCompleted(socket, data);
+        } catch (error) {
+          logger.error('Error handling payment completed:', error);
+        }
+      });
+
       // Handle disconnect
       socket.on('disconnect', () => {
         logger.info(`User disconnected: ${socket.userId}`);
@@ -301,6 +318,41 @@ class SocketService {
    */
   emitToConversation(conversationId, event, data) {
     this.io.to(`conversation:${conversationId}`).emit(event, data);
+  }
+
+  /**
+   * Handle payment initiated event
+   */
+  handlePaymentInitiated(socket, data) {
+    const { jobRequestId, orderId, amount } = data;
+    
+    // Emit to conversation room
+    this.emitToConversation(jobRequestId, 'payment:initiated', {
+      jobRequestId,
+      orderId,
+      amount,
+      initiatedBy: socket.userId
+    });
+
+    logger.info(`Payment initiated: ${orderId} for job ${jobRequestId}`);
+  }
+
+  /**
+   * Handle payment completed event
+   */
+  handlePaymentCompleted(socket, data) {
+    const { jobRequestId, orderId, amount, status } = data;
+    
+    // Emit to conversation room
+    this.emitToConversation(jobRequestId, 'payment:completed', {
+      jobRequestId,
+      orderId,
+      amount,
+      status,
+      completedBy: socket.userId
+    });
+
+    logger.info(`Payment completed: ${orderId} for job ${jobRequestId} with status ${status}`);
   }
 }
 

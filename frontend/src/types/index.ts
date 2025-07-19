@@ -83,6 +83,7 @@ export interface User {
   avatar?: string;
   avatarUrl?: string;
   isPremium?: boolean;
+  isTopRated?: boolean;
   isVerified?: boolean;
   phone?: string;
   roles: ('admin' | 'seeker' | 'provider')[];

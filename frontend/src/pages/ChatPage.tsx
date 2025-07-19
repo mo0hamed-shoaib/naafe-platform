@@ -6,7 +6,9 @@ import PageLayout from '../components/layout/PageLayout';
 import BaseCard from '../components/ui/BaseCard';
 import Button from '../components/ui/Button';
 import FormTextarea from '../components/ui/FormTextarea';
-import { Send, ArrowLeft, MessageCircle, User } from 'lucide-react';
+import PaymentModal from '../components/ui/PaymentModal';
+import MarkCompletedButton from '../components/ui/MarkCompletedButton';
+import { Send, ArrowLeft, MessageCircle, User, CreditCard } from 'lucide-react';
 
 interface Message {
   _id: string;
@@ -64,6 +66,16 @@ const ChatPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentData, setPaymentData] = useState<{
+    orderId: string;
+    iframeUrl: string;
+    paymentKey: string;
+    amount: number;
+    commission: number;
+    totalAmount: number;
+    currency: string;
+  } | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -176,6 +188,33 @@ const ChatPage: React.FC = () => {
       setSending(false);
     }
   };
+
+  const handlePaymentInitiated = (data: {
+    orderId: string;
+    iframeUrl: string;
+    paymentKey: string;
+    amount: number;
+    commission: number;
+    totalAmount: number;
+    currency: string;
+  }) => {
+    setPaymentData(data);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false);
+    // Refresh conversation data
+    window.location.reload();
+  };
+
+  const handlePaymentFailure = () => {
+    setShowPaymentModal(false);
+  };
+
+  const isSeeker = user?.id === conversation?.participants.seeker._id;
+  const isJobCompleted = conversation?.jobRequestId.status === 'completed';
+  const isJobInProgress = conversation?.jobRequestId.status === 'in_progress';
 
   const loadMoreMessages = () => {
     if (hasMore && !loading) {
@@ -391,8 +430,41 @@ const ChatPage: React.FC = () => {
               </Button>
             </div>
           </form>
+
+          {/* Payment Section - Only show for seeker when job is in progress */}
+          {isSeeker && isJobInProgress && !isJobCompleted && (
+            <div className="p-4 border-t border-gray-100 bg-warm-cream">
+              <div className="flex items-center gap-2 mb-3">
+                <CreditCard className="w-5 h-5 text-deep-teal" />
+                <h3 className="font-medium text-text-primary">إتمام الخدمة والدفع</h3>
+              </div>
+              <MarkCompletedButton
+                jobRequestId={conversation.jobRequestId._id}
+                offerId={conversation._id} // This should be the accepted offer ID
+                jobTitle={conversation.jobRequestId.title}
+                amount={1000} // This should come from the accepted offer
+                onPaymentInitiated={handlePaymentInitiated}
+              />
+            </div>
+          )}
         </BaseCard>
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && paymentData && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          iframeUrl={paymentData.iframeUrl}
+          orderId={paymentData.orderId}
+          amount={paymentData.amount}
+          commission={paymentData.commission}
+          totalAmount={paymentData.totalAmount}
+          currency={paymentData.currency}
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentFailure={handlePaymentFailure}
+        />
+      )}
     </PageLayout>
   );
 };

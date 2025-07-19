@@ -14,4 +14,9 @@ export { default as PageLayout } from '../layout/PageLayout';
 // AI Components
 export { default as AIAssistant } from './AIAssistant';
 export { default as PricingGuidance } from './PricingGuidance';
-export { default as AITestComponent } from './AITestComponent'; 
+export { default as AITestComponent } from './AITestComponent';
+
+// Payment Components
+export { default as PaymentModal } from './PaymentModal';
+export { default as OrderSummary } from './OrderSummary';
+export { default as MarkCompletedButton } from './MarkCompletedButton'; 

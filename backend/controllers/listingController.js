@@ -15,7 +15,7 @@ class ListingController {
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [listings, totalCount] = await Promise.all([
         ServiceListing.find(query)
-          .populate('provider', 'name avatarUrl isPremium isVerified totalJobsCompleted')
+          .populate('provider', 'name avatarUrl isPremium isTopRated isVerified totalJobsCompleted')
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(parseInt(limit)),
@@ -158,6 +158,7 @@ class ListingController {
         deliveryTimeDays,
         provider,
         search,
+        premiumOnly,
         page = 1,
         limit = 20
       } = req.query;
@@ -177,10 +178,74 @@ class ListingController {
           { description: { $regex: search, $options: 'i' } }
         ];
       }
+      if (premiumOnly === 'true') {
+        // Use aggregation to filter by premium providers
+        const pipeline = [
+          { $match: query },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'provider',
+              foreignField: '_id',
+              as: 'providerData'
+            }
+          },
+          { $unwind: '$providerData' },
+          { $match: { 'providerData.isPremium': true } },
+          {
+            $addFields: {
+              provider: '$providerData'
+            }
+          },
+          { $project: { providerData: 0 } },
+          { $sort: { createdAt: -1 } },
+          { $skip: skip },
+          { $limit: parseInt(limit) }
+        ];
+        
+        const [listings, totalCountResult] = await Promise.all([
+          ServiceListing.aggregate(pipeline),
+          ServiceListing.aggregate([
+            { $match: query },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'provider',
+                foreignField: '_id',
+                as: 'providerData'
+              }
+            },
+            { $unwind: '$providerData' },
+            { $match: { 'providerData.isPremium': true } },
+            { $count: 'total' }
+          ])
+        ]);
+        
+        const totalCount = totalCountResult[0]?.total || 0;
+        
+        res.status(200).json({
+          success: true,
+          data: {
+            listings,
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              totalCount,
+              totalPages: Math.ceil(totalCount / limit),
+              hasNext: parseInt(page) * parseInt(limit) < totalCount,
+              hasPrev: parseInt(page) > 1
+            }
+          },
+          message: 'Listings retrieved successfully',
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+      
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [listings, totalCount] = await Promise.all([
         ServiceListing.find(query)
-          .populate('provider', 'name avatarUrl isPremium isVerified totalJobsCompleted')
+          .populate('provider', 'name avatarUrl isPremium isTopRated isVerified totalJobsCompleted')
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(parseInt(limit)),

@@ -95,13 +95,23 @@ const userSchema = new Schema({
         type: String,
         default: null
     },
-  roles: {
-    type: [String],
+    roles: {
+        type: [String],
         enum: ['admin', 'seeker', 'provider'],
-    default: ['seeker']
+        default: ['seeker']
     },
-  seekerProfile: { type: seekerProfileSchema, default: () => ({}) },
-  providerProfile: { type: providerProfileSchema, default: () => ({}) },
+    isPremium: {
+        type: Boolean,
+        default: false,
+        description: 'Whether the user has premium status'
+    },
+    isTopRated: {
+        type: Boolean,
+        default: false,
+        description: 'Whether the user is top-rated (computed based on rating and job count)'
+    },
+    seekerProfile: { type: seekerProfileSchema, default: () => ({}) },
+    providerProfile: { type: providerProfileSchema, default: () => ({}) },
     profile: {
         bio: {
             type: String,
@@ -145,8 +155,34 @@ userSchema.virtual('fullName').get(function () {
     return `${this.name.first} ${this.name.last}`;
 });
 
+// Virtual field to check if provider is verified
 userSchema.virtual('isProviderVerified').get(function () {
   return this.providerProfile && this.providerProfile.verification && this.providerProfile.verification.status === 'verified';
+});
+
+// Method to compute and update isTopRated status
+userSchema.methods.updateTopRatedStatus = function() {
+  if (this.roles.includes('provider') && this.providerProfile) {
+    const { rating, reviewCount, totalJobsCompleted } = this.providerProfile;
+    const isVerified = this.isProviderVerified;
+    
+    // Top-rated criteria: rating >= 4.8, reviewCount > 10, totalJobsCompleted > 30, and verified
+    this.isTopRated = rating >= 4.8 && reviewCount > 10 && totalJobsCompleted > 30 && isVerified;
+  } else {
+    this.isTopRated = false;
+  }
+  return this.isTopRated;
+};
+
+// Pre-save middleware to update isTopRated status
+userSchema.pre('save', function(next) {
+  if (this.isModified('providerProfile.rating') || 
+      this.isModified('providerProfile.reviewCount') || 
+      this.isModified('providerProfile.totalJobsCompleted') ||
+      this.isModified('providerProfile.verification.status')) {
+    this.updateTopRatedStatus();
+  }
+  next();
 });
 
 const User = mongoose.model('User', userSchema);

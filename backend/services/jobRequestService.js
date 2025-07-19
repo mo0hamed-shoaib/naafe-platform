@@ -137,7 +137,7 @@ class JobRequestService {
 
       const [jobRequests, totalCount] = await Promise.all([
         JobRequest.find(query)
-          .populate('seeker', 'name email avatarUrl createdAt')
+          .populate('seeker', 'name email avatarUrl isPremium createdAt')
           .populate('assignedTo', 'name email avatarUrl')
           .sort({ createdAt: -1 })
           .skip(skip)

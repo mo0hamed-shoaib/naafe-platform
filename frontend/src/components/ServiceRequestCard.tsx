@@ -144,10 +144,10 @@ const ServiceRequestCard = ({ request, alreadyApplied }: ServiceRequestCardProps
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1 min-w-0">
               <Button
-                variant="outline"
+                variant="primary"
                 size="sm"
                 onClick={() => navigate(`/requests/${request.id}`)}
-                  className="w-full px-4"
+                className="w-full sm:w-auto"
               >
                 عرض التفاصيل
               </Button>

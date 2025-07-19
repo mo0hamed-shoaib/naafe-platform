@@ -27,6 +27,8 @@ import PricingPage from './pages/PricingPage';
 import NotificationPage from './pages/NotificationPage';
 import ChatPage from './pages/ChatPage';
 import ConversationsPage from './pages/ConversationsPage';
+import PaymentTestPage from './pages/PaymentTestPage';
+import PaymobDirectTest from './pages/PaymobDirectTest';
 
 const App = () => {
   return (
@@ -39,6 +41,8 @@ const App = () => {
               <Route path="/" element={<LandingPage />} />
               <Route path="/test" element={<TestPage />} />
               <Route path="/minimal" element={<MinimalTest />} />
+              <Route path="/payment-test" element={<PaymentTestPage />} />
+        <Route path="/paymob-direct-test" element={<PaymobDirectTest />} />
               <Route path="/categories" element={<ServiceCategoriesPage />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/login" element={<LoginPage />} />

@@ -16,6 +16,7 @@ const fetchListings = async (filters: FilterState) => {
   const params = new URLSearchParams();
   if (filters.category) params.set('category', filters.category);
   if (filters.search) params.set('search', filters.search);
+  if (filters.premiumOnly) params.set('premiumOnly', 'true');
   // Add more filters as needed (location, price, etc.)
   const res = await fetch(`/api/listings?${params.toString()}`);
   const json = await res.json();
@@ -75,7 +76,7 @@ const SearchPage = () => {
       startingPrice: l.price && typeof l.price === 'object' && 'amount' in l.price ? (l.price as Record<string, unknown>).amount as number : 0,
       imageUrl: l.provider && typeof l.provider === 'object' && 'avatarUrl' in l.provider ? (l.provider as Record<string, unknown>).avatarUrl as string : '',
       isPremium: l.provider && typeof l.provider === 'object' && 'isPremium' in l.provider ? (l.provider as Record<string, unknown>).isPremium as boolean : false,
-      isTopRated: (l.rating as number ?? 0) >= 4.8 && (l.reviewCount as number ?? 0) > 10, // Example logic
+      isTopRated: l.provider && typeof l.provider === 'object' && 'isTopRated' in l.provider ? (l.provider as Record<string, unknown>).isTopRated as boolean : false,
       completedJobs: l.provider && typeof l.provider === 'object' && 'totalJobsCompleted' in l.provider ? (l.provider as Record<string, unknown>).totalJobsCompleted as number : 0,
       isIdentityVerified: l.provider && typeof l.provider === 'object' && 'isVerified' in l.provider ? (l.provider as Record<string, unknown>).isVerified as boolean : false,
       availability: l.availability as { days: string[]; timeSlots: string[] } || { days: [], timeSlots: [] },
@@ -88,17 +89,17 @@ const SearchPage = () => {
       id: r._id as string,
       title: r.title as string,
       description: r.description as string,
-      budget: r.budget as number,
+      budget: r.budget as { min: number; max: number; currency: string },
       location: r.location && typeof r.location === 'object' && 'address' in r.location ? (r.location as Record<string, unknown>).address as string : '',
       postedBy: {
-        id: r.seeker?._id as string || '',
-        name: r.seeker?.name ? `${r.seeker.name.first} ${r.seeker.name.last}` : '',
-        avatar: r.seeker?.avatarUrl as string || '',
-        isPremium: r.seeker?.isPremium as boolean || false,
+        id: (r.seeker as Record<string, unknown>)?._id as string || '',
+        name: (r.seeker as Record<string, unknown>)?.name ? `${((r.seeker as Record<string, unknown>).name as Record<string, unknown>)?.first} ${((r.seeker as Record<string, unknown>).name as Record<string, unknown>)?.last}` : '',
+        avatar: (r.seeker as Record<string, unknown>)?.avatarUrl as string || '',
+        isPremium: (r.seeker as Record<string, unknown>)?.isPremium as boolean || false,
       },
       createdAt: r.createdAt as string,
       preferredDate: r.preferredDate as string || r.deadline as string,
-      status: r.status as string,
+      status: r.status as 'open' | 'accepted' | 'closed',
       category: r.category as string,
       urgency: r.urgency as string,
       availability: r.availability as { days: string[]; timeSlots: string[] } || { days: [], timeSlots: [] },
