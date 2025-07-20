@@ -37,12 +37,16 @@ export const validateRegister = [
   body('name.first')
     .isLength({ min: 2, max: 50 })
     .withMessage('First name must be between 2 and 50 characters')
+    .matches(/^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z]+$/)
+    .withMessage('First name must contain only letters (no numbers or special characters)')
     .trim()
     .escape(),
   
   body('name.last')
     .isLength({ min: 2, max: 50 })
     .withMessage('Last name must be between 2 and 50 characters')
+    .matches(/^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z]+$/)
+    .withMessage('Last name must contain only letters (no numbers or special characters)')
     .trim()
     .escape(),
   

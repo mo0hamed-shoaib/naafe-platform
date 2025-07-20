@@ -12,6 +12,7 @@ import {
   validateEmail, 
   validatePhone, 
   validatePassword,
+  validateName,
   checkAvailability,
   debounce,
   FieldValidation
@@ -48,6 +49,7 @@ const RegisterPage = () => {
     email?: { available: boolean; message: string; checking?: boolean };
     phone?: { available: boolean; message: string; checking?: boolean };
   }>({});
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
 
   // Debounced availability check
   const debouncedAvailabilityCheck = useCallback(
@@ -153,6 +155,12 @@ const RegisterPage = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Mark that user has started interacting with the form
+    if (!hasUserInteracted) {
+      setHasUserInteracted(true);
+    }
+    
     setFormData(prev => ({ ...prev, [name]: value }));
 
     // Clear general error when user starts typing
@@ -178,42 +186,16 @@ const RegisterPage = () => {
         setFieldErrors(prev => ({ ...prev, confirmPassword: confirmValidation }));
         break;
       }
-      case 'firstName':
-        if (value.trim().length < 2) {
-          setFieldErrors(prev => ({ 
-            ...prev, 
-            firstName: { isValid: false, message: 'الاسم الأول يجب أن يكون حرفين على الأقل' } 
-          }));
-        } else if (value.trim().length > 50) {
-          setFieldErrors(prev => ({ 
-            ...prev, 
-            firstName: { isValid: false, message: 'الاسم الأول يجب أن يكون 50 حرف كحد أقصى' } 
-          }));
-        } else {
-          setFieldErrors(prev => ({ 
-            ...prev, 
-            firstName: { isValid: true, message: '' } 
-          }));
-        }
+      case 'firstName': {
+        const validation = validateName(value, 'الاسم الأول');
+        setFieldErrors(prev => ({ ...prev, firstName: validation }));
         break;
-      case 'lastName':
-        if (value.trim().length < 2) {
-          setFieldErrors(prev => ({ 
-            ...prev, 
-            lastName: { isValid: false, message: 'اسم العائلة يجب أن يكون حرفين على الأقل' } 
-          }));
-        } else if (value.trim().length > 50) {
-          setFieldErrors(prev => ({ 
-            ...prev, 
-            lastName: { isValid: false, message: 'اسم العائلة يجب أن يكون 50 حرف كحد أقصى' } 
-          }));
-        } else {
-          setFieldErrors(prev => ({ 
-            ...prev, 
-            lastName: { isValid: true, message: '' } 
-          }));
-        }
+      }
+      case 'lastName': {
+        const validation = validateName(value, 'اسم العائلة');
+        setFieldErrors(prev => ({ ...prev, lastName: validation }));
         break;
+      }
     }
   };
 
@@ -469,13 +451,13 @@ const RegisterPage = () => {
             {fieldErrors.general?.message && <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">{fieldErrors.general.message}</div>}
             
             {/* Form Status Helper */}
-            {!isFormComplete() && (
+            {hasUserInteracted && !isFormComplete() && (
               <div className="text-amber-600 text-sm text-right bg-amber-50 p-3 rounded-lg border border-amber-200">
                 يرجى ملء جميع الحقول المطلوبة
               </div>
             )}
             
-            {isFormComplete() && hasFormErrors() && (
+            {hasUserInteracted && isFormComplete() && hasFormErrors() && (
               <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">
                 يرجى تصحيح الأخطاء قبل المتابعة
               </div>
@@ -494,7 +476,7 @@ const RegisterPage = () => {
               }`}
               disabled={!isFormValid()}
             >
-              {!isFormComplete() 
+              {!hasUserInteracted || !isFormComplete() 
                 ? 'املأ جميع الحقول' 
                 : hasFormErrors() 
                   ? 'صحح الأخطاء' 

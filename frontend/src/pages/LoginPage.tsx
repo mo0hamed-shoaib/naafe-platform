@@ -22,6 +22,7 @@ const LoginPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldValidation>({});
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
 
   // Real-time validation for email
   const validateEmailField = useCallback((email: string) => {
@@ -77,6 +78,12 @@ const LoginPage = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
+    // Mark that user has started interacting with the form
+    if (!hasUserInteracted) {
+      setHasUserInteracted(true);
+    }
+    
     setFormData(prev => ({ ...prev, [name]: value }));
 
     // Clear general error when user starts typing
@@ -175,13 +182,13 @@ const LoginPage = () => {
             {error && <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>}
             
             {/* Form Status Helper */}
-            {!isFormComplete() && (
+            {hasUserInteracted && !isFormComplete() && (
               <div className="text-amber-600 text-sm text-right bg-amber-50 p-3 rounded-lg border border-amber-200">
                 يرجى ملء جميع الحقول المطلوبة
               </div>
             )}
             
-            {isFormComplete() && hasFormErrors() && (
+            {hasUserInteracted && isFormComplete() && hasFormErrors() && (
               <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">
                 يرجى تصحيح الأخطاء قبل المتابعة
               </div>
@@ -210,7 +217,7 @@ const LoginPage = () => {
               }`}
               disabled={!isFormValid()}
             >
-              {!isFormComplete() 
+              {!hasUserInteracted || !isFormComplete() 
                 ? 'املأ جميع الحقول' 
                 : hasFormErrors() 
                   ? 'صحح الأخطاء' 

@@ -86,6 +86,12 @@ export const validateName = (name: string, fieldName: string): ValidationResult 
     return { isValid: false, message: `${fieldName} يجب أن يكون 50 حرف كحد أقصى` };
   }
   
+  // Check if name contains only letters (Arabic and English)
+  const lettersOnlyRegex = /^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z]+$/;
+  if (!lettersOnlyRegex.test(name.trim())) {
+    return { isValid: false, message: `${fieldName} يجب أن يحتوي على أحرف فقط (بدون أرقام أو رموز خاصة)` };
+  }
+  
   return { isValid: true, message: '' };
 };
 
