@@ -6,7 +6,8 @@ import {
   List, 
   Settings, 
   LogOut,
-  Layers
+  Layers,
+  AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -23,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, className }) => {
     { path: '/admin/users', icon: Users, label: 'المستخدمين' },
     { path: '/admin/categories', icon: List, label: 'الفئات' },
     { path: '/admin/upgrade-requests', icon: List, label: 'طلبات الترقية' },
+    { path: '/admin/complaints', icon: AlertTriangle, label: 'البلاغات' },
     { path: '/admin/settings', icon: Settings, label: 'الإعدادات' },
   ];
 

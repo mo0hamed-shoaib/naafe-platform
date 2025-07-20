@@ -256,7 +256,7 @@ const AdminManageUsers: React.FC = () => {
       <Breadcrumb items={[{ label: 'إدارة المستخدمين' }]} />
       <h1 className="text-3xl font-bold text-deep-teal">إدارة المستخدمين</h1>
       
-      <div className="bg-light-cream rounded-2xl p-6 shadow-md">
+      <div className="bg-light-cream rounded-2xl p-8 shadow-md">
         <SearchAndFilter
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -275,7 +275,7 @@ const AdminManageUsers: React.FC = () => {
           }}
           sortKey={sortKey}
           sortDirection={sortDirection}
-          className="mt-6"
+          className="mt-8"
           emptyMessage="لا توجد مستخدمين"
         />
 

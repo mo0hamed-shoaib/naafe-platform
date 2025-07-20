@@ -2,6 +2,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { OfferProvider } from './contexts/OfferContext';
+import { ToastProvider } from './contexts/ToastContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import ServiceCategoriesPage from './components/ServiceCategoriesPage';
@@ -21,6 +22,7 @@ import RequestServiceForm from './components/RequestServiceForm';
 import RequestServiceDetailsPage from './pages/RequestServiceDetailsPage';
 import ServiceResponseForm from './components/ServiceResponseForm';
 import AdminUpgradeRequests from './admin/pages/AdminUpgradeRequests';
+import AdminManageComplaints from './admin/pages/AdminManageComplaints';
 import HelpCenterPage from './pages/HelpCenterPage';
 import SettingsPage from './pages/SettingsPage';
 import PricingPage from './pages/PricingPage';
@@ -35,6 +37,7 @@ const App = () => {
       <Router>
       <AuthProvider>
           <OfferProvider>
+            <ToastProvider>
           <div className="App">
             <Routes>
               <Route path="/" element={<LandingPage />} />
@@ -103,6 +106,7 @@ const App = () => {
                 <Route path="users" element={<AdminManageUsers />} />
                 <Route path="categories" element={<AdminManageCategories />} />
                 <Route path="upgrade-requests" element={<AdminUpgradeRequests />} />
+                <Route path="complaints" element={<AdminManageComplaints />} />
               </Route>
               {/* Fallback routes for footer links */}
               <Route path="/services" element={<Navigate to="/categories" replace />} />
@@ -110,6 +114,7 @@ const App = () => {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
+            </ToastProvider>
           </OfferProvider>
         </AuthProvider>
         </Router>

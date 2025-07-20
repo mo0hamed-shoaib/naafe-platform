@@ -1,13 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { useSocket } from '../hooks/useSocket';
 import PageLayout from '../components/layout/PageLayout';
 import BaseCard from '../components/ui/BaseCard';
 import Button from '../components/ui/Button';
 import FormTextarea from '../components/ui/FormTextarea';
 import PaymentModal from '../components/ui/PaymentModal';
-import { createCheckoutSession, testPaymentConnection } from '../services/paymentService';
+import ReportProblemModal from '../components/ui/ReportProblemModal';
+import { createCheckoutSession } from '../services/paymentService';
+import { submitComplaint } from '../services/complaintService';
 import { Send, ArrowLeft, MessageCircle, User, CreditCard, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface Message {
@@ -26,7 +29,22 @@ interface Conversation {
   jobRequestId: {
     _id: string;
     title: string;
+    description: string;
     status: string;
+    budget: {
+      min: number;
+      max: number;
+    };
+    location: {
+      address: string;
+      government: string;
+      city: string;
+      street: string;
+      apartmentNumber: string;
+      additionalInformation: string;
+    };
+    deadline: string;
+    createdAt: string;
   };
   participants: {
     seeker: {
@@ -55,6 +73,7 @@ interface Conversation {
 const ChatPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const { accessToken, user } = useAuth();
+  const { showSuccess, showError, showWarning } = useToast();
   const navigate = useNavigate();
   const { connected, on, emit } = useSocket(accessToken || undefined);
   
@@ -67,7 +86,9 @@ const ChatPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -268,13 +289,40 @@ const ChatPage: React.FC = () => {
   };
 
   const handleReportIssue = () => {
-    // TODO: Implement issue reporting functionality
-    alert('سيتم إضافة ميزة الإبلاغ عن المشاكل قريباً');
+    setShowReportModal(true);
   };
 
-  const handleTestConnection = async () => {
-    const isConnected = await testPaymentConnection();
-    alert(isConnected ? '✅ Payment connection working!' : '❌ Payment connection failed!');
+  const handleReportSubmit = async (problemType: string, description: string) => {
+    if (!conversation || !user) return;
+    
+    setReportLoading(true);
+    try {
+      const reportedUserId = isSeeker 
+        ? conversation.participants.provider._id 
+        : conversation.participants.seeker._id;
+
+      await submitComplaint({
+        reportedUserId,
+        jobRequestId: conversation.jobRequestId._id,
+        problemType,
+        description
+      }, accessToken);
+
+      setShowReportModal(false);
+      showSuccess('تم إرسال البلاغ بنجاح', 'سيتم مراجعة البلاغ من قبل الإدارة قريباً');
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      const errorMessage = error instanceof Error ? error.message : 'حدث خطأ أثناء إرسال البلاغ';
+      
+      // Check if it's the duplicate complaint error
+      if (errorMessage.includes('لديك بلاغ قيد المعالجة')) {
+        showWarning('بلاغ موجود بالفعل', 'لديك بلاغ قيد المعالجة لهذا الطلب بالفعل');
+      } else {
+        showError('فشل إرسال البلاغ', errorMessage);
+      }
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   const isSeeker = user?.id === conversation?.participants.seeker._id;
@@ -338,78 +386,137 @@ const ChatPage: React.FC = () => {
       onLogout={() => {}}
     >
       <div className="max-w-4xl mx-auto">
-        <BaseCard className="h-[600px] flex flex-col">
+        <BaseCard className="h-[85vh] min-h-[600px] max-h-[1000px] flex flex-col">
           {/* Chat Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/conversations')}
-                className="p-2"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-text-primary">
+          <div className="border-b border-gray-100">
+            {/* Main Header */}
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/conversations')}
+                  className="p-2 flex-shrink-0"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <User className="w-5 h-5 text-primary" />
+                </div>
+                              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold text-text-primary truncate">
                   {otherParticipant?.name.first} {otherParticipant?.name.last}
                 </h3>
-                <p className="text-sm text-text-secondary">
+                <p className="text-sm text-text-secondary truncate">
                   {conversation.jobRequestId.title}
                 </p>
+                <p className="text-xs text-text-secondary/70 mt-1">
+                  📍 {conversation.jobRequestId.location?.address || 
+                     `${conversation.jobRequestId.location?.city || ''} ${conversation.jobRequestId.location?.government || ''}`.trim() || 
+                     'غير محدد'}
+                </p>
+                <div className="flex items-center gap-1 mt-1">
+                  {connected ? (
+                    <span className="flex items-center gap-1 text-xs text-green-600">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span>متصل</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-xs text-gray-500">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                      <span>غير متصل</span>
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Payment and Report Buttons */}
-              {isSeeker && ['assigned', 'in_progress'].includes(conversation.jobRequestId.status) && !paymentCompleted && (
+              </div>
+              
+              {/* Action Buttons - Hidden on mobile */}
+              <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+                {isSeeker && ['assigned', 'in_progress'].includes(conversation.jobRequestId.status) && !paymentCompleted && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setShowPaymentModal(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    إتمام الدفع
+                  </Button>
+                )}
+                {isSeeker && paymentCompleted && (
+                  <div className="flex items-center gap-2 text-green-600 text-sm">
+                    <CheckCircle className="w-4 h-4" />
+                    تم الدفع
+                  </div>
+                )}
                 <Button
-                  variant="primary"
+                  variant="outline"
                   size="sm"
-                  onClick={() => setShowPaymentModal(true)}
+                  onClick={handleReportIssue}
                   className="flex items-center gap-2"
                 >
-                  <CreditCard className="w-4 h-4" />
-                  إتمام الدفع
+                  <AlertTriangle className="w-4 h-4" />
+                  الإبلاغ عن مشكلة
                 </Button>
-              )}
-              {isSeeker && paymentCompleted && (
-                <div className="flex items-center gap-2 text-green-600 text-sm">
-                  <CheckCircle className="w-4 h-4" />
-                  تم الدفع
+              </div>
+
+
+            </div>
+
+            {/* Service Details */}
+            <div className="px-4 pb-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="font-medium text-text-primary mb-1">الميزانية</p>
+                  <p className="text-text-secondary">
+                    {conversation.jobRequestId.budget.min} - {conversation.jobRequestId.budget.max} جنيه
+                  </p>
                 </div>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleReportIssue}
-                className="flex items-center gap-2"
-              >
-                <AlertTriangle className="w-4 h-4" />
-                الإبلاغ عن مشكلة
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleTestConnection}
-                className="flex items-center gap-2"
-              >
-                Test Payment
-              </Button>
-              <div className="text-sm text-text-secondary">
-                {connected ? (
-                  <span className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    متصل
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                    غير متصل
-                  </span>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="font-medium text-text-primary mb-1">التاريخ المفضل</p>
+                  <p className="text-text-secondary">
+                    {conversation.jobRequestId.deadline ? 
+                      new Date(conversation.jobRequestId.deadline).toLocaleDateString('ar-EG') : 
+                      'غير محدد'}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="font-medium text-text-primary mb-1">تاريخ النشر</p>
+                  <p className="text-text-secondary">
+                    {new Date(conversation.jobRequestId.createdAt).toLocaleDateString('ar-EG')}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Mobile Action Buttons */}
+              <div className="md:hidden flex gap-2">
+                {isSeeker && ['assigned', 'in_progress'].includes(conversation.jobRequestId.status) && !paymentCompleted && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setShowPaymentModal(true)}
+                    className="flex items-center gap-2 flex-1"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    إتمام الدفع
+                  </Button>
                 )}
+                {isSeeker && paymentCompleted && (
+                  <div className="flex items-center gap-2 text-green-600 text-sm flex-1 justify-center">
+                    <CheckCircle className="w-4 h-4" />
+                    تم الدفع
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReportIssue}
+                  className="flex items-center gap-2 flex-1"
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                  الإبلاغ عن مشكلة
+                </Button>
               </div>
             </div>
           </div>
@@ -417,7 +524,7 @@ const ChatPage: React.FC = () => {
           {/* Messages Container */}
           <div 
             ref={messagesContainerRef}
-            className="flex-1 overflow-y-auto p-4 space-y-4"
+            className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-warm-cream/20 to-white"
             onScroll={(e) => {
               const target = e.target as HTMLDivElement;
               if (target.scrollTop === 0 && hasMore) {
@@ -432,37 +539,53 @@ const ChatPage: React.FC = () => {
                   size="sm"
                   onClick={loadMoreMessages}
                   disabled={loading}
+                  className="bg-white/80 backdrop-blur-sm"
                 >
                   {loading ? 'جاري التحميل...' : 'تحميل المزيد'}
                 </Button>
               </div>
             )}
 
-            {messages.map((message) => {
+            {messages.map((message, index) => {
               const isOwnMessage = message.senderId === user?.id;
-              const showDate = true; // You can add logic to show date separators
+              const showDate = index === 0 || 
+                new Date(message.timestamp).toDateString() !== 
+                new Date(messages[index - 1]?.timestamp).toDateString();
               
               return (
                 <div key={message._id}>
                   {showDate && (
-                    <div className="text-center text-xs text-text-secondary my-2">
-                      {formatDate(message.timestamp)}
+                    <div className="text-center my-4">
+                      <span className="inline-block bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-text-secondary border border-gray-200">
+                        {formatDate(message.timestamp)}
+                      </span>
                     </div>
                   )}
-                  <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-2`}>
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                      className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md ${
                         isOwnMessage
-                          ? 'bg-primary text-white'
-                          : 'bg-gray-100 text-text-primary'
+                          ? 'bg-deep-teal text-white rounded-br-md'
+                          : 'bg-white text-text-primary rounded-bl-md border border-gray-100'
                       }`}
                     >
-                      <p className="text-sm">{message.content}</p>
-                      <p className={`text-xs mt-1 ${
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                      <div className={`flex items-center justify-end mt-2 ${
                         isOwnMessage ? 'text-white/70' : 'text-text-secondary'
                       }`}>
-                        {formatTime(message.timestamp)}
-                      </p>
+                        <span className="text-xs">
+                          {formatTime(message.timestamp)}
+                        </span>
+                        {isOwnMessage && (
+                          <div className="ml-2 w-2 h-2">
+                            {message.read ? (
+                              <div className="w-2 h-2 bg-white/70 rounded-full"></div>
+                            ) : (
+                              <div className="w-2 h-2 bg-white/50 rounded-full"></div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -472,26 +595,38 @@ const ChatPage: React.FC = () => {
           </div>
 
           {/* Message Input */}
-          <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-100">
-            <div className="flex gap-2">
+          <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-100 bg-white">
+            <div className="space-y-3">
               <FormTextarea
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="اكتب رسالتك هنا..."
-                className="flex-1 resize-none"
-                rows={1}
+                className="resize-none border-2 border-gray-200 focus:border-deep-teal rounded-xl"
+                rows={2}
                 maxLength={2000}
                 disabled={sending}
+                size="lg"
               />
-              <Button
-                type="submit"
-                variant="primary"
-                size="sm"
-                disabled={!newMessage.trim() || sending}
-                className="px-4"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 text-xs text-text-secondary">
+                  <span>اضغط Enter للإرسال</span>
+                  <span>•</span>
+                  <span>{newMessage.length}/2000</span>
+                </div>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  disabled={!newMessage.trim() || sending}
+                  className="px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  {sending ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </BaseCard>
@@ -506,6 +641,18 @@ const ChatPage: React.FC = () => {
           serviceTitle={conversation.jobRequestId.title}
           providerName={`${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`}
           loading={paymentLoading}
+        />
+      )}
+
+      {/* Report Problem Modal */}
+      {conversation && (
+        <ReportProblemModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          onSubmit={handleReportSubmit}
+          providerName={`${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`}
+          serviceTitle={conversation.jobRequestId.title}
+          loading={reportLoading}
         />
       )}
     </PageLayout>

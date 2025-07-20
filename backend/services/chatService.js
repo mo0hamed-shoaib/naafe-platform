@@ -158,7 +158,7 @@ class ChatService {
       .populate('participants.seeker', 'name email')
       .populate('participants.provider', 'name email')
       .populate('lastMessage.senderId', 'name')
-      .populate('jobRequestId', 'title status')
+      .populate('jobRequestId', 'title status location')
       .sort({ 'lastMessage.timestamp': -1 })
       .skip(skip)
       .limit(limit);
@@ -194,7 +194,8 @@ class ChatService {
       const conversation = await Conversation.findOne({ jobRequestId })
         .populate('participants.seeker', 'name email')
         .populate('participants.provider', 'name email')
-        .populate('lastMessage.senderId', 'name');
+        .populate('lastMessage.senderId', 'name')
+        .populate('jobRequestId', 'title status location');
 
       return conversation;
     } catch (error) {
@@ -212,7 +213,7 @@ class ChatService {
         .populate('participants.seeker', 'name email')
         .populate('participants.provider', 'name email')
         .populate('lastMessage.senderId', 'name')
-        .populate('jobRequestId', 'title status');
+        .populate('jobRequestId', 'title description status budget location deadline createdAt');
 
       return conversation;
     } catch (error) {

@@ -228,8 +228,8 @@ const AdminUpgradeRequests: React.FC = () => {
   return (
     <div className="space-y-6" dir="rtl">
       <Breadcrumb items={[{ label: 'طلبات الترقية' }]} />
-      <h2 className="text-3xl font-bold text-deep-teal">طلبات الترقية</h2>
-      <div className="bg-light-cream rounded-2xl p-6 shadow-md">
+      <h1 className="text-3xl font-bold text-deep-teal">طلبات الترقية</h1>
+      <div className="bg-light-cream rounded-2xl p-8 shadow-md">
         <SearchAndFilter
           searchTerm={search}
           onSearchChange={setSearch}
@@ -253,6 +253,7 @@ const AdminUpgradeRequests: React.FC = () => {
           sortKey={sortKey}
           sortDirection={sortDirection}
           emptyMessage={loading ? 'جاري التحميل...' : error ? error : 'لا توجد طلبات'}
+          className="mt-8"
         />
         <Pagination
           currentPage={1} // TODO: wire up pagination state if needed

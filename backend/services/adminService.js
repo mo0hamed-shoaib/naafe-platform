@@ -3,6 +3,7 @@ import ServiceListing from '../models/ServiceListing.js';
 import Offer from '../models/Offer.js';
 import JobRequest from '../models/JobRequest.js';
 import Category from '../models/Category.js';
+import Complaint from '../models/Complaint.js';
 
 class AdminService {
   /**
@@ -35,13 +36,18 @@ class AdminService {
     ]);
     const prevMonthlyRevenue = prevMonthlyRevenueAgg[0]?.total || 0;
     const revenueGrowth = prevMonthlyRevenue === 0 ? 0 : ((monthlyRevenue - prevMonthlyRevenue) / prevMonthlyRevenue) * 100;
+    
+    // Pending complaints
+    const pendingComplaints = await Complaint.countDocuments({ status: 'pending' });
+    
     return {
       totalUsers,
       activeServices,
       monthlyRevenue,
       userGrowth,
       serviceGrowth,
-      revenueGrowth: Math.round(revenueGrowth)
+      revenueGrowth: Math.round(revenueGrowth),
+      pendingComplaints
     };
   }
 }

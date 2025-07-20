@@ -16,6 +16,7 @@ import chatRoutes from './routes/chatRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
+import complaintRoutes from './routes/complaintRoutes.js';
 import { requestLogger, errorLogger, performanceLogger, securityLogger } from './middlewares/logging.middleware.js';
 
 const app = express();
@@ -55,6 +56,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/complaints', complaintRoutes);
 app.use('/api', listingRoutes);
 
 // Health check endpoint

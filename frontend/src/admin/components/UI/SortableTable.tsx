@@ -65,7 +65,7 @@ function SortableTable<T extends Record<string, unknown>>({
   return (
     <div className={`bg-light-cream rounded-2xl shadow-md overflow-hidden ${className}`}>
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed">
+        <table className="w-full table-auto">
           <thead className="bg-warm-cream border-b border-light-cream">
             <tr>
               {columns.map((column) => (

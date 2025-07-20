@@ -304,20 +304,21 @@ const AdminManageCategories: React.FC = () => {
   if (isError) return (
     <div className="space-y-6">
       <Breadcrumb items={[{ label: 'إدارة الفئات' }]} />
-      <h2 className="text-3xl font-bold text-deep-teal">إدارة الفئات</h2>
+      <h1 className="text-3xl font-bold text-deep-teal">إدارة الفئات</h1>
       <div className="text-center py-8 text-red-600">{(error as Error).message}</div>
     </div>
   );
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: 'إدارة الفئات' }]} />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-3xl font-bold text-deep-teal">إدارة الفئات</h2>
+        <h1 className="text-3xl font-bold text-deep-teal">إدارة الفئات</h1>
         <Button variant="secondary" onClick={handleAddCategory} leftIcon={<Plus className="h-5 w-5 mr-1" />}>
           إضافة فئة جديدة
         </Button>
       </div>
-      <div className="bg-light-cream rounded-2xl shadow-md overflow-hidden p-6">
+      <div className="bg-light-cream rounded-2xl shadow-md overflow-hidden p-8">
         <SearchAndFilter
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -336,6 +337,7 @@ const AdminManageCategories: React.FC = () => {
           sortKey={sortKey}
           sortDirection={sortDirection}
           emptyMessage={isLoading ? 'جاري التحميل...' : isError ? (error as Error).message : 'لا توجد فئات'}
+          className="mt-8"
         />
         <Pagination
           currentPage={currentPage}

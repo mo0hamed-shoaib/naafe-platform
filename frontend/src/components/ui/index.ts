@@ -20,4 +20,7 @@ export { default as AITestComponent } from './AITestComponent';
 export { default as PaymentModal } from './PaymentModal';
 
 // Review Components
-export { default as ReviewModal } from './ReviewModal'; 
+export { default as ReviewModal } from './ReviewModal';
+
+// Report Components
+export { default as ReportProblemModal } from './ReportProblemModal'; 

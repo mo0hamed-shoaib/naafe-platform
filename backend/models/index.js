@@ -8,6 +8,7 @@ import Conversation from './Conversation.js';
 import Message from './Message.js';
 import Notification from './Notification.js';
 import Payment from './Payment.js';
+import Complaint from './Complaint.js';
 
 // Ensure discriminators are registered
 // This is important because the discriminator models need to be imported
@@ -23,7 +24,8 @@ export {
   Conversation,
   Message,
   Notification,
-  Payment
+  Payment,
+  Complaint
 };
 
 export default User; 

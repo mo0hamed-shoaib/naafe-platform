@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Wrench, DollarSign, CheckCircle, Plus, AlertTriangle, TrendingUp, TrendingDown, BarChart3, PieChart, Clock } from 'lucide-react';
+import { Users, Wrench, DollarSign, CheckCircle, Plus, AlertTriangle, TrendingUp, TrendingDown, BarChart3, PieChart, Clock, MessageSquare } from 'lucide-react';
 import { ActivityItem } from '../types';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
@@ -52,6 +52,14 @@ const AdminOverview: React.FC = () => {
       iconColor: "text-soft-teal",
       change: stats?.revenueGrowth || 0,
       changeType: stats?.revenueGrowth > 0 ? 'increase' : 'decrease'
+    },
+    {
+      title: "البلاغات المعلقة",
+      value: stats?.pendingComplaints?.toLocaleString() || "0",
+      icon: MessageSquare,
+      iconColor: "text-red-500",
+      change: 0,
+      changeType: 'neutral'
     }
   ];
 
@@ -120,7 +128,7 @@ const AdminOverview: React.FC = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {summaryData.map((item, index) => (
-          <div key={index} className="bg-light-cream rounded-2xl p-6 shadow-md">
+          <div key={index} className="bg-light-cream rounded-2xl p-8 shadow-md">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-full bg-[#f5a623]/10">
@@ -149,7 +157,7 @@ const AdminOverview: React.FC = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* User Growth Chart */}
-        <div className="lg:col-span-3 bg-light-cream rounded-2xl p-6 shadow-md">
+        <div className="lg:col-span-3 bg-light-cream rounded-2xl p-8 shadow-md">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 rounded-full bg-[#2D5D4F]/10">
               <BarChart3 className="h-7 w-7 text-[#2D5D4F]" />
@@ -183,7 +191,7 @@ const AdminOverview: React.FC = () => {
         </div>
 
         {/* Service Categories Chart */}
-        <div className="lg:col-span-2 bg-light-cream rounded-2xl p-6 shadow-md">
+        <div className="lg:col-span-2 bg-light-cream rounded-2xl p-8 shadow-md">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 rounded-full bg-[#f5a623]/10">
               <PieChart className="h-7 w-7 text-[#f5a623]" />
@@ -228,7 +236,7 @@ const AdminOverview: React.FC = () => {
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-light-cream rounded-2xl p-6 shadow-md">
+              <div className="bg-light-cream rounded-2xl p-8 shadow-md">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-3 rounded-full bg-[#50958A]/10">
             <Clock className="h-7 w-7 text-[#50958A]" />
