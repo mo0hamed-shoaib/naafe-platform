@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSocket } from '../hooks/useSocket';
@@ -72,6 +72,7 @@ interface Conversation {
 
 const ChatPage: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
+  const [searchParams] = useSearchParams();
   const { accessToken, user } = useAuth();
   const { showSuccess, showError, showWarning } = useToast();
   const navigate = useNavigate();
@@ -114,26 +115,63 @@ const ChatPage: React.FC = () => {
   }, [chatId, accessToken]);
 
   // Check if payment is completed for this conversation
-  useEffect(() => {
+  const checkPaymentStatus = async () => {
     if (!chatId || !accessToken || !user) return;
 
-    const checkPaymentStatus = async () => {
-      try {
-        const response = await fetch(`/api/payment/check-status/${chatId}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setPaymentCompleted(data.success && data.data?.status === 'completed');
-        }
-      } catch (error) {
-        console.error('Error checking payment status:', error);
+    try {
+      const response = await fetch(`/api/payment/check-status/${chatId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const isCompleted = data.success && data.data?.status === 'completed';
+        setPaymentCompleted(isCompleted);
+        console.log('Payment status check:', { status: data.data?.status, isCompleted });
       }
-    };
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+    }
+  };
 
+  // Check payment status on mount and when dependencies change
+  useEffect(() => {
     checkPaymentStatus();
   }, [chatId, accessToken, user]);
+
+  // Refresh payment status when user returns to the page (focus event)
+  useEffect(() => {
+    const handleFocus = () => {
+      checkPaymentStatus();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [chatId, accessToken, user]);
+
+  // Check if user is returning from payment success page
+  useEffect(() => {
+    const fromPayment = searchParams.get('from_payment');
+    if (fromPayment === 'success') {
+      // Refresh payment status immediately
+      checkPaymentStatus();
+      // Show success message
+      showSuccess('تم الدفع بنجاح', 'تم إتمام عملية الدفع بنجاح');
+      // Clean up URL parameter
+      navigate(`/chat/${chatId}`, { replace: true });
+    }
+  }, [searchParams, chatId, navigate]);
+
+  // Periodic payment status check (every 30 seconds) when payment is not completed
+  useEffect(() => {
+    if (!paymentCompleted && chatId && accessToken && user) {
+      const interval = setInterval(() => {
+        checkPaymentStatus();
+      }, 30000); // Check every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [paymentCompleted, chatId, accessToken, user]);
 
   // Fetch messages
   useEffect(() => {
@@ -450,6 +488,7 @@ const ChatPage: React.FC = () => {
                     تم الدفع
                   </div>
                 )}
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -508,6 +547,7 @@ const ChatPage: React.FC = () => {
                     تم الدفع
                   </div>
                 )}
+
                 <Button
                   variant="outline"
                   size="sm"

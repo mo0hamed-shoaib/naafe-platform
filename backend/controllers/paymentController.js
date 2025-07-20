@@ -158,35 +158,27 @@ export const handleWebhook = async (req, res) => {
     case 'checkout.session.completed':
       const session = event.data.object;
       
+      console.log('Payment completed for session:', session.id);
+      
       // Handle successful payment
       try {
-        // Here you would typically:
-        // 1. Update the conversation status
-        // 2. Create a payment record
-        // 3. Send notifications
-        // 4. Update job request status
-        
-        console.log('Payment completed for session:', session.id);
-        console.log('Metadata:', session.metadata);
-        
-        // Handle payment completion
         await handlePaymentCompletion(session);
-        
+        console.log('Payment completion processed successfully');
       } catch (error) {
         console.error('Error handling payment completion:', error);
       }
       break;
       
     case 'payment_intent.succeeded':
-      console.log('Payment succeeded:', event.data.object.id);
+      console.log('Payment intent succeeded:', event.data.object.id);
       break;
       
     case 'payment_intent.payment_failed':
-      console.log('Payment failed:', event.data.object.id);
+      console.log('Payment intent failed:', event.data.object.id);
       break;
       
     default:
-      console.log(`Unhandled event type: ${event.type}`);
+      console.log(`Unhandled webhook event type: ${event.type}`);
   }
 
   res.json({ received: true });
@@ -196,14 +188,17 @@ export const handleWebhook = async (req, res) => {
 const handlePaymentCompletion = async (session) => {
   try {
     // Find the payment record
-    const payment = await Payment.findBySessionId(session.id);
+    const payment = await Payment.findOne({ stripeSessionId: session.id });
     if (!payment) {
       console.error('Payment record not found for session:', session.id);
       return;
     }
 
     // Mark payment as completed
-    await payment.markCompleted(session.payment_intent);
+    payment.status = 'completed';
+    payment.stripePaymentIntentId = session.payment_intent;
+    payment.completedAt = new Date();
+    await payment.save();
 
     // Update job request status to completed
     await JobRequest.findByIdAndUpdate(payment.jobRequestId, {
@@ -247,11 +242,28 @@ export const checkPaymentStatus = async (req, res) => {
       });
     }
 
+    // If payment is pending, try to sync with Stripe automatically
+    if (payment.status === 'pending') {
+      try {
+        const stripeSession = await stripe.checkout.sessions.retrieve(payment.stripeSessionId);
+        if (stripeSession.payment_status === 'paid' && payment.status !== 'completed') {
+          payment.status = 'completed';
+          payment.completedAt = new Date();
+          await payment.save();
+          console.log(`Payment ${payment.stripeSessionId} auto-synced to completed`);
+        }
+      } catch (syncError) {
+        console.error('Error auto-syncing payment:', syncError);
+        // Continue with original status if sync fails
+      }
+    }
+
     res.json({
       success: true,
       data: {
         status: payment.status,
         exists: true,
+        sessionId: payment.stripeSessionId,
         completedAt: payment.completedAt
       }
     });
@@ -264,6 +276,8 @@ export const checkPaymentStatus = async (req, res) => {
     });
   }
 };
+
+
 
 // Get payment details by session ID
 export const getPaymentDetails = async (req, res) => {
@@ -306,6 +320,7 @@ export const getPaymentDetails = async (req, res) => {
         providerName: payment.providerId.name.first + ' ' + payment.providerId.name.last,
         providerId: payment.providerId._id.toString(),
         jobRequestId: payment.jobRequestId.toString(),
+        conversationId: payment.conversationId.toString(),
         completedAt: payment.completedAt || payment.createdAt,
         status: payment.status
       }

@@ -27,7 +27,17 @@ app.use(cors({
   origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
   credentials: true
 })); // Enable CORS
-app.use(express.json()); // Parse JSON
+// Parse JSON for all routes except webhook
+app.use((req, res, next) => {
+  if (req.path === '/api/payment/webhook') {
+    // For Stripe webhooks, we need raw body
+    express.raw({ type: 'application/json' })(req, res, next);
+  } else {
+    // For all other routes, parse JSON
+    express.json()(req, res, next);
+  }
+});
+
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
 // Debug middleware to log all requests

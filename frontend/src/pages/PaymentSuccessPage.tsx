@@ -15,6 +15,7 @@ interface PaymentDetails {
   providerName: string;
   providerId: string;
   jobRequestId: string;
+  conversationId: string;
   completedAt: string;
 }
 
@@ -234,10 +235,10 @@ const PaymentSuccessPage: React.FC = () => {
           <div className="flex gap-3 justify-center">
             <Button
               variant="outline"
-              onClick={() => navigate('/conversations')}
+              onClick={() => navigate(`/chat/${paymentDetails.conversationId}?from_payment=success`)}
             >
               <ArrowLeft className="w-4 h-4 ml-2" />
-              العودة للمحادثات
+              العودة للمحادثة
             </Button>
             <Button
               variant="primary"
