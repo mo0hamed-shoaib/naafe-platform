@@ -63,6 +63,180 @@ class AdminService {
       pendingComplaints
     };
   }
+
+  /**
+   * Get user growth data for charts
+   */
+  async getUserGrowthData() {
+    const now = new Date();
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(now.getMonth() - 6);
+
+    const userGrowthData = await User.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1 }
+      }
+    ]);
+
+    // Format data for chart
+    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    const chartData = months.map((month, index) => {
+      const monthData = userGrowthData.find(d => d._id.month === index + 1);
+      return monthData ? monthData.count : 0;
+    });
+
+    return chartData;
+  }
+
+  /**
+   * Get service categories data for charts
+   */
+  async getServiceCategoriesData() {
+    const categoriesData = await ServiceListing.aggregate([
+      {
+        $match: { status: 'active' }
+      },
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { count: -1 }
+      },
+      {
+        $limit: 6
+      }
+    ]);
+
+    return {
+      labels: categoriesData.map(cat => cat._id),
+      data: categoriesData.map(cat => cat.count)
+    };
+  }
+
+  /**
+   * Get revenue data for charts
+   */
+  async getRevenueData() {
+    const now = new Date();
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(now.getMonth() - 6);
+
+    const revenueData = await Offer.aggregate([
+      {
+        $match: {
+          status: 'accepted',
+          updatedAt: { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$updatedAt' },
+            month: { $month: '$updatedAt' }
+          },
+          revenue: { $sum: '$budget.max' }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1 }
+      }
+    ]);
+
+    // Format data for chart
+    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    const chartData = months.map((month, index) => {
+      const monthData = revenueData.find(d => d._id.month === index + 1);
+      return monthData ? monthData.revenue : 0;
+    });
+
+    return chartData;
+  }
+
+  /**
+   * Get recent activity data
+   */
+  async getRecentActivity() {
+    const now = new Date();
+    const weekAgo = new Date(now);
+    weekAgo.setDate(now.getDate() - 7);
+
+    const activities = [];
+
+    // Recent user registrations
+    const recentUsers = await User.find({ createdAt: { $gte: weekAgo } })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('name createdAt');
+
+    recentUsers.forEach(user => {
+      activities.push({
+        id: user._id.toString(),
+        type: 'user_signup',
+        message: `تسجيل جديد للمستخدم: ${user.name.first} ${user.name.last}`,
+        timestamp: user.createdAt,
+        icon: 'CheckCircle',
+        color: 'bg-green-500'
+      });
+    });
+
+    // Recent service listings
+    const recentServices = await ServiceListing.find({ createdAt: { $gte: weekAgo } })
+      .populate('provider', 'name')
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('title provider createdAt');
+
+    recentServices.forEach(service => {
+      activities.push({
+        id: service._id.toString(),
+        type: 'service_posted',
+        message: `تم نشر خدمة جديدة: ${service.title}`,
+        timestamp: service.createdAt,
+        icon: 'Plus',
+        color: 'bg-bright-orange'
+      });
+    });
+
+    // Recent job requests
+    const recentRequests = await JobRequest.find({ createdAt: { $gte: weekAgo } })
+      .populate('seeker', 'name')
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('title seeker createdAt');
+
+    recentRequests.forEach(request => {
+      activities.push({
+        id: request._id.toString(),
+        type: 'job_requested',
+        message: `طلب خدمة جديد: ${request.title}`,
+        timestamp: request.createdAt,
+        icon: 'FileText',
+        color: 'bg-blue-500'
+      });
+    });
+
+    // Sort by timestamp and return top 10
+    return activities
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 10);
+  }
 }
 
 export default new AdminService(); 

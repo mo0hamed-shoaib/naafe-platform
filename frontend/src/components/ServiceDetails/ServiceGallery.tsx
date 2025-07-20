@@ -64,16 +64,16 @@ const ServiceGallery: React.FC<ServiceGalleryProps> = ({ images, title }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {safeImages.map((img, idx) => (
             <div
-              key={idx}
+            key={idx}
               className="group relative cursor-pointer overflow-hidden rounded-lg border border-deep-teal/20 hover:border-deep-teal/40 transition-all duration-300"
               onClick={() => handleImageClick(idx)}
             >
               <img
-                src={img}
+            src={img}
                 alt={`${safeTitle} - صورة ${idx + 1}`}
                 className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-              />
+            loading="lazy"
+          />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <div className="bg-white/90 text-deep-teal px-3 py-1 rounded-full text-sm font-medium">
@@ -82,9 +82,9 @@ const ServiceGallery: React.FC<ServiceGalleryProps> = ({ images, title }) => {
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+        ))}
       </div>
+    </div>
 
       {/* Image Modal */}
       {selectedImage !== null && (

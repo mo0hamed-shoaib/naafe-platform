@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Eye, CheckCircle, XCircle, Clock, User, MessageSquare } from 'lucide-react';
+import { AlertTriangle, Eye, CheckCircle, XCircle, Clock, User, MessageSquare, History } from 'lucide-react';
 import SearchAndFilter from '../components/UI/SearchAndFilter';
 import Pagination from '../components/UI/Pagination';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,7 +10,7 @@ import SortableTable, { SortDirection } from '../components/UI/SortableTable';
 import ConfirmationModal from '../components/UI/ConfirmationModal';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import { getAdminComplaints, updateComplaint } from '../../services/complaintService';
+import { getAdminComplaints, updateComplaint, getComplaintActions } from '../../services/complaintService';
 
 // Define types for API response
 interface Complaint extends Record<string, unknown> {
@@ -52,6 +52,31 @@ interface ComplaintsApiResponse {
   itemsPerPage: number;
 }
 
+interface AdminAction {
+  _id: string;
+  complaintId: string;
+  adminId: string;
+  actionType: string;
+  actionTypeLabel: string;
+  previousStatus: string;
+  previousStatusLabel: string;
+  newStatus: string;
+  newStatusLabel: string;
+  previousAdminAction: string;
+  previousAdminActionLabel: string;
+  newAdminAction: string;
+  newAdminActionLabel: string;
+  notes?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+  admin: {
+    _id: string;
+    name: { first: string; last: string };
+    email: string;
+  };
+}
+
 const fetchComplaints = async ({ page, search, filter, token }: { page: number; search: string; filter: string; token: string | null; }): Promise<ComplaintsApiResponse> => {
   const data = await getAdminComplaints(page, search, filter, token);
   return {
@@ -88,6 +113,7 @@ const AdminManageComplaints: React.FC = () => {
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isActionsModalOpen, setIsActionsModalOpen] = useState(false);
   const [actionType, setActionType] = useState<'investigate' | 'resolve' | 'dismiss' | null>(null);
 
   const {
@@ -113,6 +139,16 @@ const AdminManageComplaints: React.FC = () => {
     },
   });
 
+  // Query for complaint actions
+  const {
+    data: actionsData,
+    isLoading: actionsLoading
+  } = useQuery<{ success: boolean; data: { actions: AdminAction[]; total: number; page: number; limit: number; totalPages: number } }, Error>({
+    queryKey: ['complaintActions', selectedComplaint?._id, accessToken],
+    queryFn: () => selectedComplaint ? getComplaintActions(selectedComplaint._id, 1, accessToken) : Promise.reject('No complaint selected'),
+    enabled: !!selectedComplaint && isActionsModalOpen,
+  });
+
   const handleAction = (complaint: Complaint, action: 'investigate' | 'resolve' | 'dismiss') => {
     setSelectedComplaint(complaint);
     setActionType(action);
@@ -122,17 +158,26 @@ const AdminManageComplaints: React.FC = () => {
   const confirmAction = () => {
     if (!selectedComplaint || !actionType) return;
 
-    let updateData: { status?: string; adminAction?: string; adminNotes?: string } = {};
+    let updateData: { status?: string; adminAction?: string; adminNotes?: string; actionType?: string } = {};
     
     switch (actionType) {
       case 'investigate':
-        updateData = { status: 'investigating' };
+        updateData = { 
+          status: 'investigating',
+          actionType: 'investigate'
+        };
         break;
       case 'resolve':
-        updateData = { status: 'resolved' };
+        updateData = { 
+          status: 'resolved',
+          actionType: 'resolve'
+        };
         break;
       case 'dismiss':
-        updateData = { status: 'dismissed' };
+        updateData = { 
+          status: 'dismissed',
+          actionType: 'dismiss'
+        };
         break;
     }
 
@@ -261,6 +306,19 @@ const AdminManageComplaints: React.FC = () => {
             className="p-2"
           >
             <Eye className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedComplaint(complaint as Complaint);
+              setIsActionsModalOpen(true);
+            }}
+            className="p-2 flex items-center gap-1"
+            title="سجل الإجراءات"
+          >
+            <History className="w-4 h-4" />
+            <span className="text-xs">سجل الإجراءات</span>
           </Button>
           {complaint.status === 'pending' && (
             <>
@@ -486,6 +544,112 @@ const AdminManageComplaints: React.FC = () => {
                     <p className="text-text-secondary">
                       {new Date(selectedComplaint.resolvedAt).toLocaleDateString('ar-EG')} {new Date(selectedComplaint.resolvedAt).toLocaleTimeString('ar-EG')}
                     </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Actions History Modal */}
+      {selectedComplaint && (
+        <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${isActionsModalOpen ? 'block' : 'hidden'}`}>
+          <div className="bg-white rounded-2xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+                <History className="w-5 h-5" />
+                سجل الإجراءات الإدارية
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsActionsModalOpen(false);
+                  setSelectedComplaint(null);
+                }}
+              >
+                <XCircle className="w-5 h-5" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Complaint Summary */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-text-primary mb-2">ملخص البلاغ</h4>
+                <p className="text-sm text-text-primary">
+                  {selectedComplaint.reporter.name.first} {selectedComplaint.reporter.name.last} 
+                  {' → '} 
+                  {selectedComplaint.reportedUser.name.first} {selectedComplaint.reportedUser.name.last}
+                </p>
+                <p className="text-xs text-text-secondary">{selectedComplaint.jobRequest.title}</p>
+              </div>
+
+              {/* Actions List */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-text-primary">الإجراءات المتخذة</h4>
+                {actionsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-deep-teal mx-auto"></div>
+                    <p className="text-sm text-text-secondary mt-2">جاري التحميل...</p>
+                  </div>
+                ) : actionsData?.data.actions && actionsData.data.actions.length > 0 ? (
+                  <div className="space-y-3">
+                    {actionsData.data.actions.map((action) => (
+                      <div key={action._id} className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="category" size="sm">
+                                {action.actionTypeLabel}
+                              </Badge>
+                              <span className="text-xs text-text-secondary">
+                                {new Date(action.createdAt).toLocaleDateString('ar-EG')} {new Date(action.createdAt).toLocaleTimeString('ar-EG')}
+                              </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="font-medium text-text-primary">الحالة:</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-text-secondary">{action.previousStatusLabel}</span>
+                                  <span className="text-deep-teal">→</span>
+                                  <span className="font-medium text-deep-teal">{action.newStatusLabel}</span>
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <span className="font-medium text-text-primary">الإجراء الإداري:</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-text-secondary">{action.previousAdminActionLabel}</span>
+                                  <span className="text-deep-teal">→</span>
+                                  <span className="font-medium text-deep-teal">{action.newAdminActionLabel}</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {action.notes && (
+                              <div className="mt-3">
+                                <span className="font-medium text-text-primary text-sm">ملاحظات:</span>
+                                <p className="text-sm text-text-secondary bg-gray-50 p-2 rounded mt-1">
+                                  {action.notes}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="text-right text-xs text-text-secondary">
+                            <div>بواسطة: {action.admin.name.first} {action.admin.name.last}</div>
+                            <div>{action.admin.email}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <History className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-text-secondary">لا توجد إجراءات مسجلة لهذا البلاغ</p>
                   </div>
                 )}
               </div>

@@ -30,6 +30,7 @@ import NotificationPage from './pages/NotificationPage';
 import ChatPage from './pages/ChatPage';
 import ConversationsPage from './pages/ConversationsPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import AdvertisePage from './pages/AdvertisePage';
 
 const App = () => {
   return (
@@ -101,6 +102,7 @@ const App = () => {
                   <PaymentSuccessPage />
                 </ProtectedRoute>
               } />
+              <Route path="/advertise" element={<AdvertisePage />} />
               <Route path="/provider/:id" element={<div className="min-h-screen bg-warm-cream flex items-center justify-center"><p className="text-2xl text-text-secondary">Provider Details Page (Coming Soon)</p></div>} />
                 <Route path="/admin" element={
                   <ProtectedRoute requiredRoles={['admin']}>

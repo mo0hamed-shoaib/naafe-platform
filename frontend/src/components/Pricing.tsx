@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Check,
   X,
   Crown,
   Shield,
-  Target,
-  Award
+  Award,
+  CreditCard
 } from 'lucide-react';
 import PageLayout from './layout/PageLayout';
 import Button from './ui/Button';
+import { useAuth } from '../contexts/AuthContext';
+import Modal from '../admin/components/UI/Modal';
 
 // New pricing data for Nafee' platform
 const pricingPlans = [
@@ -30,7 +32,8 @@ const pricingPlans = [
     ],
     buttonText: 'ابدأ مجاناً',
     buttonVariant: 'outline' as const,
-    popular: false
+    popular: false,
+    planId: null
   },
   {
     name: 'الخطة المميزة',
@@ -50,7 +53,8 @@ const pricingPlans = [
     ],
     buttonText: 'اشترك الآن',
     buttonVariant: 'primary' as const,
-    popular: true
+    popular: true,
+    planId: 'price_1RmmwcCjj2jIemB8xZhcobwz'
   }
 ];
 
@@ -61,8 +65,8 @@ const trustFeatures = [
     description: 'مطابقة ذكية بين مقدمي الخدمات والعملاء'
   },
   {
-    icon: <Target className="w-6 h-6" />,
-    title: 'مؤمن بـ Paymob',
+    icon: <CreditCard className="w-6 h-6" />,
+    title: 'مؤمن بـ Stripe',
     description: 'مدفوعات آمنة ومشفرة لحماية أموالك'
   },
   {
@@ -72,16 +76,107 @@ const trustFeatures = [
   }
 ];
 
+// Comparison data
+const comparisonData = [
+  {
+    feature: 'نشر طلبات الخدمة',
+    free: { value: '3 شهرياً', included: true },
+    premium: { value: 'غير محدود', included: true }
+  },
+  {
+    feature: 'عرض الخدمات',
+    free: { value: 'الملف الأساسي', included: true },
+    premium: { value: 'الملف المميز', included: true }
+  },
+  {
+    feature: 'المطابقة بالذكاء الاصطناعي',
+    free: { value: 'غير متاح', included: false },
+    premium: { value: 'مطابقة ذكية', included: true }
+  },
+  {
+    feature: 'رفع المستندات',
+    free: { value: 'اختياري', included: true },
+    premium: { value: 'مطلوب + شارة المراجعة', included: true }
+  },
+  {
+    feature: 'دعم العملاء',
+    free: { value: 'دعم المجتمع', included: true },
+    premium: { value: 'دعم ذو أولوية', included: true }
+  },
+  {
+    feature: 'شارة التحقق',
+    free: { value: 'غير متاح', included: false },
+    premium: { value: 'شارة البائع الموثوق', included: true }
+  },
+  {
+    feature: 'رسوم المنصة',
+    free: { value: '15%', included: true },
+    premium: { value: '5% (خصم)', included: true }
+  },
+  {
+    feature: 'الظهور في النتائج',
+    free: { value: 'عادي', included: true },
+    premium: { value: 'أولوية', included: true }
+  }
+];
+
 const Pricing: React.FC = () => {
-  const handleSubscribe = (planName: string) => {
-    // TODO: Implement subscription logic
-    console.log(`Subscribing to ${planName}`);
-    alert(`سيتم توجيهك لصفحة الدفع للخطة: ${planName}`);
+  const { accessToken } = useAuth();
+  const [loading, setLoading] = useState<string | null>(null);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+
+  const handleSubscribe = async (planName: string, planId: string | null) => {
+    if (!planId) {
+      // Free plan - just show success message
+      alert('تم تفعيل الخطة المجانية بنجاح!');
+      return;
+    }
+
+    if (!accessToken) {
+      alert('يرجى تسجيل الدخول أولاً');
+      return;
+    }
+
+    setLoading(planId);
+
+    try {
+      // Create Stripe checkout session for subscription
+      const response = await fetch('/api/subscriptions/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          planId: 'price_1RmmwcCjj2jIemB8xZhcobwz', // Real Stripe Price ID for Premium Plan
+          planName,
+          successUrl: `${window.location.origin}/pricing?success=true`,
+          cancelUrl: `${window.location.origin}/pricing?canceled=true`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.data?.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.data.url;
+      } else {
+        throw new Error(data.error?.message || 'فشل في إنشاء جلسة الدفع');
+      }
+    } catch (error) {
+      console.error('Subscription error:', error);
+      alert('حدث خطأ أثناء إنشاء الاشتراك. يرجى المحاولة مرة أخرى.');
+    } finally {
+      setLoading(null);
+    }
   };
 
   const handleComparePlans = () => {
-    // TODO: Implement plan comparison
-    console.log('Opening plan comparison');
+    setIsCompareModalOpen(true);
+  };
+
+  const handleCloseCompareModal = () => {
+    setIsCompareModalOpen(false);
   };
 
   return (
@@ -104,23 +199,23 @@ const Pricing: React.FC = () => {
             <Crown className="w-5 h-5 text-deep-teal" />
             <span className="text-sm font-semibold text-deep-teal">
               خطط الاشتراك
-            </span>
-          </div>
+              </span>
+            </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-deep-teal mb-6">
             أسعار عادلة وشفافة
             <span className="block text-accent">للجميع</span>
-          </h1>
+            </h1>
           <p className="text-xl text-text-secondary max-w-3xl mx-auto leading-relaxed">
             سواء كنت هنا للربح أو للحصول على المساعدة، خططنا مصممة لدعمك
-          </p>
+            </p>
         </section>
 
         {/* Pricing Plans */}
         <section className="mb-16">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {pricingPlans.map((plan, index) => (
-              <div
-                key={index}
+                <div
+                  key={index}
                 className={`relative bg-white rounded-2xl shadow-lg border-2 p-8 ${
                   plan.popular 
                     ? 'border-accent scale-105' 
@@ -171,12 +266,13 @@ const Pricing: React.FC = () => {
                   variant={plan.buttonVariant}
                   size="lg"
                   className="w-full"
-                  onClick={() => handleSubscribe(plan.name)}
+                  onClick={() => handleSubscribe(plan.name, plan.planId)}
+                  disabled={loading === plan.planId}
                 >
-                  {plan.buttonText}
+                  {loading === plan.planId ? 'جاري التوجيه...' : plan.buttonText}
                 </Button>
-              </div>
-            ))}
+                </div>
+              ))}
           </div>
         </section>
 
@@ -187,8 +283,13 @@ const Pricing: React.FC = () => {
               ابدأ مجاناً - ارتقِ في أي وقت
             </h2>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button variant="primary" size="lg" onClick={() => handleSubscribe('الخطة المميزة')}>
-                انضم الآن
+              <Button 
+                variant="primary" 
+                size="lg" 
+                onClick={() => handleSubscribe('الخطة المميزة', 'price_1RmmwcCjj2jIemB8xZhcobwz')}
+                disabled={loading === 'price_1RmmwcCjj2jIemB8xZhcobwz'}
+              >
+                {loading === 'price_1RmmwcCjj2jIemB8xZhcobwz' ? 'جاري التوجيه...' : 'انضم الآن'}
               </Button>
               <Button variant="outline" size="lg" onClick={handleComparePlans}>
                 قارن الخطط
@@ -227,6 +328,35 @@ const Pricing: React.FC = () => {
           </div>
         </section>
 
+        {/* Advertising Section */}
+        <section className="bg-gradient-to-r from-deep-teal/5 to-accent/5 rounded-2xl p-8 border border-deep-teal/20 mb-16">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-deep-teal mb-4">
+              هل تريد الترويج لخدماتك؟
+            </h2>
+            <p className="text-lg text-text-secondary mb-6 max-w-2xl mx-auto">
+              احصل على ظهور أفضل في نتائج البحث مع الإعلانات المميزة. 
+              إعلاناتك ستظهر في أعلى الصفحات مع استهداف ذكي بالذكاء الاصطناعي.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                variant="primary" 
+                size="lg" 
+                onClick={() => window.location.href = '/advertise'}
+              >
+                اعرف المزيد عن الإعلانات
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg"
+                onClick={() => window.location.href = '/advertise'}
+              >
+                ابدأ الإعلان الآن
+              </Button>
+            </div>
+          </div>
+        </section>
+
         {/* FAQ Section */}
         <section className="bg-light-cream rounded-2xl p-8">
           <h2 className="text-2xl font-bold text-deep-teal text-center mb-8">
@@ -235,7 +365,7 @@ const Pricing: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <h3 className="font-bold text-deep-teal mb-2">هل يمكنني إلغاء الاشتراك في أي وقت؟</h3>
-              <p className="text-text-secondary text-sm">نعم، يمكنك إلغاء اشتراكك في أي وقت من إعدادات الحساب.</p>
+              <p className="text-text-secondary text-sm">نعم، يمكنك إلغاء اشتراكك في أي وقت من إعدادات الحساب أو عبر Stripe Customer Portal.</p>
             </div>
             <div>
               <h3 className="font-bold text-deep-teal mb-2">هل هناك فترة تجريبية مجانية؟</h3>
@@ -243,15 +373,94 @@ const Pricing: React.FC = () => {
             </div>
             <div>
               <h3 className="font-bold text-deep-teal mb-2">كيف يتم الدفع؟</h3>
-              <p className="text-text-secondary text-sm">نقبل جميع البطاقات الائتمانية والمدفوعات الإلكترونية عبر Paymob.</p>
+              <p className="text-text-secondary text-sm">نقبل جميع البطاقات الائتمانية والمدفوعات الإلكترونية عبر Stripe.</p>
             </div>
             <div>
               <h3 className="font-bold text-deep-teal mb-2">هل يمكنني الترقية أو التخفيض؟</h3>
-              <p className="text-text-secondary text-sm">نعم، يمكنك تغيير خطتك في أي وقت من إعدادات الحساب.</p>
+              <p className="text-text-secondary text-sm">نعم، يمكنك تغيير خطتك في أي وقت من إعدادات الحساب أو عبر Stripe Customer Portal.</p>
             </div>
           </div>
         </section>
       </div>
+
+      <Modal
+        isOpen={isCompareModalOpen}
+        onClose={handleCloseCompareModal}
+        title="مقارنة بين الخطط"
+        size="xl"
+      >
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="grid grid-cols-3 gap-4 mb-6 text-center">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-lg font-bold text-deep-teal mb-2">الميزة</h3>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-lg font-bold text-deep-teal mb-2">الخطة المجانية</h3>
+              <p className="text-sm text-text-secondary">0 جنيه/شهر</p>
+            </div>
+            <div className="p-4 bg-accent/10 rounded-lg border-2 border-accent">
+              <h3 className="text-lg font-bold text-deep-teal mb-2">الخطة المميزة</h3>
+              <p className="text-sm text-accent font-semibold">49 جنيه/شهر</p>
+            </div>
+          </div>
+
+          {/* Comparison Table */}
+          <div className="space-y-4">
+            {comparisonData.map((item, index) => (
+              <div key={index} className="grid grid-cols-3 gap-4 items-center p-4 border-b border-gray-100">
+                <div className="font-semibold text-deep-teal text-right">
+                  {item.feature}
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    {item.free.included ? (
+                      <Check className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <X className="w-5 h-5 text-red-500" />
+                    )}
+                    <span className={`text-sm ${item.free.included ? 'text-text-primary' : 'text-text-secondary'}`}>
+                      {item.free.value}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    {item.premium.included ? (
+                      <Check className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <X className="w-5 h-5 text-red-500" />
+                    )}
+                    <span className={`text-sm ${item.premium.included ? 'text-text-primary' : 'text-text-secondary'}`}>
+                      {item.premium.value}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA Section */}
+          <div className="mt-8 p-6 bg-gradient-to-r from-deep-teal/5 to-accent/5 rounded-lg text-center">
+            <h4 className="text-lg font-bold text-deep-teal mb-3">
+              جاهز للترقية؟
+            </h4>
+            <p className="text-text-secondary mb-4">
+              احصل على جميع المزايا المتقدمة وابدأ في تحقيق المزيد من النجاح
+            </p>
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => {
+                handleCloseCompareModal();
+                handleSubscribe('الخطة المميزة', 'price_1RmmwcCjj2jIemB8xZhcobwz');
+              }}
+            >
+              اشترك الآن
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </PageLayout>
   );
 };

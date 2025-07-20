@@ -66,6 +66,42 @@ interface ComplaintStatsResponse {
   };
 }
 
+interface AdminAction {
+  _id: string;
+  complaintId: string;
+  adminId: string;
+  actionType: string;
+  actionTypeLabel: string;
+  previousStatus: string;
+  previousStatusLabel: string;
+  newStatus: string;
+  newStatusLabel: string;
+  previousAdminAction: string;
+  previousAdminActionLabel: string;
+  newAdminAction: string;
+  newAdminActionLabel: string;
+  notes?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+  admin: {
+    _id: string;
+    name: { first: string; last: string };
+    email: string;
+  };
+}
+
+interface ComplaintActionsResponse {
+  success: boolean;
+  data: {
+    actions: AdminAction[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export const submitComplaint = async (complaintData: ComplaintData, token: string | null): Promise<ComplaintResponse> => {
   const response = await fetch('/api/complaints', {
     method: 'POST',
@@ -149,6 +185,29 @@ export const getComplaintStats = async (token: string | null): Promise<Complaint
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.error?.message || 'فشل في جلب إحصائيات البلاغات');
+  }
+
+  return response.json();
+};
+
+export const getComplaintActions = async (
+  complaintId: string,
+  page: number = 1,
+  token: string | null
+): Promise<ComplaintActionsResponse> => {
+  const params = new URLSearchParams();
+  params.append('page', page.toString());
+
+  const response = await fetch(`/api/complaints/admin/${complaintId}/actions?${params.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || 'فشل في جلب إجراءات البلاغ');
   }
 
   return response.json();

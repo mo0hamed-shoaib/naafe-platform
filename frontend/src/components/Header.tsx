@@ -190,8 +190,9 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
   };
 
   const navigationItems = [
-    { label: 'الخدمات', href: '/services' },
-    { label: 'العضوية المميزة', href: '/pricing' },
+    { label: 'الخدمات', href: '/categories' },
+    { label: 'للإشتراك', href: '/pricing' },
+    { label: 'أعلن معنا', href: '/advertise' },
     { label: 'استكشف', href: '/search' },
   ];
 

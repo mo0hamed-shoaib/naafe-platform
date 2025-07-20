@@ -10,6 +10,18 @@ const adminController = new AdminController();
 // GET /api/admin/stats - Admin dashboard stats
 router.get('/stats', authenticateToken, requireRole(['admin']), adminController.getDashboardStats.bind(adminController));
 
+// GET /api/admin/charts/user-growth - User growth chart data
+router.get('/charts/user-growth', authenticateToken, requireRole(['admin']), adminController.getUserGrowthData.bind(adminController));
+
+// GET /api/admin/charts/service-categories - Service categories chart data
+router.get('/charts/service-categories', authenticateToken, requireRole(['admin']), adminController.getServiceCategoriesData.bind(adminController));
+
+// GET /api/admin/charts/revenue - Revenue chart data
+router.get('/charts/revenue', authenticateToken, requireRole(['admin']), adminController.getRevenueData.bind(adminController));
+
+// GET /api/admin/activity - Recent activity data
+router.get('/activity', authenticateToken, requireRole(['admin']), adminController.getRecentActivity.bind(adminController));
+
 // Upgrade Requests
 router.get('/upgrade-requests', authenticateToken, requireRole(['admin']), AdminController.getUpgradeRequests);
 router.post('/upgrade-requests/:id/accept', authenticateToken, requireRole(['admin']), AdminController.acceptUpgradeRequest);

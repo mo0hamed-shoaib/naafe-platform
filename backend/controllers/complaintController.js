@@ -1,6 +1,7 @@
 import Complaint from '../models/Complaint.js';
 import User from '../models/User.js';
 import JobRequest from '../models/JobRequest.js';
+import AdminAction from '../models/AdminAction.js';
 
 class ComplaintController {
   /**
@@ -232,7 +233,8 @@ class ComplaintController {
   async updateComplaint(req, res) {
     try {
       const { id } = req.params;
-      const { status, adminAction, adminNotes } = req.body;
+      const { status, adminAction, adminNotes, actionType } = req.body;
+      const { user } = req; // Get admin from auth middleware (admin is a user with role)
 
       const complaint = await Complaint.findById(id);
       if (!complaint) {
@@ -260,6 +262,10 @@ class ComplaintController {
         });
       }
 
+      // Store previous values for tracking
+      const previousStatus = complaint.status;
+      const previousAdminAction = complaint.adminAction;
+
       // Update complaint
       const updateData = {};
       if (status) updateData.status = status;
@@ -276,6 +282,22 @@ class ComplaintController {
         updateData,
         { new: true, runValidators: true }
       );
+
+      // Create admin action record
+      const adminActionRecord = new AdminAction({
+        complaintId: id,
+        adminId: user._id,
+        actionType: actionType || 'update', // Default to 'update' if not specified
+        previousStatus,
+        newStatus: updatedComplaint.status,
+        previousAdminAction,
+        newAdminAction: updatedComplaint.adminAction,
+        notes: adminNotes,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      await adminActionRecord.save();
 
       // If admin action is ban, block the reported user
       if (adminAction === 'ban') {
@@ -337,6 +359,79 @@ class ComplaintController {
       res.status(500).json({
         success: false,
         error: { message: 'حدث خطأ أثناء جلب إحصائيات البلاغات' }
+      });
+    }
+  }
+
+  /**
+   * Get admin actions for a specific complaint
+   * GET /api/admin/complaints/:id/actions
+   */
+  async getComplaintActions(req, res) {
+    try {
+      const { id } = req.params;
+      const { page = 1, limit = 10 } = req.query;
+
+      // Verify complaint exists
+      const complaint = await Complaint.findById(id);
+      if (!complaint) {
+        return res.status(404).json({
+          success: false,
+          error: { message: 'البلاغ غير موجود' }
+        });
+      }
+
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
+      // Get admin actions with admin details
+      const pipeline = [
+        { $match: { complaintId: complaint._id } },
+        {
+          $lookup: {
+            from: 'users', // Admin is a User discriminator, so use 'users' collection
+            localField: 'adminId',
+            foreignField: '_id',
+            as: 'admin'
+          }
+        },
+        { $unwind: '$admin' },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: parseInt(limit) }
+      ];
+
+      const actions = await AdminAction.aggregate(pipeline);
+      const total = await AdminAction.countDocuments({ complaintId: complaint._id });
+
+      // Add virtual fields to actions
+      const actionsWithVirtuals = actions.map(action => {
+        const actionDoc = new AdminAction(action);
+        return {
+          ...action,
+          actionTypeLabel: actionDoc.actionTypeLabel,
+          previousStatusLabel: actionDoc.previousStatusLabel,
+          newStatusLabel: actionDoc.newStatusLabel,
+          previousAdminActionLabel: actionDoc.previousAdminActionLabel,
+          newAdminActionLabel: actionDoc.newAdminActionLabel
+        };
+      });
+
+      res.json({
+        success: true,
+        data: {
+          actions: actionsWithVirtuals,
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(total / limit)
+        }
+      });
+
+    } catch (error) {
+      console.error('Error getting complaint actions:', error);
+      res.status(500).json({
+        success: false,
+        error: { message: 'حدث خطأ أثناء جلب إجراءات البلاغ' }
       });
     }
   }

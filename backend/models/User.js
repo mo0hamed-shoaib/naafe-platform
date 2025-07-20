@@ -58,6 +58,34 @@ const providerProfileSchema = new Schema({
   skills: { type: [String], default: [] } // Added skills array
 }, { _id: false });
 
+const subscriptionSchema = new Schema({
+  status: {
+    type: String,
+    enum: ['inactive', 'active', 'canceled', 'past_due', 'unpaid'],
+    default: 'inactive'
+  },
+  planName: {
+    type: String,
+    default: null
+  },
+  stripeCustomerId: {
+    type: String,
+    default: null
+  },
+  stripeSubscriptionId: {
+    type: String,
+    default: null
+  },
+  currentPeriodEnd: {
+    type: Date,
+    default: null
+  },
+  cancelAtPeriodEnd: {
+    type: Boolean,
+    default: false
+  }
+}, { _id: false });
+
 const userSchema = new Schema({
     email: {
         type: String,
@@ -112,6 +140,11 @@ const userSchema = new Schema({
     },
     seekerProfile: { type: seekerProfileSchema, default: () => ({}) },
     providerProfile: { type: providerProfileSchema, default: () => ({}) },
+    subscription: { type: subscriptionSchema, default: () => ({}) },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
     profile: {
         bio: {
             type: String,
