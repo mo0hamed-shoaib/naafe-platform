@@ -23,9 +23,9 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
     // Log error to monitoring service in production
-    if (import.meta.env.PROD) {
-      console.error('Error caught by boundary:', error, errorInfo);
-    }
+    console.error('Error caught by boundary:', error, errorInfo);
+    console.error('Error stack:', error.stack);
+    console.error('Component stack:', errorInfo.componentStack);
   }
 
   render() {

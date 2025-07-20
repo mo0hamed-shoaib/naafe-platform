@@ -9,6 +9,7 @@ import { FormInput, FormTextarea } from './ui';
 import UnifiedSelect from './ui/UnifiedSelect';
 import { AIAssistant } from './ui';
 import { PricingGuidance } from './ui';
+import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
 interface RequestServiceFormData {
   requestTitle: string;
@@ -24,6 +25,7 @@ interface RequestServiceFormData {
   preferredDateTime: string;
   deliveryTimeDays: string;
   tags: string;
+  images: string[]; // Array of image URLs
 }
 
 interface AddressFields {
@@ -50,16 +52,82 @@ const RequestServiceForm: React.FC = () => {
     preferredDateTime: '',
     deliveryTimeDays: '',
     tags: '',
+    images: [],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [imageUploadProgress, setImageUploadProgress] = useState<{[key: string]: boolean}>({});
   const navigate = useNavigate();
   const [categories, setCategories] = useState<string[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [profileAddress, setProfileAddress] = useState<AddressFields | null>(null);
   const [showAutofillSuccess, setShowAutofillSuccess] = useState(false);
+
+  // Image upload handler
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    
+    // Limit to 5 images
+    if (formData.images.length + files.length > 5) {
+      setError('يمكنك رفع 5 صور كحد أقصى');
+      return;
+    }
+
+    setUploadingImages(true);
+    setError(null);
+
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        setError('يرجى رفع صور فقط');
+        continue;
+      }
+
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
+        continue;
+      }
+
+      setImageUploadProgress(prev => ({ ...prev, [file.name]: true }));
+
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_API_KEY}`, {
+          method: 'POST',
+          body: formData,
+        });
+        
+        const data = await res.json();
+        if (data.success && data.data && data.data.url) {
+          setFormData(prev => ({
+            ...prev,
+            images: [...prev.images, data.data.url]
+          }));
+        } else {
+          setError('فشل رفع الصورة. يرجى المحاولة مرة أخرى.');
+        }
+      } catch (error) {
+        setError('فشل رفع الصورة. يرجى المحاولة مرة أخرى.');
+      }
+
+      setImageUploadProgress(prev => ({ ...prev, [file.name]: false }));
+    }
+
+    setUploadingImages(false);
+  };
+
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
 
   useEffect(() => {
     setCategoriesLoading(true);
@@ -119,7 +187,7 @@ const RequestServiceForm: React.FC = () => {
         deadline: formData.preferredDateTime ? new Date(formData.preferredDateTime) : undefined,
         deliveryTimeDays: Number(formData.deliveryTimeDays),
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-        attachments: [],
+        attachments: formData.images, // Assuming images are attachments
       };
       const res = await fetch('/api/requests', {
         method: 'POST',
@@ -369,16 +437,82 @@ const RequestServiceForm: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="tags">الكلمات المفتاحية (افصل بينها بفاصلة)</label>
+                  <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="tags">العلامات (اختياري)</label>
                   <FormInput
                     type="text"
                     id="tags"
                     name="tags"
                     value={formData.tags}
                     onChange={handleChange}
-                    placeholder="مثال: سباكة, كهرباء, تنظيف"
+                    placeholder="مثال: تنظيف، منزل، عاجل"
                   />
                 </div>
+              </div>
+
+              {/* Image Upload Section */}
+              <div>
+                <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">
+                  صور توضيحية للخدمة (اختياري)
+                </label>
+                <div className="border-2 border-dashed border-deep-teal/30 rounded-lg p-6 text-center hover:border-deep-teal/50 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={uploadingImages || formData.images.length >= 5}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label htmlFor="image-upload" className="cursor-pointer">
+                    <Upload className="w-8 h-8 text-deep-teal mx-auto mb-2" />
+                    <p className="text-deep-teal font-medium mb-1">
+                      {uploadingImages ? 'جاري رفع الصور...' : 'اضغط لرفع الصور'}
+                    </p>
+                    <p className="text-text-secondary text-sm">
+                      يمكنك رفع حتى 5 صور (JPG, PNG) - الحد الأقصى 5 ميجابايت لكل صورة
+                    </p>
+                  </label>
+                </div>
+
+                {/* Uploaded Images Preview */}
+                {formData.images.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-semibold text-deep-teal mb-3">الصور المرفوعة:</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                      {formData.images.map((imageUrl, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={imageUrl}
+                            alt={`صورة ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border border-deep-teal/20"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="حذف الصورة"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload Progress */}
+                {Object.keys(imageUploadProgress).length > 0 && (
+                  <div className="mt-3">
+                    {Object.entries(imageUploadProgress).map(([fileName, isUploading]) => (
+                      <div key={fileName} className="flex items-center gap-2 text-sm text-deep-teal">
+                        <ImageIcon className="w-4 h-4" />
+                        <span>{fileName}</span>
+                        {isUploading && <span>جاري الرفع...</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               {error && <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>}
               {success && <div className="text-green-600 text-sm text-right bg-green-50 p-3 rounded-lg border border-green-200">تم إرسال الطلب بنجاح!</div>}

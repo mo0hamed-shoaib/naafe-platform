@@ -374,6 +374,40 @@ class OfferService {
       
       offer.status = 'rejected';
       await offer.save();
+
+      // --- Notification logic for rejected offer ---
+      try {
+        const seeker = await User.findById(seekerId).select('name.first name.last');
+        const seekerName = seeker ? `${seeker.name.first} ${seeker.name.last}` : 'مستخدم';
+        const providerId = offer.provider;
+        
+        const notification = new Notification({
+          userId: providerId,
+          type: 'offer_rejected',
+          message: `${seekerName} رفض عرضك على طلب "${offer.jobRequest.title}"`,
+          relatedChatId: null,
+          isRead: false
+        });
+        await notification.save();
+
+        // Emit Socket.IO event to provider's room
+        socketService.io.to(`user:${providerId}`).emit('notify:offerRejected', {
+          notification: {
+            _id: notification._id,
+            type: notification.type,
+            message: notification.message,
+            relatedChatId: notification.relatedChatId,
+            isRead: notification.isRead,
+            createdAt: notification.createdAt
+          }
+        });
+
+        logger.info(`Notification created for rejected offer: ${notification._id}`);
+      } catch (error) {
+        logger.error('Error creating notification for rejected offer:', error);
+        // Don't throw error here as the offer was already rejected successfully
+      }
+      // --- End notification logic ---
       
       return offer;
     } catch (error) {

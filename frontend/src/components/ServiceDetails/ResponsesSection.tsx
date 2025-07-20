@@ -16,20 +16,69 @@ interface Response {
   availableDates?: string[];
   timePreferences?: string[];
   createdAt?: string;
-  jobRequestSeekerId?: string; // Added this field to check if the user is the seeker
+  jobRequestSeekerId?: string;
+  status?: string; // 'pending', 'accepted', 'rejected'
+  providerId?: string; // Provider's user ID for profile navigation
 }
 
 interface ResponsesSectionProps {
   responses: Response[];
   onOffersRefresh?: () => Promise<void>;
+  jobRequestStatus?: string; // 'open', 'assigned', 'in_progress', 'completed'
 }
 
 const ResponsesSection: React.FC<ResponsesSectionProps> = ({ 
   responses, 
-  onOffersRefresh 
+  onOffersRefresh,
+  jobRequestStatus = 'open'
 }) => {
+  console.log('ResponsesSection render:', { responses, jobRequestStatus });
+  
   const { user, accessToken } = useAuth();
   if (!responses || responses.length === 0) return null;
+
+  // Safe property access for responses
+  const safeResponses = responses.map(resp => ({
+    ...resp,
+    name: resp.name || 'مستخدم غير معروف',
+    avatar: resp.avatar || '',
+    rating: resp.rating || 0,
+    price: resp.price || 0,
+    specialties: resp.specialties || [],
+    message: resp.message || '',
+    estimatedTimeDays: resp.estimatedTimeDays || 1,
+    availableDates: resp.availableDates || [],
+    timePreferences: resp.timePreferences || [],
+    status: resp.status || 'pending',
+    providerId: resp.providerId || '',
+    jobRequestSeekerId: resp.jobRequestSeekerId || ''
+  }));
+
+  // Helper function to determine if action buttons should be shown
+  const shouldShowActionButtons = (response: Response) => {
+    // Only show buttons to the seeker
+    if (!user || user.id !== response.jobRequestSeekerId) {
+      return false;
+    }
+
+    // Don't show buttons if job request is not open
+    if (jobRequestStatus !== 'open') {
+      return false;
+    }
+
+    // Don't show buttons if this offer has already been accepted/rejected
+    if (response.status && response.status !== 'pending') {
+      return false;
+    }
+
+    // Don't show buttons if another offer has been accepted
+    const hasAcceptedOffer = responses.some(r => r.status === 'accepted');
+    if (hasAcceptedOffer) {
+      return false;
+    }
+
+    return true;
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ar-EG', {
@@ -110,18 +159,30 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
     <div className="mb-6">
       <h2 className="text-xl font-bold mb-4 text-right text-deep-teal">العروض المقدمة ({responses.length})</h2>
       <div className="space-y-4">
-        {responses.map((resp) => (
+        {safeResponses.map((resp) => (
           <div key={resp.id} className="bg-white rounded-lg shadow-lg p-6 border border-deep-teal/10">
             {/* Provider Info */}
             <div className="flex items-center gap-4 mb-4">
-              <img
-                src={resp.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=face&auto=format"}
-                alt={resp.name}
-                className="w-16 h-16 rounded-full object-cover border-2 border-deep-teal/20"
-              />
+              <button
+                onClick={() => resp.providerId && window.open(`/profile/${resp.providerId}`, '_blank')}
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+                disabled={!resp.providerId}
+              >
+                <img
+                  src={resp.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=face&auto=format"}
+                  alt={resp.name}
+                  className="w-16 h-16 rounded-full object-cover border-2 border-deep-teal/20"
+                />
+              </button>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-lg text-deep-teal">{resp.name}</h3>
+                  <button
+                    onClick={() => resp.providerId && window.open(`/profile/${resp.providerId}`, '_blank')}
+                    className="cursor-pointer hover:text-teal-700 transition-colors"
+                    disabled={!resp.providerId}
+                  >
+                    <h3 className="font-bold text-lg text-deep-teal hover:underline">{resp.name}</h3>
+                  </button>
                   {resp.verified && (
                     <Badge variant="top-rated" size="sm">
                       موثوق
@@ -131,12 +192,24 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
                 <div className="flex items-center gap-4 text-sm text-deep-teal">
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 fill-current" />
-                    <span>{resp.rating} ({resp.specialties.length} تخصص)</span>
-                  </div>
-                  <div className="font-semibold text-deep-teal">
-                    {resp.price} جنيه
+                    <span>{resp.rating.toFixed(1)} ({resp.specialties.length} تخصص)</span>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Emphasized Price Section */}
+            <div className="mb-4 p-4 bg-gradient-to-r from-deep-teal/5 to-teal-500/5 rounded-lg border border-deep-teal/20">
+              <div className="text-center">
+                <div className="text-sm text-deep-teal mb-1">السعر المقترح</div>
+                <div className="text-2xl font-bold text-deep-teal">
+                  {resp.price.toLocaleString('ar-EG')} جنيه
+                </div>
+                {resp.estimatedTimeDays && (
+                  <div className="text-xs text-deep-teal/70 mt-1">
+                    المدة المتوقعة: {resp.estimatedTimeDays} يوم
+                  </div>
+                )}
               </div>
             </div>
 
@@ -156,37 +229,39 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
 
             {/* Message */}
             {resp.message && (
-              <div className="mb-4 p-3 bg-warm-cream rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <MessageCircle className="h-4 w-4 text-deep-teal" />
-                  <span className="text-sm font-medium text-deep-teal">الرسالة:</span>
+              <div className="mb-4 p-4 bg-gradient-to-r from-deep-teal/5 to-teal-500/5 rounded-lg border border-deep-teal/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <MessageCircle className="h-5 w-5 text-deep-teal" />
+                  <span className="text-sm font-semibold text-deep-teal">الرسالة:</span>
                 </div>
-                <p className="text-sm text-text-primary leading-relaxed">{resp.message}</p>
+                <p className="text-sm text-text-primary leading-relaxed text-right">{resp.message}</p>
               </div>
             )}
 
             {/* Availability Information */}
             {((resp.availableDates && resp.availableDates.length > 0) || (resp.timePreferences && resp.timePreferences.length > 0)) && (
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-deep-teal mb-3">التواريخ والأوقات المتاحة:</h4>
+              <div className="mb-4 p-4 bg-warm-cream rounded-lg border border-deep-teal/10">
+                <h4 className="text-sm font-semibold text-deep-teal mb-4 text-center">التواريخ والأوقات المتاحة</h4>
                 
                 {/* Available Dates */}
                 {resp.availableDates && resp.availableDates.length > 0 && (
-                  <div className="mb-3">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="mb-4">
+                    <div className="flex items-center gap-2 mb-3">
                       <Calendar className="h-4 w-4 text-deep-teal" />
                       <span className="text-sm font-medium text-deep-teal">التواريخ المتاحة:</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {resp.availableDates.slice(0, 5).map((date, index) => (
-                        <Badge key={index} variant="category" size="sm">
-                          {formatDate(date)}
-                        </Badge>
+                      {resp.availableDates.slice(0, 6).map((date, index) => (
+                        <div key={index} className="bg-white px-2 py-1 rounded-md border border-deep-teal/20 text-center min-w-[80px]">
+                          <span className="text-xs text-deep-teal font-medium">{formatDate(date)}</span>
+                        </div>
                       ))}
-                      {resp.availableDates.length > 5 && (
-                        <Badge variant="category" size="sm">
-                          +{resp.availableDates.length - 5} أكثر
-                        </Badge>
+                      {resp.availableDates.length > 6 && (
+                        <div className="bg-deep-teal/10 px-2 py-1 rounded-md border border-deep-teal/20 text-center">
+                          <span className="text-xs text-deep-teal font-medium">
+                            +{resp.availableDates.length - 6} تاريخ
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -195,31 +270,24 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
                 {/* Time Preferences */}
                 {resp.timePreferences && resp.timePreferences.length > 0 && (
                   <div className="mb-3">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-3">
                       <Clock className="h-4 w-4 text-deep-teal" />
                       <span className="text-sm font-medium text-deep-teal">تفضيلات الوقت:</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {resp.timePreferences.map((pref, index) => (
-                        <Badge key={index} variant="category" size="sm">
-                          {getTimePreferenceLabel(pref)}
-                        </Badge>
+                        <div key={index} className="bg-white px-2 py-1 rounded-md border border-deep-teal/20 text-center">
+                          <span className="text-xs font-medium text-deep-teal">{getTimePreferenceLabel(pref)}</span>
+                        </div>
                       ))}
                     </div>
-                  </div>
-                )}
-
-                {/* Estimated Time */}
-                {resp.estimatedTimeDays && (
-                  <div className="text-sm text-deep-teal">
-                    <span className="font-medium">المدة المتوقعة:</span> {resp.estimatedTimeDays} يوم
                   </div>
                 )}
               </div>
             )}
 
             {/* Action Buttons */}
-            {user && user.id === resp.jobRequestSeekerId && (
+            {shouldShowActionButtons(resp) && (
               <div className="flex gap-3 pt-4 border-t border-deep-teal/10">
                 <button 
                   onClick={() => handleAcceptOffer(resp.id)}
@@ -233,6 +301,30 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
                 >
                   رفض العرض
                 </button>
+              </div>
+            )}
+
+            {/* Status Badge for accepted/rejected offers */}
+            {resp.status && resp.status !== 'pending' && (
+              <div className="pt-4 border-t border-deep-teal/10">
+                <div className={`w-full text-center py-2 px-4 rounded-lg font-medium ${
+                  resp.status === 'accepted' 
+                    ? 'bg-green-100 text-green-800 border border-green-200' 
+                    : 'bg-red-100 text-red-800 border border-red-200'
+                }`}>
+                  {resp.status === 'accepted' ? 'تم قبول العرض' : 'تم رفض العرض'}
+                </div>
+              </div>
+            )}
+
+            {/* Job Status Info */}
+            {jobRequestStatus !== 'open' && user && user.id === resp.jobRequestSeekerId && (
+              <div className="pt-4 border-t border-deep-teal/10">
+                <div className="w-full text-center py-2 px-4 rounded-lg font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                  {jobRequestStatus === 'assigned' && 'تم تعيين مقدم الخدمة'}
+                  {jobRequestStatus === 'in_progress' && 'الخدمة قيد التنفيذ'}
+                  {jobRequestStatus === 'completed' && 'تم إنجاز الخدمة'}
+                </div>
               </div>
             )}
           </div>

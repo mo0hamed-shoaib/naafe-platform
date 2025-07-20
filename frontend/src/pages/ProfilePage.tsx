@@ -125,15 +125,25 @@ const ProfilePage: React.FC = () => {
         setProfile(profileRes.data.user);
         const statsRes = await fetchWithAuth(`/api/users/${userId}/stats`, token);
         setStats(statsRes.data.stats);
-        if (profileRes.data.user.roles?.includes('provider')) {
-          const servicesRes = await fetchWithAuth('/api/users/me/listings', token);
-          setServices(servicesRes.data.listings || []);
+        if (profileRes.data.user.roles?.includes('provider') && isSelf) {
+          try {
+            const servicesRes = await fetchWithAuth('/api/users/me/listings', token);
+            setServices(servicesRes.data.listings || []);
+          } catch (error) {
+            console.warn('Could not fetch provider listings:', error);
+            setServices([]);
+          }
         } else {
           setServices([]);
         }
-        if (profileRes.data.user.roles?.includes('seeker')) {
-          const reqRes = await fetchWithAuth('/api/requests?seeker=current', token);
-          setRequestedServices(reqRes.data.jobRequests || []);
+        if (profileRes.data.user.roles?.includes('seeker') && isSelf) {
+          try {
+            const reqRes = await fetchWithAuth('/api/requests?seeker=current', token);
+            setRequestedServices(reqRes.data.jobRequests || []);
+          } catch (error) {
+            console.warn('Could not fetch seeker requests:', error);
+            setRequestedServices([]);
+          }
         } else {
           setRequestedServices([]);
         }

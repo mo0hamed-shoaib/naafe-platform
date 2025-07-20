@@ -22,6 +22,7 @@ interface Offer {
   timePreferences?: string[];
   createdAt?: string;
   jobRequestSeekerId?: string;
+  status?: string;
 }
 
 const RequestServiceDetailsPage = () => {
@@ -37,10 +38,13 @@ const RequestServiceDetailsPage = () => {
   const fetchOffers = useCallback(async () => {
     if (!id) return;
     try {
+      console.log('Fetching offers for job request:', id);
       const offersRes = await fetch(`/api/requests/${id}/offers`, {
         headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
       });
       const offersData = await offersRes.json();
+      console.log('Offers data response:', offersData);
+      
       if (offersData.success) {
         // Map backend offers to frontend responses model
         const mappedOffers = (offersData.data?.offers || []).map((offer: {
@@ -50,6 +54,7 @@ const RequestServiceDetailsPage = () => {
             name?: { first?: string; last?: string } | string;
             avatarUrl?: string;
             rating?: number;
+            reviewCount?: number;
             specialties?: string[];
             verified?: boolean
           };
@@ -64,25 +69,63 @@ const RequestServiceDetailsPage = () => {
           estimatedTimeDays?: number;
           availableDates?: string[];
           timePreferences?: string[];
+          status?: string;
           createdAt: string;
-        }): Offer => ({
-          id: offer._id,
-          providerId: offer.provider?._id,
-          name: typeof offer.provider?.name === 'object'
-            ? `${offer.provider.name.first || ''} ${offer.provider.name.last || ''}`.trim()
-            : offer.provider?.name || '',
-          avatar: offer.provider?.avatarUrl || '',
-          rating: offer.provider?.rating || 0,
-          price: offer.budget?.min || 0,
-          specialties: offer.provider?.specialties || [],
-          verified: offer.provider?.verified || false,
-          message: offer.message || '',
-          estimatedTimeDays: offer.estimatedTimeDays || 1,
-          availableDates: offer.availableDates || [],
-          timePreferences: offer.timePreferences || [],
-          createdAt: offer.createdAt,
-          jobRequestSeekerId: offer.jobRequest?.seeker,
-        }));
+        }): Offer => {
+          // Ensure provider exists
+          if (!offer.provider) {
+            console.warn('Offer missing provider data:', offer);
+            return {
+              id: offer._id,
+              providerId: '',
+              name: 'مستخدم غير معروف',
+              avatar: '',
+              rating: 0,
+              price: offer.budget?.min || 0,
+              specialties: [],
+              verified: false,
+              message: offer.message || '',
+              estimatedTimeDays: offer.estimatedTimeDays || 1,
+              availableDates: offer.availableDates || [],
+              timePreferences: offer.timePreferences || [],
+              createdAt: offer.createdAt,
+              jobRequestSeekerId: offer.jobRequest?.seeker || '',
+              status: offer.status || 'pending',
+            };
+          }
+
+          // Safe name extraction
+          let providerName = 'مستخدم غير معروف';
+          if (offer.provider.name) {
+            if (typeof offer.provider.name === 'object') {
+              const firstName = offer.provider.name.first || '';
+              const lastName = offer.provider.name.last || '';
+              providerName = `${firstName} ${lastName}`.trim() || 'مستخدم غير معروف';
+            } else {
+              providerName = offer.provider.name || 'مستخدم غير معروف';
+            }
+          }
+
+          return {
+            id: offer._id,
+            providerId: offer.provider._id || '',
+            name: providerName,
+            avatar: offer.provider.avatarUrl || '',
+            rating: offer.provider.rating || 0,
+            price: offer.budget?.min || 0,
+            specialties: offer.provider.specialties || [],
+            verified: offer.provider.verified || false,
+            message: offer.message || '',
+            estimatedTimeDays: offer.estimatedTimeDays || 1,
+            availableDates: offer.availableDates || [],
+            timePreferences: offer.timePreferences || [],
+            createdAt: offer.createdAt,
+            jobRequestSeekerId: offer.jobRequest?.seeker || '',
+            status: offer.status || 'pending',
+          };
+        });
+        
+        console.log('Mapped offers:', mappedOffers);
         setOffers(mappedOffers);
       }
     } catch (err) {
@@ -94,28 +137,42 @@ const RequestServiceDetailsPage = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
+        console.log('Fetching service data for ID:', id);
         const res = await fetch(`/api/requests/${id}`);
         const data = await res.json();
+        console.log('Service data response:', data);
+        console.log('Seeker data:', data.data.jobRequest.seeker);
+        
         if (!data.success) throw new Error(data.error?.message || 'Failed to fetch');
+        
         // TODO: Map backend jobRequest to frontend service model as needed
-        setService({
+        const mappedService = {
           ...data.data.jobRequest,
-          postedBy: { id: data.data.jobRequest.seeker?._id || data.data.jobRequest.seeker?.id, name: data.data.jobRequest.seeker?.name },
+          postedBy: { 
+            id: data.data.jobRequest.seeker?._id || data.data.jobRequest.seeker?.id || data.data.jobRequest.seeker, 
+            name: data.data.jobRequest.seeker?.name || 'مستخدم غير معروف'
+          },
           // Map location/address fields, images, requester, etc. as needed
           images: (data.data.jobRequest.attachments || []).map((a: { url: string }) => a.url),
           requester: data.data.jobRequest.seeker ? {
+            id: data.data.jobRequest.seeker._id || data.data.jobRequest.seeker.id,
             name: typeof data.data.jobRequest.seeker.name === 'object'
               ? `${data.data.jobRequest.seeker.name.first || ''} ${data.data.jobRequest.seeker.name.last || ''}`.trim()
-              : data.data.jobRequest.seeker.name || '',
-            avatar: data.data.jobRequest.seeker.avatarUrl,
+              : data.data.jobRequest.seeker.name || 'مستخدم غير معروف',
+            avatar: data.data.jobRequest.seeker.avatarUrl || '',
             createdAt: data.data.jobRequest.seeker.createdAt,
           } : null,
           // Add comments: [] if not present
           comments: [],
-        });
+        };
+        
+        console.log('Mapped service data:', mappedService);
+        setService(mappedService);
+        
         // Fetch offers
         await fetchOffers();
       } catch (err: unknown) {
+        console.error('Error in fetchData:', err);
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
         setLoading(false);
@@ -164,16 +221,39 @@ const RequestServiceDetailsPage = () => {
         </div>
         
         {/* Service Details */}
-        <ServiceDetailsContainer
-          service={service}
-          offers={offers}
-          onInterested={() => {}}
-          onShare={() => {}}
-          onBookmark={() => {}}
-          onReport={() => {}}
-          onOfferAdded={addNewOffer}
-          onOffersRefresh={fetchOffers}
-        />
+        {(() => {
+          try {
+            console.log('Rendering ServiceDetailsContainer with:', { service, offers });
+            return (
+              <ServiceDetailsContainer
+                service={service}
+                offers={offers}
+                onInterested={() => {}}
+                onShare={() => {}}
+                onBookmark={() => {}}
+                onReport={() => {}}
+                onOfferAdded={addNewOffer}
+                onOffersRefresh={fetchOffers}
+              />
+            );
+          } catch (error) {
+            console.error('Error rendering ServiceDetailsContainer:', error);
+            return (
+              <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                  <h2 className="text-xl font-bold text-red-800 mb-2">خطأ في عرض البيانات</h2>
+                  <p className="text-red-600 mb-4">حدث خطأ أثناء عرض تفاصيل الخدمة</p>
+                  <button 
+                    onClick={() => window.location.reload()} 
+                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                  >
+                    إعادة تحميل الصفحة
+                  </button>
+                </div>
+              </div>
+            );
+          }
+        })()}
       </main>
       <Footer />
     </div>

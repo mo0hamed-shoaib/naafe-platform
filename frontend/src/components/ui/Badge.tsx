@@ -1,5 +1,5 @@
 import { LucideIcon } from 'lucide-react';
-import { cn } from '../../utils/helpers';
+import { cn } from '../../utils/cn';
 
 interface BadgeProps {
   variant?: 'premium' | 'top-rated' | 'category' | 'status' | 'urgency';

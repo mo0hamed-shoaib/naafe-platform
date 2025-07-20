@@ -33,33 +33,86 @@ const ServiceDetailsContainer: React.FC<ServiceDetailsContainerProps> = ({
   onOffersRefresh
 }) => {
   const { user } = useAuth();
-  console.log('DEBUG ServiceDetails offers:', offers, 'user:', user);
+  
+  console.log('ServiceDetailsContainer render:', { service, offers, user });
+  
   const alreadyApplied = !!(user && user.roles.includes('provider') && offers.some(o => o.providerId === user.id));
+  
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-8">
-          <ServiceGallery images={service.images} title={service.title} />
-          <ServiceDetails service={service} />
-          <RequesterInfo requester={service.requester} />
-          <ResponsesSection 
-            responses={offers} 
-            onOfferAdded={onOfferAdded}
-            onOffersRefresh={onOffersRefresh}
-          />
-          <CommentsSection comments={service.comments || []} />
+          {(() => {
+            try {
+              return <ServiceGallery images={service.images} title={service.title} />;
+            } catch (error) {
+              console.error('Error rendering ServiceGallery:', error);
+              return <div className="mb-6 bg-white rounded-lg shadow-lg p-6 text-center border border-deep-teal/10">خطأ في عرض الصور</div>;
+            }
+          })()}
+          
+          {(() => {
+            try {
+              return <ServiceDetails service={service} />;
+            } catch (error) {
+              console.error('Error rendering ServiceDetails:', error);
+              return <div className="mb-6 bg-white rounded-lg shadow-lg p-6 text-center border border-deep-teal/10">خطأ في عرض تفاصيل الخدمة</div>;
+            }
+          })()}
+          
+          {(() => {
+            try {
+              return <RequesterInfo requester={service.requester} />;
+            } catch (error) {
+              console.error('Error rendering RequesterInfo:', error);
+              return <div className="mb-6 bg-white rounded-lg shadow-lg p-6 text-center border border-deep-teal/10">خطأ في عرض معلومات مقدم الطلب</div>;
+            }
+          })()}
+          
+          {(() => {
+            try {
+              return (
+                <ResponsesSection 
+                  responses={offers} 
+                  onOffersRefresh={onOffersRefresh}
+                  jobRequestStatus={service.status}
+                />
+              );
+            } catch (error) {
+              console.error('Error rendering ResponsesSection:', error);
+              return <div className="mb-6 bg-white rounded-lg shadow-lg p-6 text-center border border-deep-teal/10">خطأ في عرض العروض</div>;
+            }
+          })()}
+          
+          {(() => {
+            try {
+              return <CommentsSection comments={service.comments || []} />;
+            } catch (error) {
+              console.error('Error rendering CommentsSection:', error);
+              return <div className="mb-6 bg-white rounded-lg shadow-lg p-6 text-center border border-deep-teal/10">خطأ في عرض التعليقات</div>;
+            }
+          })()}
         </div>
         {/* Sidebar */}
         <div className="lg:col-span-4">
-          <ServiceSidebar
-            service={service}
-            onInterested={onInterested}
-            onShare={onShare}
-            onBookmark={onBookmark}
-            onReport={onReport}
-            alreadyApplied={alreadyApplied}
-          />
+          {(() => {
+            try {
+              return (
+                <ServiceSidebar
+                  service={service}
+                  onInterested={onInterested}
+                  onShare={onShare}
+                  onBookmark={onBookmark}
+                  onReport={onReport}
+                  alreadyApplied={alreadyApplied}
+                />
+              );
+            } catch (error) {
+              console.error('Error rendering ServiceSidebar:', error);
+              return <div className="bg-white rounded-lg shadow-lg p-6 text-center border border-deep-teal/10">خطأ في عرض الشريط الجانبي</div>;
+            }
+          })()}
         </div>
       </div>
     </div>

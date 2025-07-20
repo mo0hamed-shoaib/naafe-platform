@@ -1,9 +1,37 @@
 import React from 'react';
-import { Users, Wrench, DollarSign, CheckCircle, Plus, AlertTriangle, TrendingUp, TrendingDown, BarChart3, PieChart, Clock, MessageSquare } from 'lucide-react';
+import { Users, Wrench, DollarSign, CheckCircle, Plus, AlertTriangle, TrendingUp, TrendingDown, BarChart3, PieChart, Clock, MessageSquare, FileText } from 'lucide-react';
 import { ActivityItem } from '../types';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import Breadcrumb from '../components/UI/Breadcrumb';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 // API functions
 const fetchDashboardStats = async (token: string | null) => {
@@ -46,6 +74,14 @@ const AdminOverview: React.FC = () => {
       changeType: stats?.serviceGrowth > 0 ? 'increase' : 'decrease'
     },
     {
+      title: "طلبات الخدمة النشطة",
+      value: stats?.activeRequests?.toLocaleString() || "0",
+      icon: FileText,
+      iconColor: "text-soft-teal",
+      change: stats?.requestGrowth || 0,
+      changeType: stats?.requestGrowth > 0 ? 'increase' : 'decrease'
+    },
+    {
       title: "الإيرادات (شهرياً)",
       value: `EGP ${stats?.monthlyRevenue?.toLocaleString() || "0"}`,
       icon: DollarSign,
@@ -62,6 +98,117 @@ const AdminOverview: React.FC = () => {
       changeType: 'neutral'
     }
   ];
+
+  // Chart data for user growth
+  const userGrowthData = {
+    labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+    datasets: [
+      {
+        label: 'المستخدمين الجدد',
+        data: [120, 190, 300, 500, 200, 300],
+        borderColor: '#2D5D4F',
+        backgroundColor: 'rgba(45, 93, 79, 0.1)',
+        fill: true,
+        tension: 0.4,
+      },
+    ],
+  };
+
+  // Chart data for service categories
+  const serviceCategoriesData = {
+    labels: ['سباكة', 'كهرباء', 'تنظيف', 'حدائق', 'تصميم', 'أخرى'],
+    datasets: [
+      {
+        data: [30, 25, 20, 15, 8, 2],
+        backgroundColor: [
+          '#2D5D4F',
+          '#F5A623',
+          '#50958A',
+          '#8BC34A',
+          '#FF9800',
+          '#9C27B0',
+        ],
+        borderWidth: 2,
+        borderColor: '#fff',
+      },
+    ],
+  };
+
+  // Chart data for revenue
+  const revenueData = {
+    labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+    datasets: [
+      {
+        label: 'الإيرادات الشهرية',
+        data: [15000, 25000, 18000, 32000, 28000, 35000],
+        backgroundColor: 'rgba(245, 166, 35, 0.8)',
+        borderColor: '#F5A623',
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+        labels: {
+          font: {
+            family: 'Cairo',
+            size: 12,
+          },
+          color: '#2D5D4F',
+        },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(45, 93, 79, 0.1)',
+        },
+        ticks: {
+          font: {
+            family: 'Cairo',
+            size: 10,
+          },
+          color: '#2D5D4F',
+        },
+      },
+      x: {
+        grid: {
+          color: 'rgba(45, 93, 79, 0.1)',
+        },
+        ticks: {
+          font: {
+            family: 'Cairo',
+            size: 10,
+          },
+          color: '#2D5D4F',
+        },
+      },
+    },
+  };
+
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+        labels: {
+          font: {
+            family: 'Cairo',
+            size: 11,
+          },
+          color: '#2D5D4F',
+          usePointStyle: true,
+        },
+      },
+    },
+  };
 
   const recentActivity: ActivityItem[] = [
     {
@@ -126,7 +273,7 @@ const AdminOverview: React.FC = () => {
       <h2 className="text-4xl font-bold text-deep-teal">نظرة عامة</h2>
       
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {summaryData.map((item, index) => (
           <div key={index} className="bg-light-cream rounded-2xl p-8 shadow-md">
             <div className="flex items-center justify-between mb-2">
@@ -164,29 +311,8 @@ const AdminOverview: React.FC = () => {
             </div>
             <h3 className="text-2xl font-bold text-[#1a3d32]">نمو المستخدمين</h3>
           </div>
-          <div className="h-64 flex items-center justify-center">
-            <svg
-              className="w-full h-full"
-              preserveAspectRatio="none"
-              viewBox="0 0 500 200"
-            >
-              <defs>
-                <linearGradient id="userGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#2D5D4F" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="#2D5D4F" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M 0 150 C 50 120, 100 80, 150 100 S 250 180, 300 140 S 400 20, 450 50 L 500 60 L 500 200 L 0 200 Z"
-                fill="url(#userGradient)"
-              />
-              <path
-                d="M 0 150 C 50 120, 100 80, 150 100 S 250 180, 300 140 S 400 20, 450 50 L 500 60"
-                fill="none"
-                stroke="#2D5D4F"
-                strokeWidth="3"
-              />
-            </svg>
+          <div className="h-64">
+            <Line data={userGrowthData} options={chartOptions} />
           </div>
         </div>
 
@@ -198,74 +324,42 @@ const AdminOverview: React.FC = () => {
             </div>
             <h3 className="text-2xl font-bold text-[#1a3d32]">فئات الخدمات</h3>
           </div>
-          <div className="h-64 flex items-center justify-center">
-            <svg className="w-40 h-40" viewBox="0 0 200 200">
-              <circle
-                cx="100"
-                cy="100"
-                r="90"
-                fill="none"
-                stroke="#F5A623"
-                strokeWidth="20"
-                strokeDasharray="282.74 628.32"
-                transform="rotate(-90 100 100)"
-              />
-              <circle
-                cx="100"
-                cy="100"
-                r="90"
-                fill="none"
-                stroke="#50958A"
-                strokeWidth="20"
-                strokeDasharray="188.49 628.32"
-                transform="rotate(72 100 100)"
-              />
-              <circle
-                cx="100"
-                cy="100"
-                r="90"
-                fill="none"
-                stroke="#2D5D4F"
-                strokeWidth="20"
-                strokeDasharray="157.08 628.32"
-                transform="rotate(180 100 100)"
-              />
-            </svg>
+          <div className="h-64">
+            <Doughnut data={serviceCategoriesData} options={doughnutOptions} />
           </div>
         </div>
       </div>
 
-      {/* Recent Activity */}
-              <div className="bg-light-cream rounded-2xl p-8 shadow-md">
+      {/* Revenue Chart */}
+      <div className="bg-light-cream rounded-2xl p-8 shadow-md">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-3 rounded-full bg-[#50958A]/10">
-            <Clock className="h-7 w-7 text-[#50958A]" />
+            <DollarSign className="h-7 w-7 text-[#50958A]" />
           </div>
-          <h3 className="text-2xl font-bold text-[#1a3d32]">النشاطات الأخيرة</h3>
+          <h3 className="text-2xl font-bold text-[#1a3d32]">الإيرادات الشهرية</h3>
+        </div>
+        <div className="h-64">
+          <Bar data={revenueData} options={chartOptions} />
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="bg-light-cream rounded-2xl p-8 shadow-md">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 rounded-full bg-[#F5A623]/10">
+            <Clock className="h-7 w-7 text-[#F5A623]" />
+          </div>
+          <h3 className="text-2xl font-bold text-[#1a3d32]">النشاط الأخير</h3>
         </div>
         <div className="space-y-4">
-          {recentActivity.map((activity, index) => (
-            <div key={activity.id} className="flex items-start gap-4 relative">
-              {/* Timeline line */}
-              {index < recentActivity.length - 1 && (
-                <div className="absolute left-8 top-12 w-0.5 h-8 bg-warm-cream z-0" />
-              )}
-              
-              {/* Activity icon */}
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activity.color} relative z-10`}>
+          {recentActivity.map((activity) => (
+            <div key={activity.id} className="flex items-center gap-4 p-4 bg-white rounded-lg">
+              <div className={`p-2 rounded-full ${activity.color}`}>
                 {getActivityIcon(activity.icon)}
               </div>
-
-              {/* Activity content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-deep-teal">
-                    {activity.message}
-                  </p>
-                  <time className="text-sm text-soft-teal whitespace-nowrap">
-                    {formatTime(activity.timestamp)}
-                  </time>
-                </div>
+              <div className="flex-1">
+                <p className="text-[#1a3d32] font-medium">{activity.message}</p>
+                <p className="text-[#50958A] text-sm">{formatTime(activity.timestamp)}</p>
               </div>
             </div>
           ))}
