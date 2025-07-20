@@ -104,6 +104,7 @@ const userSchema = new Schema({
     phone: {
         type: String,
         required: true,
+        unique: true,
         match: [/^(\+20|0)?1[0125][0-9]{8}$/, 'Please enter a valid Egyptian phone number']
     },
     avatarUrl: {

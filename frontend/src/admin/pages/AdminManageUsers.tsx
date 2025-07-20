@@ -92,7 +92,7 @@ const USER_STATUS_VARIANT_MAP: Record<string, 'status' | 'category' | 'premium' 
 };
 
 const AdminManageUsers: React.FC = () => {
-  const { accessToken } = useAuth();
+  const { accessToken, user: currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterValue, setFilterValue] = useState('all');
@@ -128,6 +128,12 @@ const AdminManageUsers: React.FC = () => {
   });
 
   const handleToggleUserBlock = (user: User) => {
+    // Prevent admin from blocking themselves
+    if (currentUser && user.id === currentUser.id) {
+      showError('لا يمكنك حظر نفسك', 'لا يمكن للمدير حظر حسابه الخاص');
+      return;
+    }
+    
     setSelectedUser(user);
     setIsConfirmModalOpen(true);
   };
@@ -225,17 +231,22 @@ const AdminManageUsers: React.FC = () => {
       key: 'id' as keyof User,
       label: 'الإجراء',
       sortable: false,
-      render: (value: unknown, user: User) => (
-        <Button
-          variant={user.isBlocked ? 'danger' : 'secondary'}
-          size="md"
-          leftIcon={user.isBlocked ? <UserCheck className="h-4 w-4 mr-1" /> : <Shield className="h-4 w-4 mr-1" />}
-          onClick={() => handleToggleUserBlock(user)}
-          loading={blockMutation.isPending && selectedUser?.id === user.id}
-        >
-          {user.isBlocked ? 'إلغاء الحظر' : 'حظر المستخدم'}
-        </Button>
-      )
+      render: (value: unknown, user: User) => {
+        const isCurrentUser = currentUser && user.id === currentUser.id;
+        return (
+          <Button
+            variant={user.isBlocked ? 'danger' : 'secondary'}
+            size="md"
+            leftIcon={user.isBlocked ? <UserCheck className="h-4 w-4 mr-1" /> : <Shield className="h-4 w-4 mr-1" />}
+            onClick={() => handleToggleUserBlock(user)}
+            loading={blockMutation.isPending && selectedUser?.id === user.id}
+            disabled={isCurrentUser || false}
+            title={isCurrentUser ? 'لا يمكنك حظر نفسك' : undefined}
+          >
+            {isCurrentUser ? 'حسابك' : (user.isBlocked ? 'إلغاء الحظر' : 'حظر المستخدم')}
+          </Button>
+        );
+      }
     }
   ];
 

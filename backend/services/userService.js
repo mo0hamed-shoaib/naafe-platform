@@ -217,18 +217,30 @@ class UserService {
   }
 
   // Admin: Block a user
-  async blockUser(id) {
+  async blockUser(id, adminId) {
     const user = await User.findById(id);
     if (!user) throw new Error('User not found');
+    
+    // Prevent admin from blocking themselves
+    if (id === adminId) {
+      throw new Error('Cannot block your own account');
+    }
+    
     user.isBlocked = true;
     await user.save();
     return user;
   }
 
   // Admin: Unblock a user
-  async unblockUser(id) {
+  async unblockUser(id, adminId) {
     const user = await User.findById(id);
     if (!user) throw new Error('User not found');
+    
+    // Prevent admin from unblocking themselves (though this is less critical)
+    if (id === adminId) {
+      throw new Error('Cannot modify your own account status');
+    }
+    
     user.isBlocked = false;
     await user.save();
     return user;

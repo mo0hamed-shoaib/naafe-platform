@@ -71,6 +71,37 @@ export const validateLogin = [
   handleValidationErrors
 ];
 
+// Check availability validation
+export const validateCheckAvailability = [
+  body('email')
+    .optional()
+    .isEmail()
+    .withMessage('Please enter a valid email address')
+    .normalizeEmail(),
+  
+  body('phone')
+    .optional()
+    .custom((value) => {
+      if (value && value.trim()) {
+        const phoneRegex = /^(\+20|0)?1[0125][0-9]{8}$/;
+        if (!phoneRegex.test(value)) {
+          throw new Error('Please enter a valid Egyptian phone number');
+        }
+      }
+      return true;
+    }),
+  
+  body()
+    .custom((value) => {
+      if (!value.email && !value.phone) {
+        throw new Error('At least one of email or phone must be provided');
+      }
+      return true;
+    }),
+  
+  handleValidationErrors
+];
+
 // Refresh token validation
 export const validateRefreshToken = [
   body('refreshToken')

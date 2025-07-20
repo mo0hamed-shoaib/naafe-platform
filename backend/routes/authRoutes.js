@@ -1,6 +1,6 @@
 import express from 'express';
 import authController from '../controllers/authController.js';
-import { validateRegister, validateLogin, validateRefreshToken } from '../validation/authValidation.js';
+import { validateRegister, validateLogin, validateRefreshToken, validateCheckAvailability } from '../validation/authValidation.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
@@ -11,6 +11,13 @@ const router = express.Router();
  * @access  Public
  */
 router.post('/register', validateRegister, authController.register);
+
+/**
+ * @route   POST /api/auth/check-availability
+ * @desc    Check if email and phone are available
+ * @access  Public
+ */
+router.post('/check-availability', validateCheckAvailability, authController.checkAvailability);
 
 /**
  * @route   POST /api/auth/login

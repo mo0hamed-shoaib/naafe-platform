@@ -21,10 +21,16 @@ class AuthService {
         providerProfile = {};
       }
 
-      // Check if user already exists
-      const existingUser = await User.findOne({ email: userData.email });
-      if (existingUser) {
-        throw new Error('User with this email already exists');
+      // Check if user already exists by email
+      const existingUserByEmail = await User.findOne({ email: userData.email });
+      if (existingUserByEmail) {
+        throw new Error('البريد الإلكتروني مسجل مسبقاً');
+      }
+
+      // Check if user already exists by phone
+      const existingUserByPhone = await User.findOne({ phone: userData.phone });
+      if (existingUserByPhone) {
+        throw new Error('رقم الهاتف مسجل مسبقاً');
       }
 
       // Hash password
@@ -47,6 +53,43 @@ class AuthService {
       delete userResponse.password;
 
       return userResponse;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Check email and phone availability
+   * @param {string} email - Email to check
+   * @param {string} phone - Phone to check
+   * @returns {Object} Availability status
+   */
+  async checkAvailability(email, phone) {
+    try {
+      const result = {
+        email: { available: true, message: '' },
+        phone: { available: true, message: '' }
+      };
+
+      // Check email availability
+      if (email) {
+        const existingUserByEmail = await User.findOne({ email: email.toLowerCase() });
+        if (existingUserByEmail) {
+          result.email.available = false;
+          result.email.message = 'البريد الإلكتروني مسجل مسبقاً';
+        }
+      }
+
+      // Check phone availability
+      if (phone) {
+        const existingUserByPhone = await User.findOne({ phone });
+        if (existingUserByPhone) {
+          result.phone.available = false;
+          result.phone.message = 'رقم الهاتف مسجل مسبقاً';
+        }
+      }
+
+      return result;
     } catch (error) {
       throw error;
     }

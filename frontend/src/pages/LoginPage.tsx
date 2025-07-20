@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,6 +6,14 @@ import Button from '../components/ui/Button';
 import BaseCard from '../components/ui/BaseCard';
 import { User } from '../types';
 import { FormInput } from '../components/ui';
+import { validateEmail } from '../utils/validation';
+
+// Field validation type
+type FieldValidation = {
+  email?: { isValid: boolean; message: string };
+  password?: { isValid: boolean; message: string };
+  general?: { isValid: boolean; message: string };
+};
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -13,10 +21,75 @@ const LoginPage = () => {
   const { login, loading, error } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldValidation>({});
+
+  // Real-time validation for email
+  const validateEmailField = useCallback((email: string) => {
+    const validation = validateEmail(email);
+    setFieldErrors(prev => ({
+      ...prev,
+      email: validation
+    }));
+  }, []);
+
+  // Real-time validation for password
+  const validatePasswordField = useCallback((password: string) => {
+    const validation = password.trim() 
+      ? { isValid: true, message: '' }
+      : { isValid: false, message: 'كلمة المرور مطلوبة' };
+    
+    setFieldErrors(prev => ({
+      ...prev,
+      password: validation
+    }));
+  }, []);
+
+  // Check if form has any errors
+  const hasFormErrors = () => {
+    return Object.values(fieldErrors).some(error => error && !error.isValid);
+  };
+
+  // Check if form is complete (all required fields filled)
+  const isFormComplete = () => {
+    return formData.email.trim() && formData.password.trim();
+  };
+
+  // Check if form is valid and ready for submission
+  const isFormValid = () => {
+    return isFormComplete() && !hasFormErrors();
+  };
+
+  // Helper function to get border color based on field status
+  const getBorderColor = (fieldName: keyof typeof fieldErrors) => {
+    const error = fieldErrors[fieldName];
+    
+    if (error && !error.isValid) {
+      return 'border-red-500 focus:border-red-500';
+    }
+    
+    // Check if field has value and is valid
+    if (formData[fieldName as keyof typeof formData] && !error) {
+      return 'border-green-500 focus:border-green-500';
+    }
+    
+    return 'border-gray-300 focus:border-[#2D5D4F]';
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Clear general error when user starts typing
+    if (fieldErrors.general && !fieldErrors.general.isValid) {
+      setFieldErrors(prev => ({ ...prev, general: { isValid: true, message: '' } }));
+    }
+
+    // Real-time validation based on field type
+    if (name === 'email') {
+      validateEmailField(value);
+    } else if (name === 'password') {
+      validatePasswordField(value);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,7 +130,7 @@ const LoginPage = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="youremail@example.com"
-                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
+                  className={`w-full bg-gray-50 border-2 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:bg-white focus:outline-none transition-colors duration-200 ${getBorderColor('email')}`}
                   required
                   autoComplete="email"
                   aria-describedby="email-error"
@@ -65,6 +138,7 @@ const LoginPage = () => {
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
                   <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail"><rect width="20" height="20" fill="none"/><path d="M4 4h12v12H4z" stroke="none"/><path d="M4 4l8 8m0 0l8-8"/></svg>
                 </span>
+                {fieldErrors.email?.message && <p className="text-red-600 text-sm text-right mt-1">{fieldErrors.email.message}</p>}
               </div>
             </div>
             {/* Password Field */}
@@ -80,7 +154,7 @@ const LoginPage = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
+                  className={`w-full bg-gray-50 border-2 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:bg-white focus:outline-none transition-colors duration-200 ${getBorderColor('password')}`}
                   required
                   autoComplete="current-password"
                   aria-describedby="password-error"
@@ -94,10 +168,25 @@ const LoginPage = () => {
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
+                {fieldErrors.password?.message && <p className="text-red-600 text-sm text-right mt-1">{fieldErrors.password.message}</p>}
               </div>
             </div>
             {/* Error Message */}
             {error && <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>}
+            
+            {/* Form Status Helper */}
+            {!isFormComplete() && (
+              <div className="text-amber-600 text-sm text-right bg-amber-50 p-3 rounded-lg border border-amber-200">
+                يرجى ملء جميع الحقول المطلوبة
+              </div>
+            )}
+            
+            {isFormComplete() && hasFormErrors() && (
+              <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">
+                يرجى تصحيح الأخطاء قبل المتابعة
+              </div>
+            )}
+            
             {/* Forgot Password Link */}
             <div className="text-right">
               <Link
@@ -114,9 +203,19 @@ const LoginPage = () => {
               size="lg"
               fullWidth
               loading={loading}
-              className="rounded-xl"
+              className={`rounded-xl transition-all duration-200 ${
+                !isFormValid() 
+                  ? 'opacity-50 cursor-not-allowed bg-gray-400 hover:bg-gray-400' 
+                  : 'hover:bg-[#1a4a3f]'
+              }`}
+              disabled={!isFormValid()}
             >
-              تسجيل الدخول
+              {!isFormComplete() 
+                ? 'املأ جميع الحقول' 
+                : hasFormErrors() 
+                  ? 'صحح الأخطاء' 
+                  : 'تسجيل الدخول'
+              }
             </Button>
             {/* Divider */}
             <div className="relative">

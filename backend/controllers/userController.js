@@ -325,7 +325,8 @@ class UserController {
   async blockUser(req, res) {
     try {
       const { id } = req.params;
-      await userService.blockUser(id);
+      const adminId = req.user._id;
+      await userService.blockUser(id, adminId);
       res.json({ message: 'User blocked successfully' });
     } catch (err) {
       res.status(400).json({ message: 'Failed to block user', error: err.message });
@@ -336,7 +337,8 @@ class UserController {
   async unblockUser(req, res) {
     try {
       const { id } = req.params;
-      await userService.unblockUser(id);
+      const adminId = req.user._id;
+      await userService.unblockUser(id, adminId);
       res.json({ message: 'User unblocked successfully' });
     } catch (err) {
       res.status(400).json({ message: 'Failed to unblock user', error: err.message });

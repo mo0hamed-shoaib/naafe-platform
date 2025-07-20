@@ -20,13 +20,29 @@ class AuthController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      // Handle duplicate email error
-      if (error.message.includes('already exists')) {
+      // Handle duplicate email/phone errors
+      if (error.message.includes('مسجل مسبقاً')) {
         return res.status(409).json({
           success: false,
           error: {
             code: 'CONFLICT',
             message: error.message
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Handle MongoDB duplicate key errors
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern)[0];
+        const message = field === 'email' ? 'البريد الإلكتروني مسجل مسبقاً' : 
+                       field === 'phone' ? 'رقم الهاتف مسجل مسبقاً' : 
+                       'البيانات مسجلة مسبقاً';
+        return res.status(409).json({
+          success: false,
+          error: {
+            code: 'CONFLICT',
+            message: message
           },
           timestamp: new Date().toISOString()
         });
@@ -58,6 +74,33 @@ class AuthController {
         error: {
           code: 'INTERNAL_ERROR',
           message: 'Internal server error'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Check email and phone availability
+   * POST /api/auth/check-availability
+   */
+  async checkAvailability(req, res) {
+    try {
+      const { email, phone } = req.body;
+      const result = await authService.checkAvailability(email, phone);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Availability check completed',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'BAD_REQUEST',
+          message: error.message
         },
         timestamp: new Date().toISOString()
       });

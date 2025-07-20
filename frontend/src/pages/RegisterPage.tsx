@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
@@ -6,6 +6,16 @@ import BaseCard from '../components/ui/BaseCard';
 import { FormInput } from "../components/ui";
 import ProfileBuilder from '../components/onboarding/ProfileBuilder';
 import OnboardingSlider from '../components/onboarding/OnboardingSlider';
+import PasswordStrengthIndicator from '../components/ui/PasswordStrengthIndicator';
+import { 
+  validateRegistrationForm, 
+  validateEmail, 
+  validatePhone, 
+  validatePassword,
+  checkAvailability,
+  debounce,
+  FieldValidation
+} from '../utils/validation';
 
 const initialForm = {
   firstName: '',
@@ -16,28 +26,245 @@ const initialForm = {
   confirmPassword: '',
 };
 
+const initialErrors: FieldValidation = {
+  firstName: { isValid: true, message: '' },
+  lastName: { isValid: true, message: '' },
+  email: { isValid: true, message: '' },
+  phoneNumber: { isValid: true, message: '' },
+  password: { isValid: true, message: '' },
+  confirmPassword: { isValid: true, message: '' },
+  general: { isValid: true, message: '' }
+};
+
 type OnboardingStep = 'register' | 'profile' | 'onboarding' | 'complete';
+
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { register, loading, error } = useAuth();
   const [formData, setFormData] = useState(initialForm);
+  const [fieldErrors, setFieldErrors] = useState<FieldValidation>(initialErrors);
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('register');
+  const [availabilityStatus, setAvailabilityStatus] = useState<{
+    email?: { available: boolean; message: string; checking?: boolean };
+    phone?: { available: boolean; message: string; checking?: boolean };
+  }>({});
+
+  // Debounced availability check
+  const debouncedAvailabilityCheck = useCallback(
+    debounce(async (...args: unknown[]) => {
+      const [email, phone] = args as [string, string];
+      if (email || phone) {
+        console.log('Checking availability for:', { email, phone });
+        
+        // Set checking status
+        setAvailabilityStatus(prev => ({
+          ...prev,
+          ...(email && { email: { available: false, message: '', checking: true } }),
+          ...(phone && { phone: { available: false, message: '', checking: true } })
+        }));
+        
+        const availability = await checkAvailability(email, phone);
+        console.log('Availability result:', availability);
+        
+        // Clear checking status and set result
+        setAvailabilityStatus(prev => ({
+          ...prev,
+          ...(email && availability.email && { email: { ...availability.email, checking: false } }),
+          ...(phone && availability.phone && { phone: { ...availability.phone, checking: false } })
+        }));
+      }
+    }, 500),
+    []
+  );
+
+  // Real-time validation for email
+  const validateEmailField = useCallback((email: string) => {
+    const validation = validateEmail(email);
+    setFieldErrors(prev => ({
+      ...prev,
+      email: validation
+    }));
+
+    // Check availability if email is valid and not empty
+    if (validation.isValid && email && email.trim()) {
+      debouncedAvailabilityCheck(email, formData.phoneNumber);
+    } else {
+      // Clear availability status if email is invalid
+      setAvailabilityStatus(prev => ({ ...prev, email: undefined }));
+    }
+  }, [debouncedAvailabilityCheck, formData.phoneNumber]);
+
+  // Real-time validation for phone
+  const validatePhoneField = useCallback((phone: string) => {
+    const validation = validatePhone(phone);
+    setFieldErrors(prev => ({
+      ...prev,
+      phoneNumber: validation
+    }));
+
+    // Check availability if phone is valid and not empty
+    if (validation.isValid && phone && phone.trim()) {
+      debouncedAvailabilityCheck(formData.email, phone);
+    } else {
+      // Clear availability status if phone is invalid
+      setAvailabilityStatus(prev => ({ ...prev, phone: undefined }));
+    }
+  }, [debouncedAvailabilityCheck, formData.email]);
+
+  // Effect to update field errors when availability status changes
+  useEffect(() => {
+    setFieldErrors(prev => {
+      const newErrors = { ...prev };
+      
+      // Update email error if availability check shows it's taken
+      if (availabilityStatus.email && !availabilityStatus.email.available) {
+        newErrors.email = { isValid: false, message: availabilityStatus.email.message };
+      }
+      
+      // Update phone error if availability check shows it's taken
+      if (availabilityStatus.phone && !availabilityStatus.phone.available) {
+        newErrors.phoneNumber = { isValid: false, message: availabilityStatus.phone.message };
+      }
+      
+      return newErrors;
+    });
+  }, [availabilityStatus]);
+
+  // Real-time validation for password
+  const validatePasswordField = useCallback((password: string) => {
+    const validation = validatePassword(password);
+    setFieldErrors(prev => ({
+      ...prev,
+      password: validation
+    }));
+
+    // Also validate confirm password if it exists
+    if (formData.confirmPassword) {
+      const confirmValidation = password === formData.confirmPassword 
+        ? { isValid: true, message: '' }
+        : { isValid: false, message: 'كلمتا المرور غير متطابقتين' };
+      
+      setFieldErrors(prev => ({
+        ...prev,
+        confirmPassword: confirmValidation
+      }));
+    }
+  }, [formData.confirmPassword]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Clear general error when user starts typing
+    if (fieldErrors.general && !fieldErrors.general.isValid) {
+      setFieldErrors(prev => ({ ...prev, general: { isValid: true, message: '' } }));
+    }
+
+    // Real-time validation based on field type
+    switch (name) {
+      case 'email':
+        validateEmailField(value);
+        break;
+      case 'phoneNumber':
+        validatePhoneField(value);
+        break;
+      case 'password':
+        validatePasswordField(value);
+        break;
+      case 'confirmPassword': {
+        const confirmValidation = value === formData.password 
+          ? { isValid: true, message: '' }
+          : { isValid: false, message: 'كلمتا المرور غير متطابقتين' };
+        setFieldErrors(prev => ({ ...prev, confirmPassword: confirmValidation }));
+        break;
+      }
+      case 'firstName':
+        if (value.trim().length < 2) {
+          setFieldErrors(prev => ({ 
+            ...prev, 
+            firstName: { isValid: false, message: 'الاسم الأول يجب أن يكون حرفين على الأقل' } 
+          }));
+        } else if (value.trim().length > 50) {
+          setFieldErrors(prev => ({ 
+            ...prev, 
+            firstName: { isValid: false, message: 'الاسم الأول يجب أن يكون 50 حرف كحد أقصى' } 
+          }));
+        } else {
+          setFieldErrors(prev => ({ 
+            ...prev, 
+            firstName: { isValid: true, message: '' } 
+          }));
+        }
+        break;
+      case 'lastName':
+        if (value.trim().length < 2) {
+          setFieldErrors(prev => ({ 
+            ...prev, 
+            lastName: { isValid: false, message: 'اسم العائلة يجب أن يكون حرفين على الأقل' } 
+          }));
+        } else if (value.trim().length > 50) {
+          setFieldErrors(prev => ({ 
+            ...prev, 
+            lastName: { isValid: false, message: 'اسم العائلة يجب أن يكون 50 حرف كحد أقصى' } 
+          }));
+        } else {
+          setFieldErrors(prev => ({ 
+            ...prev, 
+            lastName: { isValid: true, message: '' } 
+          }));
+        }
+        break;
+    }
+  };
+
+  const validateForm = () => {
+    const errors = validateRegistrationForm(formData);
+    
+    // Add availability errors
+    if (availabilityStatus.email && !availabilityStatus.email.available) {
+      errors.email = { isValid: false, message: availabilityStatus.email.message };
+    }
+    
+    if (availabilityStatus.phone && !availabilityStatus.phone.available) {
+      errors.phoneNumber = { isValid: false, message: availabilityStatus.phone.message };
+    }
+
+    setFieldErrors(errors);
+    
+    // Check if any field has errors
+    const hasErrors = Object.values(errors).some(error => !error.isValid);
+    return !hasErrors;
+  };
+
+  // Check if form has any errors
+  const hasFormErrors = () => {
+    return Object.values(fieldErrors).some(error => error && !error.isValid);
+  };
+
+  // Check if form is complete (all required fields filled)
+  const isFormComplete = () => {
+    return (
+      formData.firstName.trim() &&
+      formData.lastName.trim() &&
+      formData.email.trim() &&
+      formData.phoneNumber.trim() &&
+      formData.password &&
+      formData.confirmPassword
+    );
+  };
+
+  // Check if form is valid and ready for submission
+  const isFormValid = () => {
+    return isFormComplete() && !hasFormErrors();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
-      // Show error via context error
+    
+    if (!validateForm()) {
       return;
     }
-    if (formData.password !== formData.confirmPassword) {
-      // Show error via context error
-      return;
-    }
+
     const payload = {
       email: formData.email,
       password: formData.password,
@@ -46,9 +273,21 @@ const RegisterPage = () => {
       role: 'seeker' as const,
       roles: ['seeker' as const],
     };
+    
     const success = await register(payload);
     if (success) {
       setOnboardingStep('profile');
+    } else {
+      // Handle specific backend errors
+      if (error) {
+        if (error.includes('البريد الإلكتروني مسجل مسبقاً')) {
+          setFieldErrors(prev => ({ ...prev, email: { isValid: false, message: 'البريد الإلكتروني مسجل مسبقاً' } }));
+        } else if (error.includes('رقم الهاتف مسجل مسبقاً')) {
+          setFieldErrors(prev => ({ ...prev, phoneNumber: { isValid: false, message: 'رقم الهاتف مسجل مسبقاً' } }));
+        } else {
+          setFieldErrors(prev => ({ ...prev, general: { isValid: false, message: error } }));
+        }
+      }
     }
   };
 
@@ -92,6 +331,27 @@ const RegisterPage = () => {
     );
   }
 
+  // Helper function to get border color based on field status
+  const getBorderColor = (fieldName: keyof typeof fieldErrors) => {
+    const error = fieldErrors[fieldName];
+    const isChecking = availabilityStatus[fieldName as keyof typeof availabilityStatus]?.checking;
+    
+    if (error && !error.isValid) {
+      return 'border-red-500 focus:border-red-500';
+    }
+    
+    if (isChecking) {
+      return 'border-amber-400 focus:border-amber-400';
+    }
+    
+    // Check if field has value and is valid
+    if (formData[fieldName as keyof typeof formData] && !error) {
+      return 'border-green-500 focus:border-green-500';
+    }
+    
+    return 'border-gray-300 focus:border-[#2D5D4F]';
+  };
+
   return (
     <div className="min-h-screen bg-[#F5E6D3] flex items-center justify-center p-4 font-cairo" dir="rtl">
       <div className="w-full max-w-md">
@@ -100,7 +360,7 @@ const RegisterPage = () => {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-extrabold text-[#0e1b18] font-jakarta">Naafe'</h1>
           </div>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="firstName">الاسم الأول</label>
@@ -111,9 +371,11 @@ const RegisterPage = () => {
                   value={formData.firstName}
                   onChange={handleInputChange}
                   placeholder="الاسم الأول"
-                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
+                  className={`w-full bg-gray-50 border-2 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200 ${getBorderColor('firstName')}`}
                   required
+                  autoComplete="given-name"
                 />
+                {fieldErrors.firstName?.message && <p className="text-red-600 text-sm text-right mt-1">{fieldErrors.firstName.message}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="lastName">اسم العائلة</label>
@@ -124,9 +386,11 @@ const RegisterPage = () => {
                   value={formData.lastName}
                   onChange={handleInputChange}
                   placeholder="اسم العائلة"
-                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
+                  className={`w-full bg-gray-50 border-2 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200 ${getBorderColor('lastName')}`}
                   required
+                  autoComplete="family-name"
                 />
+                {fieldErrors.lastName?.message && <p className="text-red-600 text-sm text-right mt-1">{fieldErrors.lastName.message}</p>}
               </div>
             </div>
             <div>
@@ -139,12 +403,14 @@ const RegisterPage = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="youremail@example.com"
-                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
+                  className={`w-full bg-gray-50 border-2 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200 ${getBorderColor('email')}`}
                   required
+                  autoComplete="email"
                 />
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
                   <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail"><rect width="20" height="20" fill="none"/><path d="M4 4h12v12H4z" stroke="none"/><path d="M4 4l8 8m0 0l8-8"/></svg>
                 </span>
+                {fieldErrors.email?.message && <p className="text-red-600 text-sm text-right mt-1">{fieldErrors.email.message}</p>}
               </div>
             </div>
             <div>
@@ -157,12 +423,14 @@ const RegisterPage = () => {
                   value={formData.phoneNumber}
                   onChange={handleInputChange}
                   placeholder="+20 1XX XXX XXXX"
-                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
+                  className={`w-full bg-gray-50 border-2 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200 ${getBorderColor('phoneNumber')}`}
                   required
+                  autoComplete="tel"
                 />
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
                   <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-phone"><rect width="20" height="20" fill="none"/><path d="M4 4h12v12H4z" stroke="none"/><path d="M4 4l8 8m0 0l8-8"/></svg>
                 </span>
+                {fieldErrors.phoneNumber?.message && <p className="text-red-600 text-sm text-right mt-1">{fieldErrors.phoneNumber.message}</p>}
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -175,9 +443,12 @@ const RegisterPage = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
+                  className={`w-full bg-gray-50 border-2 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200 ${getBorderColor('password')}`}
                   required
+                  autoComplete="new-password"
                 />
+                {fieldErrors.password?.message && <p className="text-red-600 text-sm text-right mt-1">{fieldErrors.password.message}</p>}
+                <PasswordStrengthIndicator password={formData.password} />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="confirmPassword">تأكيد كلمة المرور</label>
@@ -188,21 +459,47 @@ const RegisterPage = () => {
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   placeholder="••••••••"
-                  className="w-full bg-gray-50 border-2 border-gray-300 pr-4 pl-12 py-3 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200"
+                  className={`w-full bg-gray-50 border-2 rounded-xl text-[#0e1b18] text-right placeholder-gray-500 focus:border-[#2D5D4F] focus:bg-white focus:outline-none transition-colors duration-200 ${getBorderColor('confirmPassword')}`}
                   required
+                  autoComplete="new-password"
                 />
+                {fieldErrors.confirmPassword?.message && <p className="text-red-600 text-sm text-right mt-1">{fieldErrors.confirmPassword.message}</p>}
               </div>
             </div>
-            {error && <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>}
+            {fieldErrors.general?.message && <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">{fieldErrors.general.message}</div>}
+            
+            {/* Form Status Helper */}
+            {!isFormComplete() && (
+              <div className="text-amber-600 text-sm text-right bg-amber-50 p-3 rounded-lg border border-amber-200">
+                يرجى ملء جميع الحقول المطلوبة
+              </div>
+            )}
+            
+            {isFormComplete() && hasFormErrors() && (
+              <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">
+                يرجى تصحيح الأخطاء قبل المتابعة
+              </div>
+            )}
+            
             <Button
               type="submit"
               variant="primary"
               size="lg"
               fullWidth
               loading={loading}
-              className="rounded-xl"
+              className={`rounded-xl transition-all duration-200 ${
+                !isFormValid() 
+                  ? 'opacity-50 cursor-not-allowed bg-gray-400 hover:bg-gray-400' 
+                  : 'hover:bg-[#1a4a3f]'
+              }`}
+              disabled={!isFormValid()}
             >
-              إنشاء حساب
+              {!isFormComplete() 
+                ? 'املأ جميع الحقول' 
+                : hasFormErrors() 
+                  ? 'صحح الأخطاء' 
+                  : 'إنشاء حساب'
+              }
             </Button>
             <div className="text-center">
               <span className="text-sm text-[#0e1b18]">
