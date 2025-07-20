@@ -1,9 +1,30 @@
 import React from 'react';
-import { MapPin, Calendar, DollarSign, Clock, Tag, User } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Clock, Tag, User, CheckCircle } from 'lucide-react';
 import Badge from '../ui/Badge';
 
+interface ServiceUser {
+  name?: { first?: string; last?: string } | string;
+  roles?: string[];
+  providerProfile?: { verification?: { status?: string } };
+  seekerProfile?: { verification?: { status?: string } };
+}
+
 interface ServiceDetailsProps {
-  service: any; // TODO: Replace 'any' with a proper type for service
+  service: {
+    title?: string;
+    description?: string;
+    status?: string;
+    category?: string;
+    budget?: { min?: number; max?: number };
+    timeline?: string;
+    location?: { city?: string; government?: string; address?: string };
+    postedDate?: string;
+    createdAt?: string;
+    postedBy?: ServiceUser;
+    seeker?: ServiceUser;
+    additionalDetails?: string;
+    tags?: string[];
+  };
 }
 
 const ServiceDetails: React.FC<ServiceDetailsProps> = ({ service }) => {
@@ -21,7 +42,7 @@ const ServiceDetails: React.FC<ServiceDetailsProps> = ({ service }) => {
         month: 'long',
         day: 'numeric'
       });
-    } catch (error) {
+    } catch {
       return 'غير متوفر';
     }
   };
@@ -80,7 +101,7 @@ const ServiceDetails: React.FC<ServiceDetailsProps> = ({ service }) => {
   const safeAdditionalDetails = typeof additionalDetails === 'string' ? additionalDetails : undefined;
 
   // Safe name extraction for postedBy
-  const getPostedByName = (postedBy: any) => {
+  const getPostedByName = (postedBy: ServiceUser | undefined) => {
     if (!postedBy || !postedBy.name) return 'مستخدم غير معروف';
     
     if (typeof postedBy.name === 'object') {
@@ -95,7 +116,7 @@ const ServiceDetails: React.FC<ServiceDetailsProps> = ({ service }) => {
   const postedByName = getPostedByName(postedBy);
 
   // Safe name extraction for seeker (if it exists in service data)
-  const getSeekerName = (seeker: any) => {
+  const getSeekerName = (seeker: ServiceUser | undefined) => {
     if (!seeker || !seeker.name) return 'مستخدم غير معروف';
     
     if (typeof seeker.name === 'object') {
@@ -111,6 +132,14 @@ const ServiceDetails: React.FC<ServiceDetailsProps> = ({ service }) => {
   const finalPostedByName = postedByName === 'مستخدم غير معروف' && service.seeker 
     ? getSeekerName(service.seeker) 
     : postedByName;
+
+  // Helper: check if user is verified
+  const isVerified = (user: ServiceUser | undefined) => {
+    if (!user || !user.roles) return false;
+    if (user.roles.includes('provider')) return user.providerProfile?.verification?.status === 'approved';
+    if (user.roles.includes('seeker')) return user.seekerProfile?.verification?.status === 'approved';
+    return false;
+  };
 
   return (
     <div className="mb-6 bg-white rounded-lg shadow-lg p-6 text-right border border-deep-teal/10">
@@ -197,7 +226,15 @@ const ServiceDetails: React.FC<ServiceDetailsProps> = ({ service }) => {
             <User className="h-5 w-5 text-deep-teal flex-shrink-0" />
             <div>
               <div className="text-sm text-deep-teal/70">نشر بواسطة</div>
-              <div className="font-semibold text-deep-teal">{finalPostedByName}</div>
+              <div className="font-semibold text-deep-teal flex items-center gap-2">
+                {finalPostedByName}
+                {isVerified(postedBy) && (
+                  <Badge variant="status" size="sm" className="inline-flex items-center gap-1">
+                    <CheckCircle className="h-4 w-4 text-green-500 inline" />
+                    <span>موثّق</span>
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         )}

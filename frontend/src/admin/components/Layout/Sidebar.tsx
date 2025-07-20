@@ -7,7 +7,8 @@ import {
   Settings, 
   LogOut,
   Layers,
-  AlertTriangle
+  AlertTriangle,
+  Shield
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -22,6 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, className }) => {
   const navItems = [
     { path: '/admin', icon: Home, label: 'لوحة التحكم' },
     { path: '/admin/users', icon: Users, label: 'المستخدمين' },
+    { path: '/admin/identity-verifications', icon: Shield, label: 'التحقق من الهوية' },
     { path: '/admin/categories', icon: List, label: 'الفئات' },
     { path: '/admin/upgrade-requests', icon: List, label: 'طلبات الترقية' },
     { path: '/admin/complaints', icon: AlertTriangle, label: 'البلاغات' },

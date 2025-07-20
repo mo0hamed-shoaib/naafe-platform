@@ -25,6 +25,7 @@ import SettingsSection from '../components/settings/SettingsSection';
 import SettingsCard from '../components/settings/SettingsCard';
 import SettingsToggle from '../components/settings/SettingsToggle';
 import { useAuth } from '../contexts/AuthContext';
+import VerificationCenter from '../components/settings/VerificationCenter';
 
 interface UserSettings {
   notifications: {
@@ -119,6 +120,8 @@ const SettingsPage: React.FC = () => {
       description: 'الأمان والبيانات'
     },
   ];
+
+  const isAdmin = user?.roles?.includes('admin');
 
   // Fix address state initialization to avoid type errors
   const initialLocation = (user?.profile?.location && typeof user.profile.location === 'object') ? user.profile.location : {};
@@ -425,28 +428,17 @@ const SettingsPage: React.FC = () => {
   );
 
   const renderVerificationCenter = () => (
-    <SettingsSection
-      title="مركز التحقق"
-      description="التحقق من هويتك لفتح الميزات الإضافية وزيادة الثقة"
-      icon={Shield}
-    >
-      <SettingsCard title="التحقق من الهوية">
-        <div className="flex items-center justify-between p-6 rounded-xl bg-gradient-to-r from-deep-teal/5 to-bright-orange/5 border border-deep-teal/10">
-          <div className="flex items-center gap-4">
-            <div className="bg-deep-teal p-4 rounded-full text-white">
-              <CheckCircle size={24} />
-            </div>
-            <div>
-              <h4 className="font-semibold text-text-primary text-lg">التحقق من الهوية</h4>
-              <p className="text-text-secondary mt-1">التحقق من هويتك لفتح الميزات الإضافية وبناء الثقة مع المستخدمين الآخرين.</p>
-            </div>
+    !isAdmin ? (
+      <VerificationCenter />
+    ) : (
+      <SettingsSection title="مركز التحقق" description="التحقق من هويتك لفتح الميزات الإضافية وزيادة الثقة" icon={Shield}>
+        <SettingsCard title="التحقق من الهوية">
+          <div className="p-6 text-text-secondary text-center">
+            المسؤولون لا يحتاجون إلى التحقق من الهوية.
           </div>
-          <button className="bg-bright-orange text-white font-semibold py-3 px-6 rounded-xl hover:bg-bright-orange/90 transform hover:scale-105 transition-all duration-300 shadow-lg">
-            تحقق الآن
-          </button>
-        </div>
-      </SettingsCard>
-    </SettingsSection>
+        </SettingsCard>
+      </SettingsSection>
+    )
   );
 
   const renderNotificationPreferences = () => (

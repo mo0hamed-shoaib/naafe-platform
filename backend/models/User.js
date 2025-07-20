@@ -1,52 +1,39 @@
 import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
-const verificationSchema = new Schema({
+// --- Enhanced Verification Schema ---
+const idVerificationSchema = new Schema({
   status: {
     type: String,
-    enum: ['pending', 'verified', 'rejected'],
-    default: 'pending'
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
   },
-  method: {
-    type: String,
-    enum: ['id_card', 'sms', 'manual'],
-    default: null
-  },
-  documents: [{
-    type: {
-      type: String,
-      enum: ['id_card', 'business_license', 'certificate', 'other'],
-      required: true
+  explanation: { type: String, default: '' },
+  attempts: { type: Number, default: 0 }, // max 3
+  idFrontUrl: { type: String, required: true },
+  idBackUrl: { type: String, required: true },
+  selfieUrl: { type: String, required: true },
+  criminalRecordUrl: { type: String },
+  criminalRecordIssuedAt: { type: Date },
+  submittedAt: { type: Date, default: Date.now },
+  reviewedAt: { type: Date },
+  reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  auditTrail: [
+    {
+      action: { type: String, enum: ['submitted', 'approved', 'rejected', 'blocked', 'unblocked'], required: true },
+      by: { type: Schema.Types.ObjectId, ref: 'User' },
+      at: { type: Date, default: Date.now },
+      explanation: String,
     },
-    url: {
-      type: String,
-      required: true
-    },
-    filename: String,
-    uploadedAt: {
-      type: Date,
-      default: Date.now
-    },
-    status: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending'
-    },
-    notes: String
-  }],
-  verifiedAt: Date,
-  verifiedBy: {
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  rejectionReason: String
+  ],
 }, { _id: false });
 
 const seekerProfileSchema = new Schema({
   totalJobsPosted: { type: Number, default: 0 },
   rating: { type: Number, default: 0, min: 0, max: 5 },
   reviewCount: { type: Number, default: 0, min: 0 },
-  totalSpent: { type: Number, default: 0, min: 0 }
+  totalSpent: { type: Number, default: 0, min: 0 },
+  verification: { type: idVerificationSchema, default: undefined },
 }, { _id: false });
 
 const providerProfileSchema = new Schema({
@@ -54,8 +41,8 @@ const providerProfileSchema = new Schema({
   reviewCount: { type: Number, default: 0, min: 0 },
   totalJobsCompleted: { type: Number, default: 0, min: 0 },
   totalEarnings: { type: Number, default: 0, min: 0 },
-  verification: { type: verificationSchema, default: () => ({}) },
-  skills: { type: [String], default: [] } // Added skills array
+  verification: { type: idVerificationSchema, default: undefined },
+  skills: { type: [String], default: [] },
 }, { _id: false });
 
 const subscriptionSchema = new Schema({

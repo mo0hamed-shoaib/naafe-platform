@@ -1,9 +1,10 @@
 export interface ServiceCategory {
   id: string;
   name: string;
+  description?: string; // Add description field
   serviceCount: number;
   startingPrice: number;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string }> | string; // Allow both component and string (for images)
   dateAdded?: string; // ISO date string for sorting by recently added
   numServices?: number;
   avgServicePrice?: number;

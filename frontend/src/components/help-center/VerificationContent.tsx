@@ -1,9 +1,21 @@
 import React from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 
-const VerificationContent: React.FC = () => {
+interface VerificationContentProps {
+  onBack?: () => void;
+}
+
+const VerificationContent: React.FC<VerificationContentProps> = ({ onBack }) => {
   return (
     <article className="bg-light-cream p-4 lg:p-8 rounded-2xl shadow-lg max-w-4xl mx-auto">
+      {onBack && (
+        <button
+          className="mb-6 px-6 py-2 rounded-full bg-deep-teal text-white font-semibold hover:bg-deep-teal/90 transition-colors duration-300"
+          onClick={onBack}
+        >
+          العودة
+        </button>
+      )}
       <h1 className="text-2xl lg:text-4xl font-bold text-text-primary mb-4">كيفية التحقق من الهوية</h1>
       <p className="text-text-secondary mb-6">آخر تحديث: منذ يومين</p>
       

@@ -31,6 +31,7 @@ import ChatPage from './pages/ChatPage';
 import ConversationsPage from './pages/ConversationsPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import AdvertisePage from './pages/AdvertisePage';
+import AdminIdentityVerifications from './admin/pages/AdminIdentityVerifications';
 
 const App = () => {
   return (
@@ -111,6 +112,7 @@ const App = () => {
                 }>
                 <Route index element={<AdminOverview />} />
                 <Route path="users" element={<AdminManageUsers />} />
+                <Route path="identity-verifications" element={<AdminIdentityVerifications />} />
                 <Route path="categories" element={<AdminManageCategories />} />
                 <Route path="upgrade-requests" element={<AdminUpgradeRequests />} />
                 <Route path="complaints" element={<AdminManageComplaints />} />

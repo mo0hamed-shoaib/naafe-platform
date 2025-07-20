@@ -2,12 +2,12 @@ import { useState, useCallback, useEffect } from 'react';
 
 export type HelpSection = 'Getting Started' | 'Verification' | 'Payments' | 'Platform Rules';
 
-interface HelpCenterState {
-  activeSection: HelpSection;
+type HelpCenterState = {
+  activeSection: HelpSection | undefined;
   searchQuery: string;
-}
+};
 
-export const useHelpCenter = (initialSection: HelpSection = 'Getting Started') => {
+export const useHelpCenter = (initialSection?: HelpSection) => {
   const [state, setState] = useState<HelpCenterState>({
     activeSection: initialSection,
     searchQuery: ''
@@ -15,12 +15,12 @@ export const useHelpCenter = (initialSection: HelpSection = 'Getting Started') =
 
   // Update active section when initialSection changes (from URL)
   useEffect(() => {
-    if (initialSection && initialSection !== state.activeSection) {
+    if (initialSection !== undefined && initialSection !== state.activeSection) {
       setState(prev => ({ ...prev, activeSection: initialSection }));
     }
   }, [initialSection]);
 
-  const setActiveSection = useCallback((section: HelpSection) => {
+  const setActiveSection = useCallback((section: HelpSection | undefined) => {
     setState(prev => ({ ...prev, activeSection: section }));
   }, []);
 
@@ -30,33 +30,28 @@ export const useHelpCenter = (initialSection: HelpSection = 'Getting Started') =
 
   const getBreadcrumbItems = useCallback(() => {
     const baseItems = [{ label: 'مركز المساعدة', href: '/help' }];
-    
+    if (!state.activeSection) return baseItems;
+    let sectionLabel = '';
     switch (state.activeSection) {
       case 'Getting Started':
-        return [
-          ...baseItems,
-          { label: 'البداية', href: '/help?section=Getting Started' },
-          { label: 'دليل البدء' }
-        ];
+        sectionLabel = 'البداية';
+        break;
       case 'Payments':
-        return [
-          ...baseItems,
-          { label: 'المدفوعات', href: '/help?section=Payments' },
-          { label: 'طرق الدفع والأمان' }
-        ];
+        sectionLabel = 'المدفوعات';
+        break;
       case 'Platform Rules':
-        return [
-          ...baseItems,
-          { label: 'قواعد المنصة', href: '/help?section=Platform Rules' },
-          { label: 'القواعد والإرشادات' }
-        ];
+        sectionLabel = 'قواعد المنصة';
+        break;
+      case 'Verification':
+        sectionLabel = 'التحقق';
+        break;
       default:
-        return [
-          ...baseItems,
-          { label: 'التحقق', href: '/help?section=Verification' },
-          { label: 'كيفية التحقق من الهوية' }
-        ];
+        sectionLabel = '';
     }
+    return [
+      ...baseItems,
+      { label: sectionLabel }
+    ];
   }, [state.activeSection]);
 
   const getRelatedArticles = useCallback(() => {

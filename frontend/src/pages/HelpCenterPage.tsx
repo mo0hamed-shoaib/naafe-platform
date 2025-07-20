@@ -14,10 +14,12 @@ import {
   PlatformRulesContent
 } from '../components/help-center';
 import { useHelpCenter, HelpSection } from '../hooks/useHelpCenter';
+import { useAuth } from '../contexts/AuthContext';
 
 const HelpCenterPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const sectionParam = searchParams.get('section') as HelpSection;
+  const sectionParam = searchParams.get('section') as HelpSection | null;
+  const { user } = useAuth();
   
   const {
     activeSection,
@@ -26,42 +28,38 @@ const HelpCenterPage: React.FC = () => {
     setSearchQuery,
     getBreadcrumbItems,
     getRelatedArticles
-  } = useHelpCenter(sectionParam || 'Getting Started');
+  } = useHelpCenter(sectionParam || undefined);
 
   // Sync URL with active section when it changes
   useEffect(() => {
-    if (sectionParam !== activeSection) {
+    if (activeSection && sectionParam !== activeSection) {
       setSearchParams({ section: activeSection });
     }
-  }, [activeSection, setSearchParams]);
-
-  const renderContent = () => {
-    switch (activeSection) {
-      case 'Getting Started':
-        return <GettingStartedContent />;
-      case 'Verification':
-        return <VerificationContent />;
-      case 'Payments':
-        return <PaymentsContent />;
-      case 'Platform Rules':
-        return <PlatformRulesContent />;
-      default:
-        return <GettingStartedContent />;
+    if (!activeSection && sectionParam) {
+      setSearchParams({});
     }
-  };
+  }, [activeSection, sectionParam, setSearchParams]);
 
+  // Determine support email based on user role
+  const supportEmail = user?.roles?.includes('admin')
+    ? 'للتواصل مع الإدارة: mohamed.g.shoaib@gmail.com'
+    : 'للتواصل مع الدعم: support@naafe.com';
+
+  // Fix: always open content on card click, even if already on that section
   const handleSectionSelect = (section: HelpSection) => {
     setActiveSection(section);
   };
+
+  const handleBack = () => setActiveSection(undefined as HelpSection | undefined);
 
   const breadcrumbItems = getBreadcrumbItems();
   const relatedArticles = getRelatedArticles();
 
   return (
-    <div className="min-h-screen bg-warm-cream" dir="rtl">
+    <div className="min-h-screen flex flex-col bg-warm-cream" dir="rtl">
       <Header />
       
-      <main className="pt-20">
+      <main className="pt-20 flex-1">
         <div className="container mx-auto px-4 py-8">
           {/* Header Section */}
           <header className="mb-8">
@@ -74,25 +72,30 @@ const HelpCenterPage: React.FC = () => {
                 />
               </div>
               
-              <div className="flex items-center gap-4">
-                <Link 
-                  to="/" 
-                  className="text-text-secondary hover:text-deep-teal transition-colors duration-300 font-medium"
-                >
-                  العودة للرئيسية
-                </Link>
-              </div>
             </div>
             
             <HelpCenterBreadcrumb items={breadcrumbItems} />
           </header>
 
           {/* Content */}
-          {activeSection === 'Getting Started' && searchQuery === '' ? (
-            <HelpCenterCategories onSectionSelect={handleSectionSelect} />
+          {!activeSection && searchQuery === '' ? (
+            <HelpCenterCategories 
+              onSectionSelect={handleSectionSelect} 
+            />
           ) : (
             <>
-              {renderContent()}
+              {activeSection === 'Getting Started' && (
+                <GettingStartedContent onBack={handleBack} />
+              )}
+              {activeSection === 'Verification' && (
+                <VerificationContent onBack={handleBack} />
+              )}
+              {activeSection === 'Payments' && (
+                <PaymentsContent onBack={handleBack} />
+              )}
+              {activeSection === 'Platform Rules' && (
+                <PlatformRulesContent onBack={handleBack} />
+              )}
               <RelatedArticles articles={relatedArticles} />
             </>
           )}

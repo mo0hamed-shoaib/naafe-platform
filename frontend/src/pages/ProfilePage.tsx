@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import BaseCard from '../components/ui/BaseCard';
 import Button from '../components/ui/Button';
 import FormInput from '../components/ui/FormInput';
+import Badge from '../components/ui/Badge';
+import { CheckCircle } from 'lucide-react';
 
 const fetchWithAuth = async (url: string, token: string) => {
   const res = await fetch(url, {
@@ -243,6 +245,14 @@ const ProfilePage: React.FC = () => {
     return 0;
   };
 
+  // Helper: check if user is verified
+  const isVerified = (user: Profile | null) => {
+    if (!user) return false;
+    if (user.roles.includes('provider')) return user.providerProfile?.verification?.status === 'approved';
+    if (user.roles.includes('seeker')) return user.seekerProfile?.verification?.status === 'approved';
+    return false;
+  };
+
   return (
     <PageLayout
       title="الملف الشخصي"
@@ -274,7 +284,15 @@ const ProfilePage: React.FC = () => {
             {/* Main Info */}
             <div className="flex-1 flex flex-col gap-2 items-center lg:items-start">
               <div className="flex flex-col gap-1 items-center lg:items-start">
-                <h1 className="text-3xl font-bold text-deep-teal font-cairo mb-1">{getFullName(profile)}</h1>
+                <h1 className="text-2xl font-bold text-deep-teal mb-2 flex items-center gap-2">
+                  {getFullName(profile)}
+                  {isVerified(profile) && (
+                    <Badge variant="status" size="sm" className="inline-flex items-center gap-1">
+                      <CheckCircle className="h-4 w-4 text-green-500 inline" />
+                      <span>موثّق</span>
+                    </Badge>
+                  )}
+                </h1>
                 {profile?.profile?.bio && (
                   <p className="text-text-secondary text-base text-center lg:text-right mt-2 mb-1 whitespace-pre-line">
                     {profile.profile.bio}

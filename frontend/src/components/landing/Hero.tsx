@@ -1,9 +1,27 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, UserPlus } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Hero: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  // Helper: check if user is provider
+  const isProvider = user && user.roles.includes('provider');
+  
+  const handleProviderAction = () => {
+    if (!user) {
+      navigate('/register');
+    } else if (isProvider) {
+      navigate('/post-service');
+    } else {
+      // Open upgrade modal - this will be handled by the Header component
+      // We'll use a custom event to trigger the modal
+      window.dispatchEvent(new CustomEvent('openUpgradeModal'));
+    }
+  };
+
   return (
     <section className="relative text-white text-center py-20 md:py-48 px-4 font-arabic overflow-hidden">
       {/* Overlay background */}
@@ -37,14 +55,14 @@ const Hero: React.FC = () => {
             <Search className="w-5 h-5" style={{ color: '#2d5d4f' }} aria-hidden="true" />
             <span className="truncate text-[#2d5d4f]">ابحث عن محترف</span>
           </button>
-          <a
-            href="#become-a-pro"
+          <button
             className="min-w-[180px] cursor-pointer rounded-full h-14 px-8 flex items-center justify-center bg-[#ff5722] text-white text-lg font-bold shadow-lg hover:bg-[#e64a19] transform hover:scale-105 transition-all gap-2 focus:outline-none focus:ring-2 focus:ring-[#ff5722]/50"
-            aria-label="كن محترفًا"
+            onClick={handleProviderAction}
+            aria-label={isProvider ? "اعرض خدماتك" : "كن محترفًا"}
           >
             <UserPlus className="w-5 h-5 text-white" aria-hidden="true" />
-            <span className="truncate">كن محترفًا</span>
-          </a>
+            <span className="truncate">{isProvider ? "اعرض خدماتك" : "كن محترفًا"}</span>
+          </button>
         </div>
       </div>
       {/* Scroll indicator */}

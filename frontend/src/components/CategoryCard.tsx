@@ -8,42 +8,90 @@ interface CategoryCardProps {
 }
 
 const CategoryCard = ({ category, onClick }: CategoryCardProps) => {
-  const { name, serviceCount, startingPrice, icon, numServices, avgServicePrice, numRequests, avgRequestPrice } = category;
+  const { name, description, serviceCount, startingPrice, icon, numServices, avgServicePrice, numRequests, avgRequestPrice } = category;
 
   return (
     <BaseCard
       hover
       onClick={() => onClick?.(category)}
-      className="bg-light-cream group"
+      className="bg-light-cream group overflow-hidden"
     >
-      <div className="flex h-32 items-center justify-center bg-light-cream">
+      {/* Image/Icon Section - Made larger for better image display */}
+      <div className="relative h-48 bg-gradient-to-br from-deep-teal/5 to-accent/5 flex items-center justify-center overflow-hidden">
         {typeof icon === 'string' ? (
           <img
             src={icon}
             alt={name}
-            className="h-16 w-16 object-contain"
-            style={{ maxWidth: '4rem', maxHeight: '4rem', display: 'block' }}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={e => { (e.target as HTMLImageElement).src = '/default-category.png'; }}
           />
         ) : icon ? (
-          <icon className="h-16 w-16 text-deep-teal transition-transform group-hover:scale-110" />
+          <div className="flex items-center justify-center w-full h-full">
+            <icon className="h-24 w-24 text-deep-teal transition-transform group-hover:scale-110" />
+          </div>
         ) : (
-          <span className="h-16 w-16" />
+          <div className="flex items-center justify-center w-full h-full">
+            <div className="h-24 w-24 bg-deep-teal/10 rounded-full flex items-center justify-center">
+              <span className="text-3xl font-bold text-deep-teal">{name.charAt(0)}</span>
+            </div>
+          </div>
         )}
+        {/* Overlay for better text readability */}
+        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300" />
       </div>
-      <div className="flex flex-col gap-2">
-        <h3 className="text-lg font-semibold text-text-primary">{name}</h3>
-        {typeof numServices === 'number' && (
-          <p className="text-sm text-text-secondary">عدد الخدمات: {numServices}</p>
+      
+      {/* Content Section */}
+      <div className="p-6 space-y-3">
+        <h3 className="text-xl font-bold text-text-primary group-hover:text-deep-teal transition-colors duration-300">
+          {name}
+        </h3>
+        
+        {/* Description */}
+        {description && (
+          <p className="text-sm text-text-secondary leading-relaxed overflow-hidden" style={{
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical'
+          }}>
+            {description}
+          </p>
         )}
-        {typeof avgServicePrice === 'number' && (
-          <p className="text-sm text-text-secondary">متوسط سعر الخدمة: {avgServicePrice.toFixed(2)} EGP</p>
-        )}
-        {typeof numRequests === 'number' && (
-          <p className="text-sm text-text-secondary">عدد الطلبات: {numRequests}</p>
-        )}
-        {typeof avgRequestPrice === 'number' && (
-          <p className="text-sm text-text-secondary">متوسط سعر الطلب: {avgRequestPrice.toFixed(2)} EGP</p>
+        
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          {typeof numServices === 'number' && (
+            <div className="text-center">
+              <p className="text-lg font-bold text-deep-teal">{numServices}</p>
+              <p className="text-xs text-text-secondary">خدمة</p>
+            </div>
+          )}
+          {typeof avgServicePrice === 'number' && (
+            <div className="text-center">
+              <p className="text-lg font-bold text-accent">{avgServicePrice.toFixed(0)}</p>
+              <p className="text-xs text-text-secondary">جنيه</p>
+            </div>
+          )}
+          {typeof numRequests === 'number' && (
+            <div className="text-center">
+              <p className="text-lg font-bold text-deep-teal">{numRequests}</p>
+              <p className="text-xs text-text-secondary">طلب</p>
+            </div>
+          )}
+          {typeof avgRequestPrice === 'number' && (
+            <div className="text-center">
+              <p className="text-lg font-bold text-accent">{avgRequestPrice.toFixed(0)}</p>
+              <p className="text-xs text-text-secondary">جنيه</p>
+            </div>
+          )}
+        </div>
+        
+        {/* Starting Price */}
+        {startingPrice && (
+          <div className="pt-2 border-t border-gray-200">
+            <p className="text-sm text-text-secondary text-center">
+              يبدأ من <span className="font-bold text-accent">{startingPrice} جنيه</span>
+            </p>
+          </div>
         )}
       </div>
     </BaseCard>

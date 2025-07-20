@@ -162,6 +162,18 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
     };
   }, [connected, on]);
 
+  // Listen for custom event to open upgrade modal from landing page
+  useEffect(() => {
+    const handleOpenUpgradeModal = () => {
+      setShowUpgradeModal(true);
+    };
+
+    window.addEventListener('openUpgradeModal', handleOpenUpgradeModal);
+    return () => {
+      window.removeEventListener('openUpgradeModal', handleOpenUpgradeModal);
+    };
+  }, []);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {

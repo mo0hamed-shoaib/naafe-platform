@@ -13,5 +13,7 @@ router.get('/status', authenticateToken, verificationController.getVerificationS
 router.get('/pending', authenticateToken, requireRole(['admin']), verificationController.getPendingVerifications);
 router.post('/:userId/approve', authenticateToken, requireRole(['admin']), verificationController.approveVerification);
 router.post('/:userId/reject', authenticateToken, requireRole(['admin']), verificationController.rejectVerification);
+router.post('/:userId/block', authenticateToken, requireRole(['admin']), verificationController.blockUser);
+router.post('/:userId/unblock', authenticateToken, requireRole(['admin']), verificationController.unblockUser);
 
 export default router; 

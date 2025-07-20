@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lightbulb, Shield, CreditCard, Sun } from 'lucide-react';
+import { Lightbulb, Shield, CreditCard, Sun, Mail } from 'lucide-react';
 import { HelpSection } from '../../hooks/useHelpCenter';
 import HelpCenterCard from './HelpCenterCard';
 
@@ -70,12 +70,22 @@ const HelpCenterCategories: React.FC<HelpCenterCategoriesProps> = ({
         <p className="text-text-secondary mb-4">
           لا تجد ما تبحث عنه؟
         </p>
-        <button
-          className="inline-flex items-center gap-2 px-6 py-3 bg-deep-teal text-white rounded-full hover:bg-deep-teal/90 transition-colors duration-300 font-medium"
-          onClick={() => onSectionSelect('Getting Started')}
-        >
-          تواصل مع الدعم
-        </button>
+        <div className="mt-6 flex flex-col items-center gap-4">
+          <div className="bg-white border border-accent rounded-xl px-6 py-4 flex items-center gap-4 shadow max-w-md w-full">
+            <Mail className="w-7 h-7 text-accent" />
+            <div className="text-right">
+              <div className="font-bold text-deep-teal text-lg mb-1">للتواصل مع الإدارة</div>
+              <a href="mailto:mohamed.g.shoaib@gmail.com" className="text-text-secondary text-base break-all underline hover:text-accent focus:outline-none focus:ring-2 focus:ring-accent" tabIndex={0} aria-label="راسل الإدارة عبر البريد الإلكتروني">mohamed.g.shoaib@gmail.com</a>
+            </div>
+          </div>
+          <div className="bg-white border border-accent rounded-xl px-6 py-4 flex items-center gap-4 shadow max-w-md w-full">
+            <Mail className="w-7 h-7 text-accent" />
+            <div className="text-right">
+              <div className="font-bold text-deep-teal text-lg mb-1">للتواصل مع الدعم</div>
+              <a href="mailto:support@naafe.com" className="text-text-secondary text-base break-all underline hover:text-accent focus:outline-none focus:ring-2 focus:ring-accent" tabIndex={0} aria-label="راسل الدعم عبر البريد الإلكتروني">support@naafe.com</a>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
