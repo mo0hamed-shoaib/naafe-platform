@@ -6,7 +6,7 @@ import BaseCard from '../components/ui/BaseCard';
 import Button from '../components/ui/Button';
 import FormInput from '../components/ui/FormInput';
 import Badge from '../components/ui/Badge';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, CreditCard, FileText, Camera } from 'lucide-react';
 
 const fetchWithAuth = async (url: string, token: string) => {
   const res = await fetch(url, {
@@ -80,6 +80,34 @@ interface Profile {
   bio?: string; // Added bio to the interface
   profile?: { // Added profile to the interface
     bio?: string;
+    location?: {
+      city?: string;
+      government?: string;
+      street?: string;
+      apartmentNumber?: string;
+      additionalInformation?: string;
+    };
+  };
+  isVerified: boolean;
+  providerUpgradeStatus?: 'pending' | 'rejected' | 'accepted' | 'none';
+  verification?: {
+    status?: string;
+    explanation?: string;
+    attempts?: number;
+    idFrontUrl?: string;
+    idBackUrl?: string;
+    selfieUrl?: string;
+    criminalRecordUrl?: string;
+    criminalRecordIssuedAt?: string;
+    submittedAt?: string;
+    reviewedAt?: string;
+    reviewedBy?: string;
+    auditTrail?: Array<{
+      action: string;
+      by?: string;
+      at?: string;
+      explanation?: string;
+    }>;
   };
 }
 interface Stats {
@@ -248,9 +276,13 @@ const ProfilePage: React.FC = () => {
   // Helper: check if user is verified
   const isVerified = (user: Profile | null) => {
     if (!user) return false;
-    if (user.roles.includes('provider')) return user.providerProfile?.verification?.status === 'approved';
-    if (user.roles.includes('seeker')) return user.seekerProfile?.verification?.status === 'approved';
-    return false;
+    return !!user.isVerified;
+  };
+
+  // Helper: get provider upgrade status
+  const getProviderUpgradeStatus = (user: Profile | null) => {
+    if (!user) return 'none';
+    return user.providerUpgradeStatus || 'none';
   };
 
   return (
@@ -292,6 +324,16 @@ const ProfilePage: React.FC = () => {
                       <span>موثّق</span>
                     </Badge>
                   )}
+                  {/* Verification Method Badges */}
+                  {profile.verification?.idFrontUrl && profile.verification?.idBackUrl && (
+                    <Badge variant="category" size="sm" icon={CreditCard} className="ml-1">بطاقة هوية</Badge>
+                  )}
+                  {profile.verification?.criminalRecordUrl && (
+                    <Badge variant="premium" size="sm" icon={FileText} className="ml-1">فيش وتشبيه</Badge>
+                  )}
+                  {profile.verification?.selfieUrl && (
+                    <Badge variant="status" size="sm" icon={Camera} className="ml-1">سيلفي</Badge>
+                  )}
                 </h1>
                 {profile?.profile?.bio && (
                   <p className="text-text-secondary text-base text-center lg:text-right mt-2 mb-1 whitespace-pre-line">
@@ -317,7 +359,7 @@ const ProfilePage: React.FC = () => {
                 </div>
               )}
               {/* Verified Badge */}
-              {profile?.providerProfile?.verification?.status === 'verified' && (
+              {profile?.isVerified && (
                 <div className="flex items-center gap-1 text-green-600 text-xs font-semibold bg-green-50 px-2 py-1 rounded-full">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                   تم التحقق من الهوية
@@ -338,6 +380,21 @@ const ProfilePage: React.FC = () => {
                     <span key={skill} className="bg-[#F5A623]/10 text-[#F5A623] px-3 py-1 rounded-full text-xs font-cairo border border-[#F5A623]/30">{skill}</span>
                   ))}
                 </div>
+              )}
+              {profile?.roles.includes('provider') && getProviderUpgradeStatus(profile) === 'pending' && (
+                <Badge variant="status" size="sm" className="inline-flex items-center gap-1">
+                  <span>قيد الترقية</span>
+                </Badge>
+              )}
+              {profile?.roles.includes('provider') && getProviderUpgradeStatus(profile) === 'rejected' && (
+                <Badge variant="urgency" size="sm" className="inline-flex items-center gap-1">
+                  <span>تم رفض الترقية</span>
+                </Badge>
+              )}
+              {profile?.roles.includes('provider') && getProviderUpgradeStatus(profile) === 'accepted' && (
+                <Badge variant="category" size="sm" className="inline-flex items-center gap-1">
+                  <span>تمت الترقية</span>
+                </Badge>
               )}
           </div>
           </BaseCard>

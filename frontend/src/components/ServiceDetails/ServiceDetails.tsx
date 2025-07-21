@@ -5,8 +5,7 @@ import Badge from '../ui/Badge';
 interface ServiceUser {
   name?: { first?: string; last?: string } | string;
   roles?: string[];
-  providerProfile?: { verification?: { status?: string } };
-  seekerProfile?: { verification?: { status?: string } };
+  isVerified?: boolean;
 }
 
 interface ServiceDetailsProps {
@@ -135,10 +134,8 @@ const ServiceDetails: React.FC<ServiceDetailsProps> = ({ service }) => {
 
   // Helper: check if user is verified
   const isVerified = (user: ServiceUser | undefined) => {
-    if (!user || !user.roles) return false;
-    if (user.roles.includes('provider')) return user.providerProfile?.verification?.status === 'approved';
-    if (user.roles.includes('seeker')) return user.seekerProfile?.verification?.status === 'approved';
-    return false;
+    if (!user) return false;
+    return !!user.isVerified;
   };
 
   return (

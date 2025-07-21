@@ -24,7 +24,8 @@ export interface ServiceProvider {
   isPremium: boolean;
   isTopRated: boolean;
   completedJobs: number;
-  isIdentityVerified: boolean;
+  isVerified: boolean;
+  providerUpgradeStatus?: 'none' | 'pending' | 'accepted' | 'rejected';
   availability: {
     days: string[];
     timeSlots: string[];

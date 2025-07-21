@@ -79,6 +79,7 @@ const SearchPage = () => {
       isTopRated: l.provider && typeof l.provider === 'object' && 'isTopRated' in l.provider ? (l.provider as Record<string, unknown>).isTopRated as boolean : false,
       completedJobs: l.provider && typeof l.provider === 'object' && 'totalJobsCompleted' in l.provider ? (l.provider as Record<string, unknown>).totalJobsCompleted as number : 0,
       isIdentityVerified: l.provider && typeof l.provider === 'object' && 'isVerified' in l.provider ? (l.provider as Record<string, unknown>).isVerified as boolean : false,
+      providerUpgradeStatus: l.provider && typeof l.provider === 'object' && 'providerUpgradeStatus' in l.provider ? (l.provider as Record<string, unknown>).providerUpgradeStatus as string : 'none',
       availability: l.availability as { days: string[]; timeSlots: string[] } || { days: [], timeSlots: [] },
     };
   });

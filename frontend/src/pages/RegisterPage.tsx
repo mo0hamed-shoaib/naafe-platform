@@ -117,17 +117,22 @@ const RegisterPage = () => {
   useEffect(() => {
     setFieldErrors(prev => {
       const newErrors = { ...prev };
-      
-      // Update email error if availability check shows it's taken
-      if (availabilityStatus.email && !availabilityStatus.email.available) {
-        newErrors.email = { isValid: false, message: availabilityStatus.email.message };
+      // Email
+      if (availabilityStatus.email) {
+        if (!availabilityStatus.email.available) {
+          newErrors.email = { isValid: false, message: availabilityStatus.email.message };
+        } else {
+          newErrors.email = { isValid: true, message: '' };
+        }
       }
-      
-      // Update phone error if availability check shows it's taken
-      if (availabilityStatus.phone && !availabilityStatus.phone.available) {
-        newErrors.phoneNumber = { isValid: false, message: availabilityStatus.phone.message };
+      // Phone
+      if (availabilityStatus.phone) {
+        if (!availabilityStatus.phone.available) {
+          newErrors.phoneNumber = { isValid: false, message: availabilityStatus.phone.message };
+        } else {
+          newErrors.phoneNumber = { isValid: true, message: '' };
+        }
       }
-      
       return newErrors;
     });
   }, [availabilityStatus]);

@@ -49,7 +49,7 @@ const ServiceCard = ({ provider, onViewDetails }: ServiceCardProps) => {
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
             <h3 className="text-lg font-semibold text-text-primary text-right order-1 sm:order-1 sm:flex-1 sm:pr-3">
               {provider.name}
-              {provider.isProviderVerified && (
+              {provider.isVerified && (
                 <Badge variant="status" size="sm" className="ml-2 inline-flex items-center gap-1">
                   <CheckCircle className="h-4 w-4 text-green-500 inline" />
                   <span>موثّق</span>
