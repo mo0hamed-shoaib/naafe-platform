@@ -5,7 +5,7 @@ import Button from './ui/Button';
 import BaseCard from './ui/BaseCard';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FormInput, FormTextarea, AIAssistant, PricingGuidance, AITestComponent } from './ui';
+import { FormInput, FormTextarea, AIAssistant, PricingGuidance } from './ui';
 import UnifiedSelect from './ui/UnifiedSelect';
 
 interface PostServiceFormData {
@@ -404,8 +404,6 @@ const PostServiceForm: React.FC = () => {
               {error && <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>}
               {success && <div className="text-green-600 text-sm text-right bg-green-50 p-3 rounded-lg border border-green-200">تم إرسال الطلب بنجاح!</div>}
               
-              {/* AI Test Component */}
-              <AITestComponent />
               
               <Button
                 type="submit"

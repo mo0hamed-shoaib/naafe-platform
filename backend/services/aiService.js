@@ -1,5 +1,6 @@
 import aiConfig from '../config/ai.js';
 import { logger } from '../middlewares/logging.middleware.js';
+import Category from '../models/Category.js';
 
 class AIService {
   constructor() {
@@ -77,7 +78,14 @@ class AIService {
     }
 
     try {
-      const categoryArabic = this.config.formAssistance.categories[category] || category;
+      // Fetch latest categories from DB
+      const allCategories = await Category.find({ isActive: true });
+      const normalizedCategory = (category || '').trim().toLowerCase();
+      const categoryObj = allCategories.find(
+        cat => cat.name.trim().toLowerCase() === normalizedCategory
+      );
+      const categoryArabic = categoryObj ? categoryObj.name : category;
+      // Optionally, you can use cat.description or another field for Arabic if available
       
       let prompt;
       if (formType === 'service') {
@@ -249,7 +257,14 @@ Remember: Return ONLY the JSON object, no additional text or explanations.`;
     }
 
     try {
-      const categoryArabic = this.config.formAssistance.categories[category] || category;
+      // Fetch latest categories from DB
+      const allCategories = await Category.find({ isActive: true });
+      const normalizedCategory = (category || '').trim().toLowerCase();
+      const categoryObj = allCategories.find(
+        cat => cat.name.trim().toLowerCase() === normalizedCategory
+      );
+      const categoryArabic = categoryObj ? categoryObj.name : category;
+      // Optionally, you can use cat.description or another field for Arabic if available
       const priceRange = this.config.pricingGuidance.priceRanges[category];
       const skillsText = Array.isArray(skills) && skills.length > 0 ? `\nمهارات مقدم الخدمة:\n- ${skills.join('\n- ')}` : '';
       const prompt = `

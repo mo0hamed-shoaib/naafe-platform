@@ -55,7 +55,6 @@ const RequestServiceForm: React.FC = () => {
     images: [],
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [imageUploadProgress, setImageUploadProgress] = useState<{[key: string]: boolean}>({});
@@ -73,22 +72,21 @@ const RequestServiceForm: React.FC = () => {
     
     // Limit to 5 images
     if (formData.images.length + files.length > 5) {
-      setError('يمكنك رفع 5 صور كحد أقصى');
+      alert('يمكنك رفع 5 صور كحد أقصى');
       return;
     }
 
     setUploadingImages(true);
-    setError(null);
 
     for (const file of files) {
       if (!file.type.startsWith('image/')) {
-        setError('يرجى رفع صور فقط');
+        alert('يرجى رفع صور فقط');
         continue;
       }
 
       // Check file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        setError('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
+        alert('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
         continue;
       }
 
@@ -110,10 +108,10 @@ const RequestServiceForm: React.FC = () => {
             images: [...prev.images, data.data.url]
           }));
         } else {
-          setError('فشل رفع الصورة. يرجى المحاولة مرة أخرى.');
+          alert('فشل رفع الصورة. يرجى المحاولة مرة أخرى.');
         }
       } catch (error) {
-        setError('فشل رفع الصورة. يرجى المحاولة مرة أخرى.');
+        alert('فشل رفع الصورة. يرجى المحاولة مرة أخرى.');
       }
 
       setImageUploadProgress(prev => ({ ...prev, [file.name]: false }));
@@ -164,8 +162,6 @@ const RequestServiceForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
-    setSuccess(false);
     try {
       const payload = {
         title: formData.requestTitle,
@@ -187,7 +183,12 @@ const RequestServiceForm: React.FC = () => {
         deadline: formData.preferredDateTime ? new Date(formData.preferredDateTime) : undefined,
         deliveryTimeDays: Number(formData.deliveryTimeDays),
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-        attachments: formData.images, // Assuming images are attachments
+        attachments: formData.images.map(url => ({
+          url,
+          filename: url.split('/').pop() || 'image.jpg',
+          fileType: 'image/jpeg', // You can improve this if you have the actual type
+          fileSize: 0 // If you have the size, set it; otherwise, leave as 0 or omit
+        })),
       };
       const res = await fetch('/api/requests', {
         method: 'POST',
@@ -204,10 +205,9 @@ const RequestServiceForm: React.FC = () => {
       }
       setSuccess(true);
       setTimeout(() => navigate('/search?category=' + encodeURIComponent(formData.category) + '&tab=requests'), 1500);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
+    } catch (err) {
       setLoading(false);
+      alert(err instanceof Error ? err.message : 'Failed to post request');
     }
   };
 
@@ -514,7 +514,6 @@ const RequestServiceForm: React.FC = () => {
                   </div>
                 )}
               </div>
-              {error && <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>}
               {success && <div className="text-green-600 text-sm text-right bg-green-50 p-3 rounded-lg border border-green-200">تم إرسال الطلب بنجاح!</div>}
               <Button
                 type="submit"

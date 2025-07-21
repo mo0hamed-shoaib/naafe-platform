@@ -3,6 +3,7 @@ import { Sparkles, Lightbulb, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from './Button';
 import BaseCard from './BaseCard';
+import FormTextarea from './FormTextarea';
 
 interface AIAssistantProps {
   formType: 'service' | 'request';
@@ -135,12 +136,13 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
           <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">
             اكتب وصفاً مختصراً للخدمة وسأساعدك في تحسين النموذج
           </label>
-          <textarea
+          <FormTextarea
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             placeholder={inputPlaceholder || "مثال: أحتاج سباك محترف لإصلاح تسرب في الحمام..."}
-            className="w-full p-3 border border-gray-300 rounded-lg text-right resize-none"
             rows={3}
+            required
+            label={undefined}
           />
         </div>
 
