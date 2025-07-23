@@ -41,7 +41,10 @@ const providerProfileSchema = new Schema({
   reviewCount: { type: Number, default: 0, min: 0 },
   totalJobsCompleted: { type: Number, default: 0, min: 0 },
   totalEarnings: { type: Number, default: 0, min: 0 },
-  skills: { type: [String], default: [] }
+  skills: { type: [String], default: [] },
+  workingDays: { type: [String], default: [] }, // Added for availability
+  startTime: { type: String, default: '' },     // Added for availability
+  endTime: { type: String, default: '' }        // Added for availability
   // Removed verification
 }, { _id: false });
 
@@ -170,6 +173,10 @@ const userSchema = new Schema({
     settings: {
         type: Schema.Types.Mixed,
         default: {}
+    },
+    portfolio: {
+        type: [String],
+        default: []
     }
 }, {
     timestamps: true

@@ -109,7 +109,6 @@ const paymentSteps = [
 
 const AdvertisePage: React.FC = () => {
   const { accessToken } = useAuth();
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [showAdForm, setShowAdForm] = useState(false);
@@ -120,11 +119,6 @@ const AdvertisePage: React.FC = () => {
     targetUrl: ''
   });
   const [imageUploading, setImageUploading] = useState(false);
-
-  // Toggle FAQ item
-  const toggleFaq = (index: number) => {
-    setOpenFaqIndex(openFaqIndex === index ? null : index);
-  };
 
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId);
@@ -548,7 +542,6 @@ const AdvertisePage: React.FC = () => {
             <p className="text-lg text-text-secondary mb-12 max-w-2xl mx-auto">
               منصتنا تجذب الآلاف من العملاء الباحثين عن خدمات عالية الجودة. الإعلان معنا يضعك في مقدمة المنافسة.
             </p>
-            
             {/* Statistics Highlight */}
             <div className="bg-gradient-to-r from-deep-teal to-accent rounded-2xl p-12 text-white shadow-xl mb-12">
               <div className="text-6xl font-extrabold mb-4">3x</div>
@@ -556,19 +549,7 @@ const AdvertisePage: React.FC = () => {
                 نسبة ظهور أعلى من الحسابات العادية
               </p>
             </div>
-
-            {/* Success Story */}
-            <div>
-              <h3 className="text-2xl font-bold text-deep-teal mb-4">قصص نجاح</h3>
-              <div className="max-w-3xl mx-auto italic text-text-secondary">
-                <p>
-                  "بعد استخدام الإعلان المميز، زادت طلبات الخدمة لدي بنسبة 200% في أسبوع واحد فقط. كانت أفضل استثمار قمت به لعملي."
-                </p>
-                <p className="mt-2 font-bold text-deep-teal">
-                  - سارة، مصممة جرافيك
-                </p>
-              </div>
-            </div>
+            {/* Success Story section removed */}
           </div>
         </section>
 
@@ -592,50 +573,20 @@ const AdvertisePage: React.FC = () => {
           </div>
         </section>
 
-        {/* FAQ Section */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold text-deep-teal text-center mb-12">أسئلة شائعة</h2>
-          <div className="max-w-3xl mx-auto space-y-4">
-            {faqData.map((faq, index) => (
+        {/* FAQ Section - Unified with Pricing Page */}
+        <section className="bg-light-cream rounded-2xl p-8 mb-16">
+          <h2 className="text-2xl font-bold text-deep-teal text-center mb-8">الأسئلة الشائعة</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {faqData.map((faq) => (
               <BaseCard key={faq.id} className="p-6">
-                                  <button
-                    className="flex w-full cursor-pointer items-center justify-between font-semibold text-right"
-                    onClick={() => toggleFaq(index)}
-                    aria-expanded={openFaqIndex === index}
-                  >
-                  <span className="text-lg text-deep-teal">
-                    {openFaqIndex === index ? '−' : '+'}
-                  </span>
-                  <span className="flex-1 text-deep-teal">{faq.question}</span>
-                </button>
-                {openFaqIndex === index && (
-                  <div className="mt-4 text-text-secondary border-t border-gray-200 pt-4">
-                    {faq.answer}
-                  </div>
-                )}
+                <h3 className="font-bold text-deep-teal mb-2 text-lg">{faq.question}</h3>
+                <p className="text-text-primary text-sm">{faq.answer}</p>
               </BaseCard>
             ))}
           </div>
         </section>
 
-        {/* Contact Section */}
-        <section id="contact" className="bg-gradient-to-r from-deep-teal/5 to-accent/5 rounded-2xl p-8">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-deep-teal mb-4">
-              تحتاج مساعدة؟
-            </h2>
-            <p className="text-lg text-text-secondary mb-6">
-              فريق الدعم لدينا جاهز لمساعدتك في اختيار أفضل خطة إعلانية لعملك
-            </p>
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={() => window.location.href = '/help'}
-            >
-              تواصل مع الدعم
-            </Button>
-          </div>
-        </section>
+        {/* Contact Section removed */}
       </div>
 
       {/* Ad Form Modal */}

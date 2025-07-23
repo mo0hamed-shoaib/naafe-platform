@@ -32,6 +32,8 @@ import ConversationsPage from './pages/ConversationsPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import AdvertisePage from './pages/AdvertisePage';
 import AdminIdentityVerifications from './admin/pages/AdminIdentityVerifications';
+import ProviderDetailsPage from './pages/ProviderDetailsPage';
+import HireProviderPage from './pages/HireProviderPage';
 
 const App = () => {
   return (
@@ -47,6 +49,14 @@ const App = () => {
               <Route path="/minimal" element={<MinimalTest />} />
               <Route path="/categories" element={<ServiceCategoriesPage />} />
               <Route path="/search" element={<SearchPage />} />
+              <Route path="/search/providers" element={<SearchPage />} />
+              <Route path="/search/service-requests" element={<SearchPage />} />
+              <Route path="/provider/:id" element={<ProviderDetailsPage />} />
+              <Route path="/hire-provider/:id" element={
+                <ProtectedRoute>
+                  <HireProviderPage />
+                </ProtectedRoute>
+              } />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
                 <Route path="/profile" element={

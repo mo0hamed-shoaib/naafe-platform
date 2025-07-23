@@ -42,6 +42,39 @@ router.get('/me/skills', authenticateToken, userController.getProviderSkills);
 router.patch('/me/skills', authenticateToken, userController.updateProviderSkills);
 
 /**
+ * @route   GET /api/users/me/portfolio
+ * @desc    Get current user's portfolio images
+ * @access  Private
+ */
+router.get('/me/portfolio', authenticateToken, userController.getOwnPortfolio);
+/**
+ * @route   POST /api/users/me/portfolio
+ * @desc    Add a portfolio image to current user
+ * @access  Private
+ */
+router.post('/me/portfolio', authenticateToken, userController.addPortfolioImage);
+/**
+ * @route   DELETE /api/users/me/portfolio
+ * @desc    Remove a portfolio image from current user
+ * @access  Private
+ */
+router.delete('/me/portfolio', authenticateToken, userController.removePortfolioImage);
+
+/**
+ * @route   GET /api/users/me/availability
+ * @desc    Get current user's availability
+ * @access  Private
+ */
+router.get('/me/availability', authenticateToken, userController.getAvailability);
+
+/**
+ * @route   PATCH /api/users/me/availability
+ * @desc    Update current user's availability
+ * @access  Private
+ */
+router.patch('/me/availability', authenticateToken, userController.updateAvailability);
+
+/**
  * @route   GET /api/users/:id
  * @desc    Get public user profile by ID
  * @access  Public (with optional auth)
@@ -49,11 +82,32 @@ router.patch('/me/skills', authenticateToken, userController.updateProviderSkill
 router.get('/:id', optionalAuth, validateUserId, userController.getPublicUserProfile);
 
 /**
+ * @route   GET /api/users/:id/portfolio
+ * @desc    Get public user's portfolio images
+ * @access  Public
+ */
+router.get('/:id/portfolio', optionalAuth, userController.getUserPortfolio);
+
+/**
  * @route   GET /api/users/:id/stats
  * @desc    Get user statistics
  * @access  Public
  */
 router.get('/:id/stats', validateUserId, userController.getUserStats);
+
+/**
+ * @route   GET /api/users/:id/listings
+ * @desc    Get user's public listings/services
+ * @access  Public
+ */
+router.get('/:id/listings', validateUserId, userController.getUserListings);
+
+/**
+ * @route   GET /api/users/:id/reviews
+ * @desc    Get user's reviews
+ * @access  Public
+ */
+router.get('/:id/reviews', validateUserId, userController.getUserReviews);
 
 // Admin: Get all users (paginated, filterable)
 router.get('/', authenticateToken, requireRole(['admin']), userController.getAllUsers);

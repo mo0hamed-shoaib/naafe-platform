@@ -71,7 +71,7 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/ads', adRoutes);
-app.use('/api', listingRoutes);
+app.use('/api/listings', listingRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -15,7 +15,7 @@ class ListingController {
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [listings, totalCount] = await Promise.all([
         ServiceListing.find(query)
-          .populate('provider', 'name avatarUrl isPremium isTopRated isVerified totalJobsCompleted')
+          .populate('provider', 'name avatarUrl isPremium isTopRated isVerified totalJobsCompleted providerProfile')
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(parseInt(limit)),
@@ -155,7 +155,6 @@ class ListingController {
         status,
         minPrice,
         maxPrice,
-        deliveryTimeDays,
         provider,
         search,
         premiumOnly,
@@ -166,7 +165,6 @@ class ListingController {
       if (category) query.category = category;
       if (status) query.status = status;
       if (provider) query.provider = provider;
-      if (deliveryTimeDays) query.deliveryTimeDays = parseInt(deliveryTimeDays);
       if (minPrice || maxPrice) {
         query['price.amount'] = {};
         if (minPrice) query['price.amount'].$gte = parseFloat(minPrice);
@@ -197,9 +195,9 @@ class ListingController {
               provider: '$providerData'
             }
           },
-          { $project: { providerData: 0 } },
+          { $project: { providerData: 0, 'provider.password': 0 } },
           { $sort: { createdAt: -1 } },
-          { $skip: skip },
+          { $skip: (parseInt(page) - 1) * parseInt(limit) },
           { $limit: parseInt(limit) }
         ];
         
@@ -245,7 +243,7 @@ class ListingController {
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [listings, totalCount] = await Promise.all([
         ServiceListing.find(query)
-          .populate('provider', 'name avatarUrl isPremium isTopRated isVerified totalJobsCompleted')
+          .populate('provider', 'name avatarUrl isPremium isTopRated isVerified totalJobsCompleted providerProfile')
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(parseInt(limit)),

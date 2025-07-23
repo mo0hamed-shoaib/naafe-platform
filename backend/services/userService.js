@@ -119,8 +119,12 @@ class UserService {
       if (user.roles.includes('provider')) {
         stats = {
           ...stats,
-          totalJobsCompleted: user.totalJobsCompleted || 0,
-          totalEarnings: user.totalEarnings || 0
+          totalJobsCompleted: user.providerProfile?.totalJobsCompleted || 0,
+          totalEarnings: user.providerProfile?.totalEarnings || 0,
+          averageRating: user.providerProfile?.rating || user.rating || 0,
+          totalReviews: user.providerProfile?.reviewCount || user.reviewCount || 0,
+          responseTime: user.providerProfile?.averageResponseTime || 'غير محدد',
+          completionRate: user.providerProfile?.completionRate || 0
         };
       } else if (user.roles.includes('seeker')) {
         stats = {
@@ -164,6 +168,11 @@ class UserService {
     const avgRating = reviewCount > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount) : 0;
     user.rating = avgRating;
     user.reviewCount = reviewCount;
+    // Also update providerProfile if user is a provider
+    if (user.roles.includes('provider') && user.providerProfile) {
+      user.providerProfile.rating = avgRating;
+      user.providerProfile.reviewCount = reviewCount;
+    }
     await user.save();
   }
 
@@ -186,6 +195,71 @@ class UserService {
     user.providerProfile.skills = skills;
     await user.save();
     return user.providerProfile.skills;
+  }
+
+  async addPortfolioImage(userId, imageUrl) {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { portfolio: imageUrl } },
+      { new: true }
+    );
+    return user;
+  }
+
+  async removePortfolioImage(userId, imageUrl) {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { portfolio: imageUrl } },
+      { new: true }
+    );
+    return user;
+  }
+
+  /**
+   * Get user's public listings/services
+   */
+  async getUserListings(userId) {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    // Get user's service listings
+    const ServiceListing = (await import('../models/ServiceListing.js')).default;
+    const listings = await ServiceListing.find({ 
+      provider: userId, 
+      status: 'active' 
+    }).populate('provider', 'name avatarUrl');
+
+    return listings;
+  }
+
+  /**
+   * Get user's reviews
+   */
+  async getUserReviews(userId) {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    // Get reviews for this user (when they were the provider)
+    const Review = (await import('../models/Review.js')).default;
+    const reviews = await Review.find({ 
+      reviewedUser: userId 
+    }).populate('reviewer', 'name avatarUrl').sort({ createdAt: -1 });
+
+    return reviews;
+  }
+
+  /**
+   * Update provider availability
+   */
+  async updateAvailability(userId, { workingDays, startTime, endTime }) {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+    if (!user.providerProfile) user.providerProfile = {};
+    user.providerProfile.workingDays = workingDays;
+    user.providerProfile.startTime = startTime;
+    user.providerProfile.endTime = endTime;
+    await user.save();
+    return user;
   }
 
   // Admin: Get all users (paginated, filterable)

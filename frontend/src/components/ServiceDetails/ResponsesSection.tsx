@@ -11,6 +11,12 @@ interface Response {
   price: number;
   specialties: string[];
   verified?: boolean;
+  completedJobs?: number;
+  responseTime?: string;
+  completionRate?: number;
+  joinDate?: string;
+  isTopRated?: boolean;
+  isPremium?: boolean;
   message?: string;
   estimatedTimeDays?: number;
   availableDates?: string[];
@@ -19,6 +25,14 @@ interface Response {
   jobRequestSeekerId?: string;
   status?: string; // 'pending', 'accepted', 'rejected'
   providerId?: string; // Provider's user ID for profile navigation
+  stats?: {
+    rating: number;
+    completedJobs: number;
+    completionRate: number;
+    joinDate: string;
+    isTopRated: boolean;
+    isPremium: boolean;
+  };
 }
 
 interface ResponsesSectionProps {
@@ -51,7 +65,15 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
     timePreferences: resp.timePreferences || [],
     status: resp.status || 'pending',
     providerId: resp.providerId || '',
-    jobRequestSeekerId: resp.jobRequestSeekerId || ''
+    jobRequestSeekerId: resp.jobRequestSeekerId || '',
+    stats: resp.stats || {
+      rating: 0,
+      completedJobs: 0,
+      completionRate: 0,
+      joinDate: '',
+      isTopRated: false,
+      isPremium: false,
+    }
   }));
 
   // Helper function to determine if action buttons should be shown
@@ -164,37 +186,64 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
             {/* Provider Info */}
             <div className="flex items-center gap-4 mb-4">
               <button
-                onClick={() => resp.providerId && window.open(`/profile/${resp.providerId}`, '_blank')}
+                onClick={() => resp.providerId && window.open(`/provider/${resp.providerId}`, '_blank')}
                 className="cursor-pointer hover:opacity-80 transition-opacity"
                 disabled={!resp.providerId}
               >
                 <img
                   src={resp.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=face&auto=format"}
                   alt={resp.name}
-                  className="w-16 h-16 rounded-full object-cover border-2 border-deep-teal/20"
+                  className={`w-16 h-16 rounded-full object-cover border-2 ${
+                    resp.isPremium ? 'border-yellow-300' : 'border-deep-teal/20'
+                  }`}
                 />
               </button>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <button
-                    onClick={() => resp.providerId && window.open(`/profile/${resp.providerId}`, '_blank')}
+                    onClick={() => resp.providerId && window.open(`/provider/${resp.providerId}`, '_blank')}
                     className="cursor-pointer hover:text-teal-700 transition-colors"
                     disabled={!resp.providerId}
                   >
                     <h3 className="font-bold text-lg text-deep-teal hover:underline">{resp.name}</h3>
                   </button>
                   {resp.verified && (
+                    <Badge variant="status" size="sm">
+                      موثق
+                    </Badge>
+                  )}
+                  {resp.isTopRated && (
                     <Badge variant="top-rated" size="sm">
-                      موثوق
+                      أعلى تقييم
+                    </Badge>
+                  )}
+                  {resp.isPremium && (
+                    <Badge variant="premium" size="sm">
+                      مميز
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-4 text-sm text-deep-teal">
+                <div className="flex items-center gap-4 text-sm text-deep-teal mb-2">
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 fill-current" />
-                    <span>{resp.rating.toFixed(1)} ({resp.specialties.length} تخصص)</span>
+                    <span>{resp.stats.rating.toFixed(1)}</span>
                   </div>
+                  {resp.stats.completedJobs !== undefined && (
+                    <span>{resp.stats.completedJobs} مهمة مكتملة</span>
+                  )}
+                  {resp.stats.completionRate !== undefined && (
+                    <span>معدل إنجاز {resp.stats.completionRate}%</span>
+                  )}
                 </div>
+                {resp.specialties && resp.specialties.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {resp.specialties.map((skill, index) => (
+                      <span key={index} className="text-xs bg-soft-teal/20 text-deep-teal px-2 py-1 rounded-full">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

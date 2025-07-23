@@ -111,7 +111,7 @@ class OfferService {
       }
       
       const offers = await Offer.find(query)
-        .populate('provider', 'name email phone rating reviewCount')
+        .populate('provider', 'name email phone avatarUrl isPremium isTopRated isVerified providerProfile')
         .sort({ createdAt: -1 });
       
       return offers;
@@ -153,7 +153,7 @@ class OfferService {
       }
       
       const offers = await Offer.find(query)
-        .populate('provider', 'name email phone rating reviewCount')
+        .populate('provider', 'name email phone avatarUrl isPremium isTopRated isVerified providerProfile')
         .populate('jobRequest', 'title description budget deadline status')
         .sort({ createdAt: -1 });
       
@@ -167,7 +167,7 @@ class OfferService {
   async getOfferById(offerId, userId = null) {
     try {
       const offer = await Offer.findById(offerId)
-        .populate('provider', 'name email phone rating reviewCount')
+        .populate('provider', 'name email phone avatarUrl isPremium isTopRated isVerified providerProfile')
         .populate('jobRequest', 'title description budget deadline status seeker');
       
       if (!offer) {

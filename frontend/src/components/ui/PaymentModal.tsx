@@ -22,14 +22,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   loading = false
 }) => {
   const [amount, setAmount] = useState('');
-  const [error, setError] = useState('');
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     // Only allow numbers and decimal point
     if (/^\d*\.?\d{0,2}$/.test(value) || value === '') {
       setAmount(value);
-      setError('');
     }
   };
 
@@ -37,12 +35,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     const numAmount = parseFloat(amount);
     
     if (!amount || numAmount <= 0) {
-      setError('يرجى إدخال مبلغ صحيح');
       return;
     }
 
     if (numAmount < 1) {
-      setError('الحد الأدنى للمبلغ هو 1 جنيه');
       return;
     }
 
@@ -51,7 +47,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const handleClose = () => {
     setAmount('');
-    setError('');
     onClose();
   };
 
@@ -70,40 +65,35 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
           </div>
         </div>
 
-        {/* Payment Amount */}
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-text-primary">
-            مبلغ الدفع (جنيه مصري)
+        {/* Amount Input */}
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-2">
+            المبلغ المطلوب (جنيه مصري)
           </label>
-          <p className="text-xs text-text-secondary">
-            سيتم تحويل المبلغ إلى الدولار الأمريكي عند الدفع
-          </p>
           <div className="relative">
             <FormInput
               type="text"
               value={amount}
               onChange={handleAmountChange}
               placeholder="أدخل المبلغ"
-              className="pl-10"
+              required
+              className="pl-8"
               disabled={loading}
             />
             <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           </div>
-          {error && (
-            <div className="flex items-center gap-2 text-red-600 text-sm">
-              <AlertCircle className="w-4 h-4" />
-              {error}
-            </div>
-          )}
+          <p className="text-sm text-text-secondary">
+            * سيتم تحويل المبلغ إلى الدولار الأمريكي عند الدفع
+          </p>
         </div>
 
-        {/* Important Notice */}
+        {/* Information Notice */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
             <div className="text-sm text-blue-800">
               <p className="font-medium mb-1">ملاحظة مهمة:</p>
-              <ul className="space-y-1 text-xs">
+              <ul className="space-y-1 text-sm">
                 <li>• سيتم توجيهك إلى صفحة دفع آمنة من Stripe</li>
                 <li>• يمكنك استخدام بطاقة ائتمان تجريبية للاختبار</li>
                 <li>• لن يتم خصم أي مبالغ حقيقية في وضع الاختبار</li>

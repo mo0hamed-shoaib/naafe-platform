@@ -314,9 +314,9 @@ const AdminManageUsers: React.FC = () => {
       render: (value: unknown, row: Record<string, unknown>) => {
         const user = row as unknown as User;
         return (
-          <span className={`font-medium ${user.isBlocked ? 'text-red-600' : 'text-deep-teal'}`}>
-            {String(value)}
-          </span>
+        <span className={`font-medium ${user.isBlocked ? 'text-red-600' : 'text-deep-teal'}`}>
+          {String(value)}
+        </span>
         );
       }
     },
@@ -327,9 +327,9 @@ const AdminManageUsers: React.FC = () => {
       render: (value: unknown, row: Record<string, unknown>) => {
         const user = row as unknown as User;
         return (
-          <span className={user.isBlocked ? 'text-red-600' : 'text-deep-teal'}>
-            {String(value)}
-          </span>
+        <span className={user.isBlocked ? 'text-red-600' : 'text-deep-teal'}>
+          {String(value)}
+        </span>
         );
       }
     },
@@ -340,9 +340,9 @@ const AdminManageUsers: React.FC = () => {
       render: (value: unknown, row: Record<string, unknown>) => {
         const user = row as unknown as User;
         return (
-          <span className={user.isBlocked ? 'text-red-600' : 'text-deep-teal'}>
-            {String(value)}
-          </span>
+        <span className={user.isBlocked ? 'text-red-600' : 'text-deep-teal'}>
+          {String(value)}
+        </span>
         );
       }
     },
@@ -353,11 +353,11 @@ const AdminManageUsers: React.FC = () => {
       render: (value: unknown, row: Record<string, unknown>) => {
         const user = row as unknown as User;
         return (
-          <ExpandableAddress
-            address={user.address}
-            userId={user.id}
-            isBlocked={user.isBlocked}
-          />
+        <ExpandableAddress
+          address={user.address}
+          userId={user.id}
+          isBlocked={user.isBlocked}
+        />
         );
       }
     },

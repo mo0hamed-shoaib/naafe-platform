@@ -353,18 +353,9 @@ class JobRequestService {
       //   throw new Error('Not authorized to view offers for this job request');
       // }
 
-      // Import Offer model
-      const Offer = (await import('../models/Offer.js')).default;
-
-      let query = { jobRequest: jobRequestId };
-      if (filters.status) {
-        query.status = filters.status;
-      }
-
-      const offers = await Offer.find(query)
-        .populate('provider', 'name email phone rating reviewCount')
-        .populate('jobRequest', 'seeker title status')
-        .sort({ createdAt: -1 });
+      // Use offerService to get offers with proper population
+      const offerService = (await import('./offerService.js')).default;
+      const offers = await offerService.getOffersByJobRequest(jobRequestId, filters);
 
       return offers;
     } catch (error) {
