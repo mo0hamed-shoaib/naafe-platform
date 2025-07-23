@@ -1,6 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import swaggerUi from 'swagger-ui-express';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { parse } from 'yaml';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
@@ -29,6 +34,7 @@ app.use(cors({
   origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
   credentials: true
 })); // Enable CORS
+
 // Parse JSON for all routes except webhook
 app.use((req, res, next) => {
   if (req.path === '/api/payment/webhook') {
@@ -52,6 +58,14 @@ app.use((req, res, next) => {
 app.use(requestLogger); // Request/response logging
 // app.use(performanceLogger); // Performance monitoring
 app.use(securityLogger); // Security logging
+
+// Swagger setup
+const __filename = fileURLToPath(import.meta.url); // Get the current file path
+const __dirname = dirname(__filename); // Get the directory of the current file
+const swaggerFilePath = join(__dirname, 'swagger.yaml'); // Path to swagger.yaml in root
+const swaggerSpec = readFileSync(swaggerFilePath, 'utf8');
+const swaggerDocument = parse(swaggerSpec);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -117,7 +131,7 @@ app.use((error, req, res, next) => {
   res.status(500).json({
     success: false,
     error: {
-      code: 'INTERNAL_ERROR',
+      code: 'INTERNAL_SERVER_ERROR',
       message: 'Internal server error'
     },
     timestamp: new Date().toISOString()

@@ -29,7 +29,9 @@
     "node-fetch": "^3.3.2",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "stripe": "^18.3.0"
+    "stripe": "^18.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.8.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

@@ -20,6 +20,7 @@ socketService.initialize(server);
     await connectDB();
     server.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`📖 Swagger UI available at http://localhost:${PORT}/api-docs`);
       console.log(`🔌 Socket.IO server ready`);
     });
   } catch (error) {
