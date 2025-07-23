@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Menu, X, Bell, CheckCircle, MessageCircle, AlertCircle } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Button from './ui/Button';
 import UserDropdown from './ui/UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
@@ -35,6 +35,7 @@ interface NotificationItem {
 const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
   const { user, logout, accessToken } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState(searchValue);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -418,7 +419,8 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
                   <li key={item.href}>
                     <Link 
                       to={item.href} 
-                      className="font-medium text-text-primary hover:text-deep-teal/90 transition-colors duration-200 rounded-lg px-3 py-2 hover:bg-bright-orange/10 focus:outline-none focus:ring-2 focus:ring-deep-teal/50"
+                      className={`font-medium transition-colors duration-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-deep-teal/50
+                        ${location.pathname === item.href ? 'text-deep-teal font-extrabold underline underline-offset-8 decoration-bright-orange decoration-4' : 'text-text-primary hover:text-deep-teal/90 hover:bg-bright-orange/10'}`}
                     >
                       {item.label}
                     </Link>
@@ -443,7 +445,8 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
                   ) : (
                     <Link 
                       to="/post-service"
-                      className="font-medium text-text-primary hover:text-deep-teal/90 transition-colors duration-200 rounded-lg px-3 py-2 hover:bg-bright-orange/10 focus:outline-none focus:ring-2 focus:ring-deep-teal/50"
+                      className={`font-medium transition-colors duration-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-deep-teal/50
+                        ${location.pathname === '/post-service' ? 'text-deep-teal font-extrabold underline underline-offset-8 decoration-bright-orange decoration-4' : 'text-text-primary hover:text-deep-teal/90 hover:bg-bright-orange/10'}`}
                     >
                       نشر خدمة
                     </Link>
@@ -452,7 +455,8 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
                 <li>
                   <Link 
                     to="/request-service"
-                    className="font-medium text-text-primary hover:text-deep-teal/90 transition-colors duration-200 rounded-lg px-3 py-2 hover:bg-bright-orange/10 focus:outline-none focus:ring-2 focus:ring-deep-teal/50"
+                    className={`font-medium transition-colors duration-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-deep-teal/50
+                      ${location.pathname === '/request-service' ? 'text-deep-teal font-extrabold underline underline-offset-8 decoration-bright-orange decoration-4' : 'text-text-primary hover:text-deep-teal/90 hover:bg-bright-orange/10'}`}
                   >
                     طلب خدمة
                   </Link>
@@ -555,7 +559,8 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
                     <li key={item.href}>
                       <Link 
                         to={item.href} 
-                        className="block font-medium text-text-primary hover:text-deep-teal/90 transition-colors duration-200 rounded-lg px-3 py-2 hover:bg-bright-orange/10 focus:outline-none focus:ring-2 focus:ring-deep-teal/50"
+                        className={`block font-medium transition-colors duration-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-deep-teal/50
+                          ${location.pathname === item.href ? 'text-deep-teal font-extrabold underline underline-offset-8 decoration-bright-orange decoration-4' : 'text-text-primary hover:text-deep-teal/90 hover:bg-bright-orange/10'}`}
                         onClick={closeMobileMenu}
                       >
                         {item.label}
@@ -575,7 +580,8 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
                     ) : (
                       <Link 
                         to="/post-service"
-                        className="block font-medium text-text-primary hover:text-deep-teal/90 transition-colors duration-200 rounded-lg px-3 py-2 hover:bg-bright-orange/10 focus:outline-none focus:ring-2 focus:ring-deep-teal/50"
+                        className={`block font-medium transition-colors duration-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-deep-teal/50
+                          ${location.pathname === '/post-service' ? 'text-deep-teal font-extrabold underline underline-offset-8 decoration-bright-orange decoration-4' : 'text-text-primary hover:text-deep-teal/90 hover:bg-bright-orange/10'}`}
                         onClick={closeMobileMenu}
                       >
                         نشر خدمة
@@ -583,7 +589,8 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
                     )}
                     <Link 
                       to="/request-service"
-                      className="block font-medium text-text-primary hover:text-deep-teal/90 transition-colors duration-200 rounded-lg px-3 py-2 hover:bg-bright-orange/10 focus:outline-none focus:ring-2 focus:ring-deep-teal/50"
+                      className={`block font-medium transition-colors duration-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-deep-teal/50
+                        ${location.pathname === '/request-service' ? 'text-deep-teal font-extrabold underline underline-offset-8 decoration-bright-orange decoration-4' : 'text-text-primary hover:text-deep-teal/90 hover:bg-bright-orange/10'}`}
                       onClick={closeMobileMenu}
                     >
                       طلب خدمة
