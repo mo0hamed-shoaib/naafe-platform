@@ -5,6 +5,7 @@ import {
   getMessages,
   markMessagesAsRead,
   getConversationByJobRequest,
+  createOrGetConversationByJobRequest,
   getUnreadCount,
   getConversationById
 } from '../controllers/chatController.js';
@@ -28,6 +29,8 @@ router.patch('/conversations/:conversationId/read', markMessagesAsRead);
 
 // Get conversation by job request ID
 router.get('/job-requests/:jobRequestId/conversation', getConversationByJobRequest);
+// Create or get conversation by job request ID (for chat-first negotiation)
+router.post('/job-requests/:jobRequestId/conversation', createOrGetConversationByJobRequest);
 
 // Get unread message count
 router.get('/unread-count', getUnreadCount);

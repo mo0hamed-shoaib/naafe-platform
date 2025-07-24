@@ -49,6 +49,27 @@ const offerSchema = new mongoose.Schema({
     enum: ['morning', 'afternoon', 'evening', 'flexible'],
     required: false
   }],
+  // Negotiation object for offer-based agreement
+  negotiation: {
+    price: { type: Number },
+    date: { type: Date },
+    time: { type: String },
+    materials: { type: String },
+    scope: { type: String },
+    seekerConfirmed: { type: Boolean, default: false },
+    providerConfirmed: { type: Boolean, default: false },
+    negotiationHistory: [
+      {
+        field: { type: String },
+        oldValue: { type: mongoose.Schema.Types.Mixed },
+        newValue: { type: mongoose.Schema.Types.Mixed },
+        changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        timestamp: { type: Date, default: Date.now }
+      }
+    ],
+    lastModifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    lastModifiedAt: { type: Date }
+  },
   status: {
     type: String,
     enum: ['pending', 'accepted', 'rejected', 'withdrawn'],

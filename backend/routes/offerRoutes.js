@@ -98,4 +98,55 @@ router.delete('/:offerId',
   offerController.deleteOffer
 );
 
+/**
+ * @route   PATCH /api/offers/:offerId/negotiation
+ * @desc    Update negotiation terms for an offer
+ * @access  Private (Provider or Seeker)
+ */
+router.patch('/:offerId/negotiation',
+  authenticateToken,
+  requireRole(['provider', 'seeker']),
+  offerIdValidation,
+  handleValidationErrors,
+  offerController.updateNegotiationTerms
+);
+
+/**
+ * @route   POST /api/offers/:offerId/confirm-negotiation
+ * @desc    Confirm negotiation terms for an offer (by either party)
+ * @access  Private (Provider or Seeker)
+ */
+router.post('/:offerId/confirm-negotiation',
+  authenticateToken,
+  requireRole(['provider', 'seeker']),
+  offerIdValidation,
+  handleValidationErrors,
+  offerController.confirmNegotiation
+);
+
+/**
+ * @route   POST /api/offers/:offerId/reset-confirmation
+ * @desc    Reset negotiation confirmations for an offer
+ * @access  Private (Provider or Seeker)
+ */
+router.post('/:offerId/reset-confirmation',
+  authenticateToken,
+  requireRole(['provider', 'seeker']),
+  offerIdValidation,
+  handleValidationErrors,
+  offerController.resetNegotiationConfirmation
+);
+
+/**
+ * @route   GET /api/offers/:offerId/negotiation-history
+ * @desc    Get negotiation history for an offer
+ * @access  Private (Provider or Seeker)
+ */
+router.get('/:offerId/negotiation-history',
+  authenticateToken,
+  offerIdValidation,
+  handleValidationErrors,
+  offerController.getNegotiationHistory
+);
+
 export default router; 

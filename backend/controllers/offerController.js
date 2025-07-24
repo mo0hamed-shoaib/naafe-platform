@@ -45,7 +45,8 @@ class OfferController {
       const mappedOffers = offers.map(offer => ({
         ...offer.toObject(),
         jobRequest: offer.jobRequest && offer.jobRequest._id ? offer.jobRequest._id.toString() : offer.jobRequest,
-        providerId: offer.provider && offer.provider._id ? offer.provider._id.toString() : undefined
+        providerId: offer.provider && offer.provider._id ? offer.provider._id.toString() : undefined,
+        jobRequestId: offer.jobRequest && offer.jobRequest._id ? offer.jobRequest._id.toString() : undefined
       }));
       
       logger.info(`Found ${offers.length} offers for user ${userId}`);
@@ -312,6 +313,99 @@ class OfferController {
         success: false,
         error: {
           code: 'OFFER_REJECTION_ERROR',
+          message: error.message
+        }
+      });
+    }
+  }
+
+  // Update negotiation terms for an offer
+  async updateNegotiationTerms(req, res) {
+    try {
+      const { offerId } = req.params;
+      const userId = req.user._id;
+      const updateData = req.body;
+      const result = await offerService.updateNegotiationTerms(offerId, userId, updateData);
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Negotiation terms updated successfully'
+      });
+    } catch (error) {
+      logger.error(`Error updating negotiation terms: ${error.message}`);
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'NEGOTIATION_UPDATE_ERROR',
+          message: error.message
+        }
+      });
+    }
+  }
+
+  // Confirm negotiation for an offer
+  async confirmNegotiation(req, res) {
+    try {
+      const { offerId } = req.params;
+      const userId = req.user._id;
+      const result = await offerService.confirmNegotiation(offerId, userId);
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Negotiation confirmed successfully'
+      });
+    } catch (error) {
+      logger.error(`Error confirming negotiation: ${error.message}`);
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'NEGOTIATION_CONFIRM_ERROR',
+          message: error.message
+        }
+      });
+    }
+  }
+
+  // Reset negotiation confirmations for an offer
+  async resetNegotiationConfirmation(req, res) {
+    try {
+      const { offerId } = req.params;
+      const userId = req.user._id;
+      const result = await offerService.resetNegotiationConfirmation(offerId, userId);
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Negotiation confirmations reset successfully'
+      });
+    } catch (error) {
+      logger.error(`Error resetting negotiation confirmations: ${error.message}`);
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'NEGOTIATION_RESET_ERROR',
+          message: error.message
+        }
+      });
+    }
+  }
+
+  // Get negotiation history for an offer
+  async getNegotiationHistory(req, res) {
+    try {
+      const { offerId } = req.params;
+      const userId = req.user._id;
+      const result = await offerService.getNegotiationHistory(offerId, userId);
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Negotiation history retrieved successfully'
+      });
+    } catch (error) {
+      logger.error(`Error getting negotiation history: ${error.message}`);
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'NEGOTIATION_HISTORY_ERROR',
           message: error.message
         }
       });

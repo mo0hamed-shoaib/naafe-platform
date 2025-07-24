@@ -357,7 +357,13 @@ class JobRequestService {
       const offerService = (await import('./offerService.js')).default;
       const offers = await offerService.getOffersByJobRequest(jobRequestId, filters);
 
-      return offers;
+      // Ensure jobRequestId is present in each offer object
+      const mappedOffers = offers.map(offer => ({
+        ...offer.toObject(),
+        jobRequestId: jobRequestId.toString(),
+      }));
+
+      return mappedOffers;
     } catch (error) {
       throw error;
     }

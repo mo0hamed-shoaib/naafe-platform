@@ -167,8 +167,8 @@ class OfferService {
   async getOfferById(offerId, userId = null) {
     try {
       const offer = await Offer.findById(offerId)
-        .populate('provider', 'name email phone avatarUrl isPremium isTopRated isVerified providerProfile')
-        .populate('jobRequest', 'title description budget deadline status seeker');
+        .populate('provider', '_id name email phone avatarUrl isPremium isTopRated isVerified providerProfile')
+        .populate({ path: 'jobRequest', select: 'title description budget deadline status seeker', populate: { path: 'seeker', select: '_id name email' } });
       
       if (!offer) {
         throw new Error('Offer not found');
@@ -182,9 +182,18 @@ class OfferService {
         }
         
         // Only offer owner, job request owner, or admin can view
+        const providerId = offer.provider?._id ? offer.provider._id.toString() : offer.provider?.toString();
+        const seekerId = offer.jobRequest?.seeker?._id ? offer.jobRequest.seeker._id.toString() : offer.jobRequest?.seeker?.toString();
         if (!user.roles.includes('admin') && 
-            offer.provider._id.toString() !== userId && 
-            offer.jobRequest.seeker.toString() !== userId) {
+            providerId !== userId.toString() && 
+            seekerId !== userId.toString()) {
+          console.warn('[Offer Access Denied]', {
+            userId,
+            providerId,
+            seekerId,
+            userRoles: user.roles,
+            offerId
+          });
           throw new Error('Access denied');
         }
       }
@@ -413,6 +422,156 @@ class OfferService {
     } catch (error) {
       throw error;
     }
+  }
+
+  // Update negotiation terms for an offer
+  async updateNegotiationTerms(offerId, userId, updateData) {
+    const Offer = (await import('../models/Offer.js')).default;
+    const offer = await Offer.findById(offerId).populate('jobRequest');
+    if (!offer) throw new Error('Offer not found');
+    // Only provider or job request seeker can update
+    if (
+      offer.provider.toString() !== userId.toString() &&
+      offer.jobRequest.seeker.toString() !== userId.toString()
+    ) {
+      throw new Error('Access denied');
+    }
+    // Only allow update if offer is pending
+    if (offer.status !== 'pending') throw new Error('Can only update negotiation for pending offers');
+    const negotiation = offer.negotiation || {};
+    const fields = ['price', 'date', 'time', 'materials', 'scope'];
+    let changes = [];
+    let confirmationsWereSet = negotiation.seekerConfirmed && negotiation.providerConfirmed;
+    fields.forEach(field => {
+      if (updateData[field] !== undefined && updateData[field] !== negotiation[field]) {
+        changes.push({
+          field,
+          oldValue: negotiation[field],
+          newValue: updateData[field],
+          changedBy: userId,
+          timestamp: new Date()
+        });
+        negotiation[field] = updateData[field];
+      }
+    });
+    if (changes.length === 0) throw new Error('No changes to negotiation terms');
+    // If both had confirmed, reset confirmations and push reset event
+    if (confirmationsWereSet) {
+      negotiation.seekerConfirmed = false;
+      negotiation.providerConfirmed = false;
+      changes.push({
+        field: 'confirmation',
+        oldValue: true,
+        newValue: false,
+        changedBy: userId,
+        timestamp: new Date(),
+        note: 'Confirmations reset due to negotiation change'
+      });
+    }
+    negotiation.lastModifiedBy = userId;
+    negotiation.lastModifiedAt = new Date();
+    negotiation.negotiationHistory = negotiation.negotiationHistory || [];
+    negotiation.negotiationHistory.push(...changes);
+    offer.negotiation = negotiation;
+    await offer.save();
+    return offer.negotiation;
+  }
+
+  // Confirm negotiation for an offer
+  async confirmNegotiation(offerId, userId) {
+    const Offer = (await import('../models/Offer.js')).default;
+    const offer = await Offer.findById(offerId).populate('jobRequest');
+    if (!offer) throw new Error('Offer not found');
+    // Only provider or job request seeker can confirm
+    if (
+      offer.provider.toString() !== userId.toString() &&
+      offer.jobRequest.seeker.toString() !== userId.toString()
+    ) {
+      throw new Error('Access denied');
+    }
+    // Only allow confirm if offer is pending
+    if (offer.status !== 'pending') throw new Error('Can only confirm negotiation for pending offers');
+    const negotiation = offer.negotiation || {};
+    const requiredFields = ['price', 'date', 'time', 'materials', 'scope'];
+    for (const field of requiredFields) {
+      if (!negotiation[field]) throw new Error(`Negotiation field '${field}' must be set before confirmation`);
+    }
+    if (offer.provider.toString() === userId.toString()) {
+      negotiation.providerConfirmed = true;
+    } else {
+      negotiation.seekerConfirmed = true;
+    }
+    negotiation.lastModifiedBy = userId;
+    negotiation.lastModifiedAt = new Date();
+    negotiation.negotiationHistory = negotiation.negotiationHistory || [];
+    negotiation.negotiationHistory.push({
+      field: 'confirmation',
+      oldValue: false,
+      newValue: true,
+      changedBy: userId,
+      timestamp: new Date(),
+      note: 'Party confirmed negotiation terms'
+    });
+    offer.negotiation = negotiation;
+    await offer.save();
+    // Emit real-time negotiation update to both provider and seeker
+    const socketService = (await import('./socketService.js')).default;
+    socketService.io.to(`user:${offer.provider}`).emit('negotiation:update', { offerId });
+    socketService.io.to(`user:${offer.jobRequest.seeker}`).emit('negotiation:update', { offerId });
+    return offer.negotiation;
+  }
+
+  // Reset negotiation confirmations for an offer
+  async resetNegotiationConfirmation(offerId, userId) {
+    const Offer = (await import('../models/Offer.js')).default;
+    const offer = await Offer.findById(offerId).populate('jobRequest');
+    if (!offer) throw new Error('Offer not found');
+    // Only provider or job request seeker can reset
+    if (
+      offer.provider.toString() !== userId.toString() &&
+      offer.jobRequest.seeker.toString() !== userId.toString()
+    ) {
+      throw new Error('Access denied');
+    }
+    // Only allow reset if offer is pending
+    if (offer.status !== 'pending') throw new Error('Can only reset negotiation for pending offers');
+    const negotiation = offer.negotiation || {};
+    negotiation.seekerConfirmed = false;
+    negotiation.providerConfirmed = false;
+    negotiation.lastModifiedBy = userId;
+    negotiation.lastModifiedAt = new Date();
+    negotiation.negotiationHistory = negotiation.negotiationHistory || [];
+    negotiation.negotiationHistory.push({
+      field: 'confirmation',
+      oldValue: true,
+      newValue: false,
+      changedBy: userId,
+      timestamp: new Date(),
+      note: 'Confirmations reset by user request'
+    });
+    offer.negotiation = negotiation;
+    await offer.save();
+    // Emit real-time negotiation update to both provider and seeker
+    const socketService = (await import('./socketService.js')).default;
+    socketService.io.to(`user:${offer.provider}`).emit('negotiation:update', { offerId });
+    socketService.io.to(`user:${offer.jobRequest.seeker}`).emit('negotiation:update', { offerId });
+    return offer.negotiation;
+  }
+
+  // Get negotiation history for an offer
+  async getNegotiationHistory(offerId, userId) {
+    const Offer = (await import('../models/Offer.js')).default;
+    const offer = await Offer.findById(offerId).populate('jobRequest');
+    if (!offer) throw new Error('Offer not found');
+    // Only provider or job request seeker can view
+    if (
+      offer.provider.toString() !== userId.toString() &&
+      offer.jobRequest.seeker.toString() !== userId.toString()
+    ) {
+      throw new Error('Access denied');
+    }
+    const negotiation = offer.negotiation || {};
+    return negotiation.negotiationHistory || [];
   }
 }
 

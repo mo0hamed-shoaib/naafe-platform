@@ -247,3 +247,55 @@ export const getConversationById = async (req, res) => {
     });
   }
 }; 
+
+/**
+ * Create or get conversation by job request ID (for chat-first negotiation)
+ */
+export const createOrGetConversationByJobRequest = async (req, res) => {
+  try {
+    const { jobRequestId } = req.params;
+    const userId = req.user._id;
+    const userRoles = req.user.roles || [];
+    let { providerId } = req.body;
+
+    // If providerId is not provided, try to get from query
+    if (!providerId && req.query.providerId) {
+      providerId = req.query.providerId;
+    }
+
+    if (!providerId) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'PROVIDER_ID_REQUIRED', message: 'providerId is required' }
+      });
+    }
+
+    let seekerId, actualProviderId;
+    if (userRoles.includes('seeker')) {
+      seekerId = userId;
+      actualProviderId = providerId;
+    } else if (userRoles.includes('provider')) {
+      seekerId = providerId;
+      actualProviderId = userId;
+    } else {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only seekers or providers can start a conversation' }
+      });
+    }
+
+    const conversation = await chatService.getOrCreateConversation(jobRequestId, seekerId, actualProviderId);
+
+    res.status(200).json({
+      success: true,
+      data: conversation,
+      message: 'Conversation created or retrieved successfully'
+    });
+  } catch (error) {
+    logger.error('Error in createOrGetConversationByJobRequest controller:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to create or get conversation' }
+    });
+  }
+}; 

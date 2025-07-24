@@ -3,6 +3,9 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSocket } from '../hooks/useSocket';
+import { useOfferContext, Offer } from '../contexts/OfferContext';
+import NegotiationSummary from '../components/ui/NegotiationSummary';
+import NegotiationHistory from '../components/ui/NegotiationHistory';
 import PageLayout from '../components/layout/PageLayout';
 import BaseCard from '../components/ui/BaseCard';
 import Button from '../components/ui/Button';
@@ -77,6 +80,7 @@ const ChatPage: React.FC = () => {
   const { showSuccess, showError, showWarning } = useToast();
   const navigate = useNavigate();
   const { connected, on, emit } = useSocket(accessToken || undefined);
+  const { negotiationState, fetchNegotiation, confirmNegotiation, resetNegotiation, fetchNegotiationHistory, updateNegotiation, offers, addNewOffer } = useOfferContext();
   
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -94,6 +98,7 @@ const ChatPage: React.FC = () => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [offerId, setOfferId] = useState<string | null>(null);
 
   // Fetch conversation details
   useEffect(() => {
@@ -113,6 +118,72 @@ const ChatPage: React.FC = () => {
       .catch(() => setError('فشل الاتصال بالخادم'))
       .finally(() => setLoading(false));
   }, [chatId, accessToken]);
+
+  // Fetch negotiation offerId for this conversation (jobRequestId + providerId)
+  useEffect(() => {
+    const fetchOfferId = async () => {
+      if (conversation && conversation.jobRequestId && conversation.participants && accessToken) {
+        const jobRequestId = conversation.jobRequestId._id;
+        const providerId = conversation.participants.provider._id;
+        try {
+          const res = await fetch(`/api/offers?jobRequest=${jobRequestId}&provider=${providerId}`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+          const data = await res.json();
+          if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+            setOfferId(data.data[0]._id);
+            fetchNegotiation(data.data[0]._id);
+            fetchNegotiationHistory(data.data[0]._id);
+          } else {
+            setOfferId(null);
+          }
+        } catch {
+          // Optionally log error
+        }
+      }
+    };
+    fetchOfferId();
+  }, [conversation, accessToken, fetchNegotiation, fetchNegotiationHistory]);
+
+  // Fetch offer details if not present in offers array
+  useEffect(() => {
+    const fetchOfferIfMissing = async () => {
+      if (offerId && !offers.find(o => o.id === offerId) && accessToken) {
+        try {
+          const res = await fetch(`/api/offers/${offerId}`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+          const data = await res.json();
+          if (data.success && data.data) {
+            // Map backend offer to frontend Offer type
+            const backendOffer = data.data;
+            const mappedOffer = {
+              id: backendOffer._id,
+              name: backendOffer.provider?.name
+                ? typeof backendOffer.provider.name === 'object'
+                  ? `${backendOffer.provider.name.first || ''} ${backendOffer.provider.name.last || ''}`.trim()
+                  : backendOffer.provider.name
+                : 'مستخدم غير معروف',
+              avatar: backendOffer.provider?.avatarUrl || '',
+              rating: backendOffer.provider?.providerProfile?.rating || 0,
+              price: backendOffer.budget?.min || 0,
+              specialties: backendOffer.provider?.providerProfile?.skills || [],
+              verified: backendOffer.provider?.isVerified || false,
+              message: backendOffer.message || '',
+              estimatedTimeDays: backendOffer.estimatedTimeDays || 1,
+              availableDates: backendOffer.availableDates || [],
+              timePreferences: backendOffer.timePreferences || [],
+              createdAt: backendOffer.createdAt,
+            };
+            addNewOffer(mappedOffer);
+          }
+        } catch (err) {
+          // Optionally log error
+        }
+      }
+    };
+    fetchOfferIfMissing();
+  }, [offerId, offers, accessToken, addNewOffer]);
 
   // Check if payment is completed for this conversation
   const checkPaymentStatus = async () => {
@@ -423,253 +494,277 @@ const ChatPage: React.FC = () => {
       user={user}
       onLogout={() => {}}
     >
-      <div className="max-w-4xl mx-auto">
-        <BaseCard className="h-[85vh] min-h-[600px] max-h-[1000px] flex flex-col">
-          {/* Chat Header */}
-          <div className="border-b border-gray-100">
-            {/* Main Header */}
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/conversations')}
-                  className="p-2 flex-shrink-0"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5 text-primary" />
+
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6 h-[85vh] min-h-[600px] max-h-[1000px]">
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col">
+          <BaseCard className="flex-1 flex flex-col h-full">
+            {/* Chat Header */}
+            <div className="border-b border-gray-100">
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate('/conversations')}
+                    className="p-2 flex-shrink-0"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-text-primary truncate">
+                      {otherParticipant?.name.first} {otherParticipant?.name.last}
+                    </h3>
+                    <p className="text-sm text-text-secondary truncate">
+                      {conversation.jobRequestId.title}
+                    </p>
+                    <p className="text-xs text-text-secondary/70 mt-1">
+                      📍 {conversation.jobRequestId.location?.address || 
+                        `${conversation.jobRequestId.location?.city || ''} ${conversation.jobRequestId.location?.government || ''}`.trim() || 
+                        'غير محدد'}
+                    </p>
+                    <div className="flex items-center gap-1 mt-1">
+                      {connected ? (
+                        <span className="flex items-center gap-1 text-xs text-green-600">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span>متصل</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-xs text-gray-500">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                          <span>غير متصل</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-text-primary truncate">
-                  {otherParticipant?.name.first} {otherParticipant?.name.last}
-                </h3>
-                <p className="text-sm text-text-secondary truncate">
-                  {conversation.jobRequestId.title}
-                </p>
-                <p className="text-xs text-text-secondary/70 mt-1">
-                  📍 {conversation.jobRequestId.location?.address || 
-                     `${conversation.jobRequestId.location?.city || ''} ${conversation.jobRequestId.location?.government || ''}`.trim() || 
-                     'غير محدد'}
-                </p>
-                <div className="flex items-center gap-1 mt-1">
-                  {connected ? (
-                    <span className="flex items-center gap-1 text-xs text-green-600">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>متصل</span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-xs text-gray-500">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                      <span>غير متصل</span>
-                    </span>
+                {/* Action Buttons - Hidden on mobile */}
+                <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+                  {isSeeker && ['assigned', 'in_progress'].includes(conversation.jobRequestId.status) && !paymentCompleted && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setShowPaymentModal(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      إتمام الدفع
+                    </Button>
                   )}
-                </div>
-              </div>
-              </div>
-              
-              {/* Action Buttons - Hidden on mobile */}
-              <div className="hidden md:flex items-center gap-3 flex-shrink-0">
-                {isSeeker && ['assigned', 'in_progress'].includes(conversation.jobRequestId.status) && !paymentCompleted && (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => setShowPaymentModal(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    إتمام الدفع
-                  </Button>
-                )}
-                {isSeeker && paymentCompleted && (
-                  <div className="flex items-center gap-2 text-green-600 text-sm">
-                    <CheckCircle className="w-4 h-4" />
-                    تم الدفع
-                  </div>
-                )}
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleReportIssue}
-                  className="flex items-center gap-2"
-                >
-                  <AlertTriangle className="w-4 h-4" />
-                  الإبلاغ عن مشكلة
-                </Button>
-              </div>
-
-
-            </div>
-
-            {/* Service Details */}
-            <div className="px-4 pb-4 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="font-medium text-text-primary mb-1">الميزانية</p>
-                  <p className="text-text-secondary">
-                    {conversation.jobRequestId.budget.min} - {conversation.jobRequestId.budget.max} جنيه
-                  </p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="font-medium text-text-primary mb-1">التاريخ المفضل</p>
-                  <p className="text-text-secondary">
-                    {conversation.jobRequestId.deadline ? 
-                      new Date(conversation.jobRequestId.deadline).toLocaleDateString('ar-EG') : 
-                      'غير محدد'}
-                  </p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="font-medium text-text-primary mb-1">تاريخ النشر</p>
-                  <p className="text-text-secondary">
-                    {new Date(conversation.jobRequestId.createdAt).toLocaleDateString('ar-EG')}
-                  </p>
-                </div>
-              </div>
-              
-              {/* Mobile Action Buttons */}
-              <div className="md:hidden flex gap-2">
-                {isSeeker && ['assigned', 'in_progress'].includes(conversation.jobRequestId.status) && !paymentCompleted && (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => setShowPaymentModal(true)}
-                    className="flex items-center gap-2 flex-1"
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    إتمام الدفع
-                  </Button>
-                )}
-                {isSeeker && paymentCompleted && (
-                  <div className="flex items-center gap-2 text-green-600 text-sm flex-1 justify-center">
-                    <CheckCircle className="w-4 h-4" />
-                    تم الدفع
-                  </div>
-                )}
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleReportIssue}
-                  className="flex items-center gap-2 flex-1"
-                >
-                  <AlertTriangle className="w-4 h-4" />
-                  الإبلاغ عن مشكلة
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Messages Container */}
-          <div 
-            ref={messagesContainerRef}
-            className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-warm-cream/20 to-white"
-            onScroll={(e) => {
-              const target = e.target as HTMLDivElement;
-              if (target.scrollTop === 0 && hasMore) {
-                loadMoreMessages();
-              }
-            }}
-          >
-            {hasMore && (
-              <div className="text-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadMoreMessages}
-                  disabled={loading}
-                  className="bg-white/80 backdrop-blur-sm"
-                >
-                  {loading ? 'جاري التحميل...' : 'تحميل المزيد'}
-                </Button>
-              </div>
-            )}
-
-            {messages.map((message, index) => {
-              const isOwnMessage = message.senderId === user?.id;
-              const showDate = index === 0 || 
-                new Date(message.timestamp).toDateString() !== 
-                new Date(messages[index - 1]?.timestamp).toDateString();
-              
-              return (
-                <div key={message._id}>
-                  {showDate && (
-                    <div className="text-center my-4">
-                      <span className="inline-block bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-text-secondary border border-gray-200">
-                        {formatDate(message.timestamp)}
-                      </span>
+                  {isSeeker && paymentCompleted && (
+                    <div className="flex items-center gap-2 text-green-600 text-sm">
+                      <CheckCircle className="w-4 h-4" />
+                      تم الدفع
                     </div>
                   )}
-                  <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-2`}>
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md ${
-                        isOwnMessage
-                          ? 'bg-deep-teal text-white rounded-br-md'
-                          : 'bg-white text-text-primary rounded-bl-md border border-gray-100'
-                      }`}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReportIssue}
+                    className="flex items-center gap-2"
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                    الإبلاغ عن مشكلة
+                  </Button>
+                </div>
+              </div>
+              {/* Service Details */}
+              <div className="px-4 pb-4 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="font-medium text-text-primary mb-1">الميزانية</p>
+                    <p className="text-text-secondary">
+                      {conversation.jobRequestId.budget.min} - {conversation.jobRequestId.budget.max} جنيه
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="font-medium text-text-primary mb-1">التاريخ المفضل</p>
+                    <p className="text-text-secondary">
+                      {conversation.jobRequestId.deadline ? 
+                        new Date(conversation.jobRequestId.deadline).toLocaleDateString('ar-EG') : 
+                        'غير محدد'}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="font-medium text-text-primary mb-1">تاريخ النشر</p>
+                    <p className="text-text-secondary">
+                      {new Date(conversation.jobRequestId.createdAt).toLocaleDateString('ar-EG')}
+                    </p>
+                  </div>
+                </div>
+                {/* Mobile Action Buttons */}
+                <div className="md:hidden flex gap-2">
+                  {isSeeker && ['assigned', 'in_progress'].includes(conversation.jobRequestId.status) && !paymentCompleted && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setShowPaymentModal(true)}
+                      className="flex items-center gap-2 flex-1"
                     >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                      <div className={`flex items-center justify-end mt-2 ${
-                        isOwnMessage ? 'text-white/70' : 'text-text-secondary'
-                      }`}>
-                        <span className="text-xs">
-                          {formatTime(message.timestamp)}
+                      <CreditCard className="w-4 h-4" />
+                      إتمام الدفع
+                    </Button>
+                  )}
+                  {isSeeker && paymentCompleted && (
+                    <div className="flex items-center gap-2 text-green-600 text-sm flex-1 justify-center">
+                      <CheckCircle className="w-4 h-4" />
+                      تم الدفع
+                    </div>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReportIssue}
+                    className="flex items-center gap-2 flex-1"
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                    الإبلاغ عن مشكلة
+                  </Button>
+                </div>
+              </div>
+            </div>
+            {/* Messages Container */}
+            <div
+              ref={messagesContainerRef}
+              className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-warm-cream/20 to-white"
+              aria-label="رسائل المحادثة"
+              onScroll={(e) => {
+                const target = e.target as HTMLDivElement;
+                if (target.scrollTop === 0 && hasMore) {
+                  loadMoreMessages();
+                }
+              }}
+            >
+              {hasMore && (
+                <div className="text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={loadMoreMessages}
+                    disabled={loading}
+                    className="bg-white/80 backdrop-blur-sm"
+                  >
+                    {loading ? 'جاري التحميل...' : 'تحميل المزيد'}
+                  </Button>
+                </div>
+              )}
+              {messages.map((message, index) => {
+                const isOwnMessage = message.senderId === user?.id;
+                const showDate = index === 0 ||
+                  new Date(message.timestamp).toDateString() !==
+                  new Date(messages[index - 1]?.timestamp).toDateString();
+                return (
+                  <div key={message._id}>
+                    {showDate && (
+                      <div className="text-center my-4">
+                        <span className="inline-block bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-text-secondary border border-gray-200">
+                          {formatDate(message.timestamp)}
                         </span>
-                        {isOwnMessage && (
-                          <div className="ml-2 w-2 h-2">
-                            {message.read ? (
-                              <div className="w-2 h-2 bg-white/70 rounded-full"></div>
-                            ) : (
-                              <div className="w-2 h-2 bg-white/50 rounded-full"></div>
-                            )}
-                          </div>
-                        )}
+                      </div>
+                    )}
+                    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-2`}>
+                      <div
+                        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md ${
+                          isOwnMessage
+                            ? 'bg-deep-teal text-white rounded-br-md'
+                            : 'bg-white text-text-primary rounded-bl-md border border-gray-100'
+                        }`}
+                      >
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                        <div className={`flex items-center justify-end mt-2 ${
+                          isOwnMessage ? 'text-white/70' : 'text-text-secondary'
+                        }`}>
+                          <span className="text-xs">
+                            {formatTime(message.timestamp)}
+                          </span>
+                          {isOwnMessage && (
+                            <div className="ml-2 w-2 h-2">
+                              {message.read ? (
+                                <div className="w-2 h-2 bg-white/70 rounded-full"></div>
+                              ) : (
+                                <div className="w-2 h-2 bg-white/50 rounded-full"></div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Message Input */}
-          <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-100 bg-white">
-            <div className="space-y-3">
-              <FormTextarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="اكتب رسالتك هنا..."
-                className="resize-none border-2 border-gray-200 focus:border-deep-teal rounded-xl"
-                rows={2}
-                maxLength={2000}
-                disabled={sending}
-                size="lg"
-              />
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 text-xs text-text-secondary">
-                  <span>اضغط Enter للإرسال</span>
-                  <span>•</span>
-                  <span>{newMessage.length}/2000</span>
-                </div>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="md"
-                  disabled={!newMessage.trim() || sending}
-                  className="px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  {sending ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
             </div>
-          </form>
-        </BaseCard>
+            {/* Message Input */}
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-100 bg-white">
+              <div className="space-y-3">
+                <FormTextarea
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="اكتب رسالتك هنا..."
+                  className="resize-none border-2 border-gray-200 focus:border-deep-teal rounded-xl"
+                  rows={2}
+                  maxLength={2000}
+                  disabled={sending}
+                  size="lg"
+                />
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-xs text-text-secondary">
+                    <span>اضغط Enter للإرسال</span>
+                    <span>•</span>
+                    <span>{newMessage.length}/2000</span>
+                  </div>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    disabled={!newMessage.trim() || sending}
+                    className="px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+                  >
+                    {sending ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </BaseCard>
+        </div>
+        {/* Negotiation Sidebar (desktop only) */}
+        <div className="hidden md:flex flex-col w-96 max-w-full h-full sticky top-8 bg-transparent">
+          <div className="h-full flex flex-col border-r border-gray-100 pl-6 overflow-y-auto" aria-label="ملخص التفاوض والتاريخ">
+            {offerId && negotiationState[offerId] && user && (
+              <>
+                <NegotiationSummary
+                  negotiation={negotiationState[offerId]}
+                  isProvider={user.id === conversation.participants.provider._id}
+                  isSeeker={user.id === conversation.participants.seeker._id}
+                  // TODO: Replace 'any' with ServiceRequest type if possible. The jobRequestId object does not match the ServiceRequest type directly.
+                  jobRequest={conversation.jobRequestId as any}
+                  offer={offers.find(o => o.id === offerId) as Offer}
+                  onEditSave={async (terms) => {
+                    await updateNegotiation(offerId, terms);
+                    await resetNegotiation(offerId); // Reset confirmations after edit
+                  }}
+                  onConfirm={() => confirmNegotiation(offerId)}
+                  onReset={() => resetNegotiation(offerId)}
+                />
+                <NegotiationHistory
+                  negotiationHistory={negotiationState[offerId]?.negotiationHistory}
+                  userMap={{
+                    [conversation.participants.seeker._id]: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
+                    [conversation.participants.provider._id]: `${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`
+                  }}
+                  isMobile={false}
+                />
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Payment Modal */}
