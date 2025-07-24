@@ -15,6 +15,7 @@ export interface Offer {
   availableDates?: string[];
   timePreferences?: string[];
   createdAt?: string;
+  status?: string; // 'pending', 'negotiating', 'accepted', 'in_progress', 'completed', 'rejected'
 }
 
 export interface NegotiationTerms {

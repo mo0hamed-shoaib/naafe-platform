@@ -5,6 +5,7 @@ import JobRequest from '../models/JobRequest.js';
 import User from '../models/User.js';
 import Offer from '../models/Offer.js';
 import offerService from './offerService.js';
+import socketService from './socketService.js';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
 
@@ -236,6 +237,14 @@ export const handleEscrowPaymentCompletion = async (session) => {
 
     // Update offer payment status and move to in_progress
     const result = await offerService.processEscrowPayment(payment.offerId, payment._id);
+    
+    // Send real-time notification to both users
+    await socketService.sendPaymentNotification(
+      payment.offerId.toString(),
+      payment._id.toString(),
+      payment.seekerId.toString(),
+      payment.providerId.toString()
+    );
 
     return { success: true, payment, offer: result };
   } catch (error) {
@@ -274,6 +283,14 @@ export const releaseFundsFromEscrow = async (paymentId, userId) => {
     // Process payout to provider
     console.log(`Processing payout for completed service, payment ID: ${payment._id}`);
     const payoutResult = await createProviderPayout(payment._id);
+    
+    // Send real-time notification to both users
+    await socketService.sendServiceCompletionNotification(
+      payment.offerId._id.toString(),
+      payment._id.toString(),
+      payment.seekerId.toString(),
+      payment.providerId.toString()
+    );
     
     if (!payoutResult.success) {
       console.error(`Payout failed for payment ${payment._id}: ${payoutResult.error}`);

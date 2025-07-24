@@ -6,7 +6,7 @@ import UnifiedInput from '../ui/FormInput';
 import { DatePicker, TimePicker, ConfigProvider } from 'antd';
 import dayjs from 'dayjs';
 import arEG from 'antd/locale/ar_EG';
-import { CheckCircle2, XCircle, AlertCircle, Clock, CalendarDays, Tag, FileText, Palette } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Clock, CalendarDays, Tag, FileText, Palette, Shield } from 'lucide-react';
 
 interface NegotiationSummaryProps {
   negotiation: NegotiationState;
@@ -18,6 +18,8 @@ interface NegotiationSummaryProps {
   onConfirm?: () => void;
   onReset?: () => void;
   isConfirming?: boolean;
+  paymentCompleted?: boolean;
+  serviceCompleted?: boolean;
 }
 
 const NegotiationSummary: React.FC<NegotiationSummaryProps> = ({
@@ -28,7 +30,9 @@ const NegotiationSummary: React.FC<NegotiationSummaryProps> = ({
   onEditSave,
   onConfirm,
   onReset,
-  isConfirming
+  isConfirming,
+  paymentCompleted = false,
+  serviceCompleted = false
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTerms, setEditTerms] = useState<NegotiationTerms>({ ...negotiation?.currentTerms || {} });
@@ -83,7 +87,31 @@ const NegotiationSummary: React.FC<NegotiationSummaryProps> = ({
   };
 
   const renderNegotiationStatus = () => {
-    if (canAcceptOffer) {
+    if (serviceCompleted) {
+      return (
+        <div className="bg-green-100 rounded-lg p-3 mb-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="text-green-600 w-5 h-5 flex-shrink-0" />
+            <div>
+              <p className="font-bold text-green-800">تم اكتمال الخدمة</p>
+              <p className="text-sm text-green-700">تم تحرير المبلغ لمقدم الخدمة</p>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (paymentCompleted) {
+      return (
+        <div className="bg-blue-100 rounded-lg p-3 mb-4">
+          <div className="flex items-center gap-2">
+            <Shield className="text-blue-600 w-5 h-5 flex-shrink-0" />
+            <div>
+              <p className="font-bold text-blue-800">الخدمة قيد التنفيذ</p>
+              <p className="text-sm text-blue-700">تم إيداع الضمان وبدء تنفيذ الخدمة</p>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (canAcceptOffer) {
       return (
         <div className="bg-green-100 rounded-lg p-3 mb-4">
           <div className="flex items-center gap-2">
@@ -130,7 +158,7 @@ const NegotiationSummary: React.FC<NegotiationSummaryProps> = ({
       <div className="px-4 pb-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-deep-teal">تفاصيل التفاوض</h3>
-          {!isEditing && !canAcceptOffer && (
+          {!isEditing && !canAcceptOffer && !paymentCompleted && !serviceCompleted && (
             <button 
               className="bg-warm-cream text-deep-teal px-3 py-1.5 rounded font-medium text-sm hover:bg-deep-teal/10 transition-colors" 
               onClick={handleEditClick}
@@ -328,56 +356,58 @@ const NegotiationSummary: React.FC<NegotiationSummaryProps> = ({
             )}
           </div>
           
-          {/* Confirmation Status and Actions */}
-          <div className="rounded-lg border border-gray-100 p-4" ref={confirmSectionRef}>
-            <h4 className="font-medium text-deep-teal mb-3">حالة التأكيد</h4>
-            
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg ${confirmationStatus.seeker ? 'bg-green-100' : 'bg-gray-100'}`}>
-                {confirmationStatus.seeker ? (
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-gray-400" />
-                )}
-                <span className={confirmationStatus.seeker ? 'text-green-800' : 'text-gray-500'}>المشترك أكد</span>
+          {/* Confirmation Status and Actions - Only show if payment not completed */}
+          {!paymentCompleted && !serviceCompleted && (
+            <div className="rounded-lg border border-gray-100 p-4" ref={confirmSectionRef}>
+              <h4 className="font-medium text-deep-teal mb-3">حالة التأكيد</h4>
+              
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg ${confirmationStatus.seeker ? 'bg-green-100' : 'bg-gray-100'}`}>
+                  {confirmationStatus.seeker ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-gray-400" />
+                  )}
+                  <span className={confirmationStatus.seeker ? 'text-green-800' : 'text-gray-500'}>المشترك أكد</span>
+                </div>
+                
+                <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg ${confirmationStatus.provider ? 'bg-green-100' : 'bg-gray-100'}`}>
+                  {confirmationStatus.provider ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-gray-400" />
+                  )}
+                  <span className={confirmationStatus.provider ? 'text-green-800' : 'text-gray-500'}>المزود أكد</span>
+                </div>
               </div>
               
-              <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg ${confirmationStatus.provider ? 'bg-green-100' : 'bg-gray-100'}`}>
-                {confirmationStatus.provider ? (
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-gray-400" />
+              {/* Action Buttons - Using fixed positioning for mobile */}
+              <div className={`space-y-2 mt-4 ${((isSeeker && !confirmationStatus.seeker) || (isProvider && !confirmationStatus.provider)) ? "pb-2" : ""}`}>
+                {/* Show confirm button for current user if not confirmed */}
+                {((isSeeker && !confirmationStatus.seeker) || (isProvider && !confirmationStatus.provider)) && (
+                  <button 
+                    className="bg-green-600 text-white w-full py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 z-10"
+                    onClick={onConfirm} 
+                    disabled={isConfirming}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    تأكيد الموافقة على الشروط
+                  </button>
                 )}
-                <span className={confirmationStatus.provider ? 'text-green-800' : 'text-gray-500'}>المزود أكد</span>
+                
+                {/* Reset button if either confirmed */}
+                {(confirmationStatus.seeker || confirmationStatus.provider) && (
+                  <button 
+                    className="border border-red-500 text-red-500 w-full py-2 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+                    onClick={onReset}
+                  >
+                    <XCircle className="w-4 h-4" />
+                    إعادة تعيين التأكيدات
+                  </button>
+                )}
               </div>
             </div>
-            
-            {/* Action Buttons - Using fixed positioning for mobile */}
-            <div className={`space-y-2 mt-4 ${((isSeeker && !confirmationStatus.seeker) || (isProvider && !confirmationStatus.provider)) ? "pb-2" : ""}`}>
-              {/* Show confirm button for current user if not confirmed */}
-              {((isSeeker && !confirmationStatus.seeker) || (isProvider && !confirmationStatus.provider)) && (
-                <button 
-                  className="bg-green-600 text-white w-full py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 z-10"
-                  onClick={onConfirm} 
-                  disabled={isConfirming}
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  تأكيد الموافقة على الشروط
-                </button>
-              )}
-              
-              {/* Reset button if either confirmed */}
-              {(confirmationStatus.seeker || confirmationStatus.provider) && (
-                <button 
-                  className="border border-red-500 text-red-500 w-full py-2 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
-                  onClick={onReset}
-                >
-                  <XCircle className="w-4 h-4" />
-                  إعادة تعيين التأكيدات
-                </button>
-              )}
-            </div>
-          </div>
+          )}
           
           <div className="text-xs text-text-secondary mt-4 text-center">
             آخر تعديل: {lastUpdatedBy || 'غير معروف'}

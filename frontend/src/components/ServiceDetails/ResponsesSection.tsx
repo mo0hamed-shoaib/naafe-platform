@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, MessageCircle, Star } from 'lucide-react';
+import { Calendar, Clock, MessageCircle, Star, Shield, CheckCircle } from 'lucide-react';
 import Badge from '../ui/Badge';
 import { useAuth } from '../../contexts/AuthContext';
 import { useOfferContext } from '../../contexts/OfferContext';
@@ -515,6 +515,35 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
                     {jobRequestStatus === 'completed' && 'تم إنجاز الخدمة'}
                   </div>
                 </div>
+              )}
+
+              {user && user.id === resp.providerId && resp.status === 'in_progress' && (
+                <div className="flex items-center gap-2 text-blue-700 text-sm px-3 py-1 bg-blue-50 rounded-full mb-2">
+                  <Shield className="w-4 h-4" />
+                  الخدمة قيد التنفيذ
+                </div>
+              )}
+
+              {resp.status === 'completed' && (
+                <div className="flex items-center gap-2 text-green-700 text-sm px-3 py-1 bg-green-50 rounded-full mb-2">
+                  <CheckCircle className="w-4 h-4" />
+                  تم تحرير المبلغ لمقدم الخدمة. اكتملت الخدمة.
+                </div>
+              )}
+
+              {/* Only show negotiation summary if the offer is not in_progress or completed */}
+              {!(resp.status === 'in_progress' || resp.status === 'completed') && negotiation && user && conversationId && (
+                <NegotiationSummary
+                  negotiation={negotiation}
+                  isProvider={user.id === resp.providerId}
+                  isSeeker={user.id === resp.jobRequestSeekerId}
+                  jobRequest={{ id: resp.jobRequestId || '', title: '', description: '', budget: { min: 0, max: 0, currency: '' }, location: '', postedBy: { id: '', name: '', isPremium: false }, createdAt: '', preferredDate: '', status: 'open', category: '', availability: { days: [], timeSlots: [] } }}
+                  offer={resp}
+                  paymentCompleted={resp.status === 'in_progress'}
+                  serviceCompleted={resp.status === 'completed'}
+                  onConfirm={() => confirmNegotiation(resp.id)}
+                  onReset={() => resetNegotiation(resp.id)}
+                />
               )}
             </div>
           );
