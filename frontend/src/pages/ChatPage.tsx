@@ -836,8 +836,10 @@ const ChatPage: React.FC = () => {
           <BaseCard className="flex-1 flex flex-col h-full">
             {/* Chat Header */}
             <div className="border-b border-gray-100">
-              <div className="flex flex-col md:flex-row p-4">
-                <div className="flex items-center gap-3 min-w-0 flex-1 mb-3 md:mb-0">
+              {/* Main Header Row */}
+              <div className="p-4">
+                {/* Back Button and User Info Row */}
+                <div className="flex items-center gap-3 mb-4">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -846,29 +848,32 @@ const ChatPage: React.FC = () => {
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <User className="w-5 h-5 text-primary" />
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <User className="w-6 h-6 text-primary" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-text-primary truncate">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-text-primary text-lg mb-1">
                       {otherParticipant?.name.first} {otherParticipant?.name.last}
                     </h3>
-                    <p className="text-sm text-text-secondary truncate">
+                    <p className="text-sm text-text-secondary mb-2">
                       {conversation.jobRequestId.title}
                     </p>
-                    <div className="flex flex-wrap items-center gap-x-3 mt-1">
-                      <p className="text-xs text-text-secondary/70">
-                        📍 {conversation.jobRequestId.location?.address || 
-                          `${conversation.jobRequestId.location?.city || ''} ${conversation.jobRequestId.location?.government || ''}`.trim() || 
-                          'غير محدد'}
-                      </p>
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1 text-text-secondary/80">
+                        <span className="text-pink-500">📍</span>
+                        <span>
+                          {conversation.jobRequestId.location?.address || 
+                           `${conversation.jobRequestId.location?.city || ''} ${conversation.jobRequestId.location?.government || ''}`.trim() || 
+                           'غير محدد'}
+                        </span>
+                      </div>
                       {connected ? (
-                        <span className="flex items-center gap-1 text-xs text-green-600">
+                        <span className="flex items-center gap-1 text-green-600">
                           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                           <span>متصل</span>
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-xs text-gray-500">
+                        <span className="flex items-center gap-1 text-gray-500">
                           <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
                           <span>غير متصل</span>
                         </span>
@@ -876,81 +881,91 @@ const ChatPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                {/* Action Buttons - Hidden on mobile */}
-                <div className="hidden md:flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-                  {/* Show payment button for seeker when offer is accepted but payment not completed */}
-                  {isSeeker && offerId && negotiationState[offerId]?.canAcceptOffer && !paymentCompleted && (
+
+                {/* Action Buttons Row - Desktop */}
+                <div className="hidden md:flex items-center gap-3 flex-wrap">
+                  {/* Primary Actions */}
+                  <div className="flex items-center gap-2">
+                    {/* Show payment button for seeker when offer is accepted but payment not completed */}
+                    {isSeeker && offerId && negotiationState[offerId]?.canAcceptOffer && !paymentCompleted && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handleAcceptOffer}
+                        className="flex items-center gap-2"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        قبول وبدء الدفع
+                      </Button>
+                    )}
+                    
+                    {/* Show service completion button for seeker when service is in progress */}
+                    {isSeeker && serviceInProgress && (
+                      <Button
+                        variant="success"
+                        size="sm"
+                        onClick={() => setShowCompletionModal(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        تأكيد اكتمال الخدمة
+                      </Button>
+                    )}
+                    
+                    {/* Show cancellation button only when payment has been made */}
+                    {(serviceInProgress || paymentCompleted) && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => setShowCancellationModal(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <AlertCircle className="w-4 h-4" />
+                        طلب إلغاء الخدمة
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Status Indicators */}
+                  <div className="flex items-center gap-2">
+                    {/* Show guidance if negotiation is not confirmed by both parties */}
+                    {isSeeker && offerId && negotiationState[offerId] && 
+                     !negotiationState[offerId]?.canAcceptOffer && 
+                     !paymentCompleted && (
+                      <div className="text-amber-600 text-sm px-3 py-1 bg-amber-50 rounded-full flex items-center gap-1">
+                        <AlertTriangle className="w-4 h-4" />
+                        {!negotiationState[offerId]?.confirmationStatus?.seeker ? 
+                          'يجب عليك تأكيد شروط التفاوض' : 
+                          'بانتظار تأكيد مقدم الخدمة للشروط'}
+                      </div>
+                    )}
+                    
+                    {/* Show payment status badge */}
+                    {paymentCompleted && currentOffer?.status === 'completed' ? (
+                      <div className="flex items-center gap-2 text-green-600 text-sm px-3 py-1 bg-green-50 rounded-full">
+                        <CheckCircle className="w-4 h-4" />
+                        تم تحرير المبلغ وإكمال الخدمة
+                      </div>
+                    ) : paymentCompleted && (
+                      <div className="flex items-center gap-2 text-blue-600 text-sm px-3 py-1 bg-blue-50 rounded-full">
+                        <Shield className="w-4 h-4" />
+                        الخدمة قيد التنفيذ
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Secondary Actions */}
+                  <div className="flex items-center gap-2">
                     <Button
-                      variant="primary"
+                      variant="outline"
                       size="sm"
-                      onClick={handleAcceptOffer}
+                      onClick={handleReportIssue}
                       className="flex items-center gap-2"
                     >
-                      <CreditCard className="w-4 h-4" />
-                      قبول وبدء الدفع
-                    </Button>
-                  )}
-                  
-                  {/* Show guidance if negotiation is not confirmed by both parties */}
-                  {isSeeker && offerId && negotiationState[offerId] && 
-                   !negotiationState[offerId]?.canAcceptOffer && 
-                   !paymentCompleted && (
-                    <div className="text-amber-600 text-sm px-3 py-1 bg-amber-50 rounded-full flex items-center gap-1">
                       <AlertTriangle className="w-4 h-4" />
-                      {!negotiationState[offerId]?.confirmationStatus?.seeker ? 
-                        'يجب عليك تأكيد شروط التفاوض' : 
-                        'بانتظار تأكيد مقدم الخدمة للشروط'}
-                    </div>
-                  )}
-                  
-                  {/* Show service completion button for seeker when service is in progress */}
-                  {isSeeker && serviceInProgress && (
-                    <Button
-                      variant="success"
-                      size="sm"
-                      onClick={() => setShowCompletionModal(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      تأكيد اكتمال الخدمة
+                      الإبلاغ عن مشكلة
                     </Button>
-                  )}
-                  
-                  {/* Show cancellation button only when payment has been made */}
-                  {(serviceInProgress || paymentCompleted) && (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setShowCancellationModal(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <AlertCircle className="w-4 h-4" />
-                      طلب إلغاء الخدمة
-                    </Button>
-                  )}
-                  
-                  {/* Show payment status badge */}
-                  {paymentCompleted && currentOffer?.status === 'completed' ? (
-                    <div className="flex items-center gap-2 text-green-600 text-sm px-3 py-1 bg-green-50 rounded-full">
-                      <CheckCircle className="w-4 h-4" />
-                      تم تحرير المبلغ وإكمال الخدمة
-                    </div>
-                  ) : paymentCompleted && (
-                    <div className="flex items-center gap-2 text-blue-600 text-sm px-3 py-1 bg-blue-50 rounded-full">
-                      <Shield className="w-4 h-4" />
-                      الخدمة قيد التنفيذ
-                    </div>
-                  )}
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleReportIssue}
-                    className="flex items-center gap-2"
-                  >
-                    <AlertTriangle className="w-4 h-4" />
-                    الإبلاغ عن مشكلة
-                  </Button>
+                  </div>
                 </div>
               </div>
               {/* Service Details */}
