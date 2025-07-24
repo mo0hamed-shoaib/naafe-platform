@@ -10,8 +10,12 @@ class ChatService {
    */
   async getOrCreateConversation(jobRequestId, seekerId, providerId) {
     try {
-      // Check if conversation already exists
-      let conversation = await Conversation.findOne({ jobRequestId });
+      // Check if conversation already exists for this job request and provider
+      let conversation = await Conversation.findOne({
+        jobRequestId,
+        'participants.seeker': seekerId,
+        'participants.provider': providerId
+      });
       
       if (!conversation) {
         // Create new conversation
@@ -23,7 +27,7 @@ class ChatService {
           }
         });
         await conversation.save();
-        logger.info(`Created new conversation for job request: ${jobRequestId}`);
+        logger.info(`Created new conversation for job request: ${jobRequestId} and provider: ${providerId}`);
       }
       
       return conversation;
@@ -68,6 +72,18 @@ class ChatService {
           [`unreadCount.${receiverType}`]: 1
         }
       });
+
+      // --- Offer status transition logic ---
+      // If the sender is the seeker and this is the first message, update offer status to 'negotiating'
+      const Offer = (await import('../models/Offer.js')).default;
+      const offer = await Offer.findOne({
+        conversation: conversation._id
+      });
+      if (offer && offer.status === 'pending' && senderId.toString() === conversation.participants.seeker.toString()) {
+        offer.status = 'negotiating';
+        await offer.save();
+      }
+      // --- End offer status transition logic ---
 
       logger.info(`Message sent: ${message._id} from ${senderId} to ${receiverId}`);
       return message;

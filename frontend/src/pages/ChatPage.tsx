@@ -773,6 +773,10 @@ const ChatPage: React.FC = () => {
 
   const otherParticipant = getOtherParticipant();
 
+  // Helper to get offer status
+  const currentOffer = offers.find(o => o.id === offerId);
+  const offerStatus = currentOffer ? currentOffer.status : null;
+
   return (
     <PageLayout
       title={`محادثة مع ${otherParticipant?.name.first} ${otherParticipant?.name.last}`}
@@ -1100,6 +1104,19 @@ const ChatPage: React.FC = () => {
                   </Button>
                 </div>
               )}
+              
+              {messages.length === 0 && !loading && (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 max-w-md text-center">
+                    <MessageCircle className="w-12 h-12 text-primary/50 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-text-primary mb-2">لم تبدأ المحادثة بعد</h3>
+                    <p className="text-text-secondary mb-4">
+                      ابدأ المحادثة مع {otherParticipant?.name.first} {otherParticipant?.name.last} للتفاوض على تفاصيل الخدمة.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
               {messages.map((message, index) => {
                 const isOwnMessage = message.senderId === user?.id;
                 const showDate = index === 0 ||

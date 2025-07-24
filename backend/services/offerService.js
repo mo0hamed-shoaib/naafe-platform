@@ -55,17 +55,17 @@ class OfferService {
       });
       
       // Create conversation for chat between seeker and provider
+      // This will now create a unique conversation for each (jobRequest, seeker, provider) combination
       const conversation = await chatService.getOrCreateConversation(
         jobRequestId,
         jobRequest.seeker,
         providerId
       );
       
+      logger.info(`Created/Retrieved conversation for offer: ${conversation._id}, jobRequest: ${jobRequestId}, provider: ${providerId}, seeker: ${jobRequest.seeker}`);
+      
       // Link the conversation to the offer
       offer.conversation = conversation._id;
-      
-      // Set status to negotiating to indicate that chat is required before acceptance
-      offer.status = 'negotiating';
       
       await offer.save();
       

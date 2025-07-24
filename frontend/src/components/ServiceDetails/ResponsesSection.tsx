@@ -242,7 +242,9 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
           const canAccept = negotiation && conversationId ? negotiation.canAcceptOffer : false;
           // Determine negotiation status label
           let negotiationStatus = 'لم تبدأ المحادثة';
-          if (conversationId) {
+          if (resp.status === 'completed' || resp.status === 'in_progress') {
+            negotiationStatus = 'المحادثة مكتملة';
+          } else if (conversationId) {
             negotiationStatus = 'بانتظار التفاوض';
             if (negotiation) {
               if (negotiation.canAcceptOffer) negotiationStatus = 'تم الاتفاق';
@@ -424,9 +426,10 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
               {negotiation && user && conversationId && (
                 <NegotiationSummary
                   negotiation={negotiation}
-                  user={user}
                   isProvider={user.id === resp.providerId}
                   isSeeker={user.id === resp.jobRequestSeekerId}
+                  jobRequest={{ id: resp.jobRequestId || '', title: '', description: '', budget: { min: 0, max: 0, currency: '' }, location: '', postedBy: { id: '', name: '', isPremium: false }, createdAt: '', preferredDate: '', status: 'open', category: '', availability: { days: [], timeSlots: [] } }}
+                  offer={resp}
                   onConfirm={() => confirmNegotiation(resp.id)}
                   onReset={() => resetNegotiation(resp.id)}
                 />
@@ -480,15 +483,25 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
                 </div>
               )}
 
-              {/* Status Badge for accepted/rejected offers */}
+              {/* Status Badge for accepted/rejected/completed/in_progress offers */}
               {resp.status && resp.status !== 'pending' && (
                 <div className="pt-4 border-t border-deep-teal/10">
                   <div className={`w-full text-center py-2 px-4 rounded-lg font-medium ${
-                    resp.status === 'accepted' 
-                      ? 'bg-green-100 text-green-800 border border-green-200' 
-                      : 'bg-red-100 text-red-800 border border-red-200'
+                    resp.status === 'accepted'
+                      ? 'bg-green-100 text-green-800 border border-green-200'
+                    : resp.status === 'completed'
+                      ? 'bg-gray-100 text-gray-800 border border-gray-200'
+                    : resp.status === 'in_progress'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                    : resp.status === 'rejected'
+                      ? 'bg-red-100 text-red-800 border border-red-200'
+                    : 'bg-gray-100 text-gray-600 border border-gray-200'
                   }`}>
-                    {resp.status === 'accepted' ? 'تم قبول العرض' : 'تم رفض العرض'}
+                    {resp.status === 'accepted' && 'تم قبول العرض'}
+                    {resp.status === 'completed' && 'تم إنجاز الخدمة'}
+                    {resp.status === 'in_progress' && 'الخدمة قيد التنفيذ'}
+                    {resp.status === 'rejected' && 'تم رفض العرض'}
+                    {['accepted','completed','in_progress','rejected'].indexOf(resp.status) === -1 && resp.status}
                   </div>
                 </div>
               )}
