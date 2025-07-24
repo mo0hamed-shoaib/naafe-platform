@@ -85,12 +85,19 @@ export const OfferProvider: React.FC<OfferProviderProps> = ({ children }) => {
   // Fetch negotiation state for an offer
   const fetchNegotiation = useCallback(async (offerId: string) => {
     if (!accessToken) return;
+    
+    console.log('Fetching negotiation for offer:', offerId);
+    
     const res = await fetch(`/api/offers/${offerId}` , {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
     const data = await res.json();
+    console.log('Negotiation data:', data);
+    
     if (data.success && data.data.negotiation) {
       const n = data.data.negotiation;
+      console.log('Setting negotiation state for offer:', offerId, n);
+      
       setNegotiationState(prev => ({
         ...prev,
         [offerId]: {
@@ -111,6 +118,8 @@ export const OfferProvider: React.FC<OfferProviderProps> = ({ children }) => {
           negotiationHistory: n.negotiationHistory || []
         }
       }));
+    } else {
+      console.log('No negotiation data found for offer:', offerId);
     }
   }, [accessToken]);
 

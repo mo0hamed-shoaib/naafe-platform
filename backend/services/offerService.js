@@ -30,7 +30,7 @@ class OfferService {
       const existingOffer = await Offer.findOne({
         jobRequest: jobRequestId,
         provider: providerId,
-        status: { $in: ['pending', 'accepted'] }
+        status: { $in: ['pending', 'negotiating', 'agreement_reached', 'accepted', 'in_progress'] }
       });
       
       if (existingOffer) {
@@ -54,6 +54,19 @@ class OfferService {
         status: 'pending'
       });
       
+      // Create conversation for chat between seeker and provider
+      const conversation = await chatService.getOrCreateConversation(
+        jobRequestId,
+        jobRequest.seeker,
+        providerId
+      );
+      
+      // Link the conversation to the offer
+      offer.conversation = conversation._id;
+      
+      // Set status to negotiating to indicate that chat is required before acceptance
+      offer.status = 'negotiating';
+      
       await offer.save();
       
       // Populate provider and job request details
@@ -71,7 +84,7 @@ class OfferService {
           userId: offer.jobRequest.seeker,
           type: 'offer_received',
           message: `${providerName} أرسل لك عرض جديد على طلبك "${offer.jobRequest.title}"`,
-          relatedChatId: null, // No chat yet, will be created when offer is accepted
+          relatedChatId: conversation._id, // Link to the conversation
           isRead: false
         });
         await notification.save();
@@ -285,7 +298,8 @@ class OfferService {
   async acceptOffer(offerId, seekerId) {
     try {
       const offer = await Offer.findById(offerId)
-        .populate('jobRequest');
+        .populate('jobRequest')
+        .populate('conversation');
       
       if (!offer) {
         throw new Error('Offer not found');
@@ -296,9 +310,22 @@ class OfferService {
         throw new Error('Access denied');
       }
       
-      // Can only accept pending offers
-      if (offer.status !== 'pending') {
-        throw new Error('Can only accept pending offers');
+      // Can only accept offers with agreement reached status
+      if (offer.status !== 'agreement_reached') {
+        throw new Error('Can only accept offers with confirmed agreement. Please finalize the negotiation terms first.');
+      }
+      
+      // Ensure both parties have confirmed the negotiation terms
+      if (!offer.negotiation || !offer.negotiation.seekerConfirmed || !offer.negotiation.providerConfirmed) {
+        throw new Error('Both parties must confirm all negotiation terms before accepting');
+      }
+      
+      // Ensure required negotiation fields are set
+      const requiredFields = ['price', 'date', 'time', 'materials', 'scope'];
+      for (const field of requiredFields) {
+        if (!offer.negotiation[field]) {
+          throw new Error(`Negotiation field '${field}' must be set before accepting`);
+        }
       }
       
       // Update offer status
@@ -311,18 +338,11 @@ class OfferService {
         assignedTo: offer.provider
       });
       
-      // Create conversation for chat between seeker and provider
-      const conversation = await chatService.getOrCreateConversation(
-        offer.jobRequest._id,
-        offer.jobRequest.seeker,
-        offer.provider
-      );
-      
       // Reject all other pending offers for this job
       await Offer.updateMany(
         { 
           jobRequest: offer.jobRequest._id, 
-          status: 'pending',
+          status: { $in: ['pending', 'negotiating', 'agreement_reached'] },
           _id: { $ne: offerId }
         },
         { status: 'rejected' }
@@ -332,16 +352,18 @@ class OfferService {
       // Get seeker name for message
       const seeker = await User.findById(seekerId);
       const providerId = offer.provider;
-      const message = seeker ? `${seeker.name.first} قبل عرضك` : 'تم قبول عرضك';
+      const message = seeker ? `${seeker.name.first} قبل عرضك وبانتظار الدفع للإسكرو` : 'تم قبول عرضك وبانتظار الدفع للإسكرو';
+      
       // Create notification in DB
       const notification = new Notification({
         userId: providerId,
         type: 'offer_accepted',
         message,
-        relatedChatId: conversation._id,
+        relatedChatId: offer.conversation._id,
         isRead: false
       });
       await notification.save();
+      
       // Emit Socket.IO event to provider's room
       socketService.io.to(`user:${providerId}`).emit('notify:offerAccepted', {
         notification: {
@@ -482,28 +504,52 @@ class OfferService {
     const Offer = (await import('../models/Offer.js')).default;
     const offer = await Offer.findById(offerId).populate('jobRequest');
     if (!offer) throw new Error('Offer not found');
+    
     // Only provider or job request seeker can confirm
-    if (
-      offer.provider.toString() !== userId.toString() &&
-      offer.jobRequest.seeker.toString() !== userId.toString()
-    ) {
+    const isProvider = offer.provider.toString() === userId.toString();
+    const isSeeker = offer.jobRequest.seeker.toString() === userId.toString();
+    
+    if (!isProvider && !isSeeker) {
       throw new Error('Access denied');
     }
-    // Only allow confirm if offer is pending
-    if (offer.status !== 'pending') throw new Error('Can only confirm negotiation for pending offers');
-    const negotiation = offer.negotiation || {};
+    
+    // Only allow confirm if offer is pending or negotiating
+    if (!['pending', 'negotiating'].includes(offer.status)) {
+      throw new Error('Can only confirm negotiation for pending or negotiating offers');
+    }
+    
+    // Initialize negotiation object if it doesn't exist
+    if (!offer.negotiation) {
+      offer.negotiation = {
+        negotiationHistory: []
+      };
+    }
+    
+    const negotiation = offer.negotiation;
     const requiredFields = ['price', 'date', 'time', 'materials', 'scope'];
+    
+    // Check for required fields
     for (const field of requiredFields) {
       if (!negotiation[field]) throw new Error(`Negotiation field '${field}' must be set before confirmation`);
     }
-    if (offer.provider.toString() === userId.toString()) {
+    
+    // Update confirmation status based on user role
+    if (isProvider) {
       negotiation.providerConfirmed = true;
     } else {
       negotiation.seekerConfirmed = true;
     }
+    
+    // Update metadata
     negotiation.lastModifiedBy = userId;
     negotiation.lastModifiedAt = new Date();
-    negotiation.negotiationHistory = negotiation.negotiationHistory || [];
+    
+    // Ensure negotiationHistory array is initialized
+    if (!Array.isArray(negotiation.negotiationHistory)) {
+      negotiation.negotiationHistory = [];
+    }
+    
+    // Add confirmation entry to history
     negotiation.negotiationHistory.push({
       field: 'confirmation',
       oldValue: false,
@@ -512,12 +558,87 @@ class OfferService {
       timestamp: new Date(),
       note: 'Party confirmed negotiation terms'
     });
+    
     offer.negotiation = negotiation;
+    
+    // If both parties have confirmed, update status to agreement_reached
+    if (negotiation.seekerConfirmed && negotiation.providerConfirmed) {
+      offer.status = 'agreement_reached';
+      
+      // Add notification about agreement reached
+      const seekerId = offer.jobRequest.seeker;
+      
+      // Notify seeker
+      const seekerNotification = new Notification({
+        userId: seekerId,
+        type: 'agreement_reached',
+        message: 'تم التوصل لاتفاق على جميع الشروط، يمكنك الآن قبول العرض والمتابعة للدفع',
+        relatedChatId: offer.conversation,
+        isRead: false
+      });
+      await seekerNotification.save();
+      
+      // Notify provider
+      const providerId = offer.provider;
+      const providerNotification = new Notification({
+        userId: providerId,
+        type: 'agreement_reached',
+        message: 'تم التوصل لاتفاق على جميع الشروط، بانتظار قبول العرض والدفع من قبل طالب الخدمة',
+        relatedChatId: offer.conversation,
+        isRead: false
+      });
+      await providerNotification.save();
+      
+      // Emit Socket.IO events - using a safer approach to avoid circular imports
+      try {
+        // Try the global socketService first
+        if (socketService && socketService.io) {
+          socketService.io.to(`user:${seekerId}`).emit('notify:agreementReached', {
+            notification: {
+              _id: seekerNotification._id,
+              type: seekerNotification.type,
+              message: seekerNotification.message,
+              relatedChatId: seekerNotification.relatedChatId,
+              isRead: seekerNotification.isRead,
+              createdAt: seekerNotification.createdAt
+            }
+          });
+          
+          socketService.io.to(`user:${providerId}`).emit('notify:agreementReached', {
+            notification: {
+              _id: providerNotification._id,
+              type: providerNotification.type,
+              message: providerNotification.message,
+              relatedChatId: providerNotification.relatedChatId,
+              isRead: providerNotification.isRead,
+              createdAt: providerNotification.createdAt
+            }
+          });
+        } else {
+          logger.warn('Socket service not initialized for agreement notifications');
+        }
+      } catch (socketError) {
+        logger.error('Error sending agreement notifications via socket: ' + socketError.message);
+        // Don't fail the transaction if socket notifications fail
+      }
+    }
+    
     await offer.save();
-    // Emit real-time negotiation update to both provider and seeker
-    const socketService = (await import('./socketService.js')).default;
-    socketService.io.to(`user:${offer.provider}`).emit('negotiation:update', { offerId });
-    socketService.io.to(`user:${offer.jobRequest.seeker}`).emit('negotiation:update', { offerId });
+    
+    // Emit real-time negotiation update to both provider and seeker safely
+    try {
+      // Try to use the global socketService first
+      if (socketService && socketService.io) {
+        socketService.io.to(`user:${offer.provider}`).emit('negotiation:update', { offerId });
+        socketService.io.to(`user:${offer.jobRequest.seeker}`).emit('negotiation:update', { offerId });
+      } else {
+        logger.warn(`Socket service not available for negotiation:update on offer ${offerId}`);
+      }
+    } catch (socketError) {
+      // Don't fail the transaction if socket notifications fail
+      logger.error('Socket notification error: ' + socketError.message);
+    }
+    
     return offer.negotiation;
   }
 
@@ -551,10 +672,20 @@ class OfferService {
     });
     offer.negotiation = negotiation;
     await offer.save();
-    // Emit real-time negotiation update to both provider and seeker
-    const socketService = (await import('./socketService.js')).default;
-    socketService.io.to(`user:${offer.provider}`).emit('negotiation:update', { offerId });
-    socketService.io.to(`user:${offer.jobRequest.seeker}`).emit('negotiation:update', { offerId });
+    
+    // Emit real-time negotiation update to both provider and seeker safely
+    try {
+      // Try to use the global socketService first
+      if (socketService && socketService.io) {
+        socketService.io.to(`user:${offer.provider}`).emit('negotiation:update', { offerId });
+        socketService.io.to(`user:${offer.jobRequest.seeker}`).emit('negotiation:update', { offerId });
+      } else {
+        logger.warn(`Socket service not available for negotiation:update on offer ${offerId}`);
+      }
+    } catch (socketError) {
+      // Don't fail the transaction if socket notifications fail
+      logger.error('Socket notification error: ' + socketError.message);
+    }
     return offer.negotiation;
   }
 
@@ -572,6 +703,324 @@ class OfferService {
     }
     const negotiation = offer.negotiation || {};
     return negotiation.negotiationHistory || [];
+  }
+
+  // Process escrow payment for an accepted offer
+  async processEscrowPayment(offerId, paymentId) {
+    try {
+      const offer = await Offer.findById(offerId);
+      if (!offer) {
+        throw new Error('Offer not found');
+      }
+
+      // Can only process escrow for accepted offers
+      if (offer.status !== 'accepted') {
+        throw new Error('Can only process escrow payments for accepted offers');
+      }
+
+      // Link payment to the offer and update status
+      offer.payment = {
+        status: 'escrowed',
+        paymentId: paymentId,
+        amount: offer.negotiation.price,
+        currency: offer.budget.currency,
+        escrowedAt: new Date(),
+        scheduledDate: offer.negotiation.date,
+        scheduledTime: offer.negotiation.time
+      };
+
+      // Update status to in_progress
+      offer.status = 'in_progress';
+      await offer.save();
+
+      // Update job request status to in_progress
+      await JobRequest.findByIdAndUpdate(offer.jobRequest, {
+        status: 'in_progress'
+      });
+
+      // Notify provider that payment is in escrow
+      const providerId = offer.provider;
+      const notification = new Notification({
+        userId: providerId,
+        type: 'payment_escrowed',
+        message: `تم إيداع المبلغ في الضمان وتم جدولة الخدمة`,
+        relatedChatId: offer.conversation,
+        isRead: false
+      });
+      await notification.save();
+
+      // Emit Socket.IO event to provider's room
+      socketService.io.to(`user:${providerId}`).emit('notify:paymentEscrowed', {
+        notification: {
+          _id: notification._id,
+          type: notification.type,
+          message: notification.message,
+          relatedChatId: notification.relatedChatId,
+          isRead: notification.isRead,
+          createdAt: notification.createdAt
+        }
+      });
+
+      return offer;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Mark service as completed and release funds
+  async markServiceCompleted(offerId, userId) {
+    try {
+      const offer = await Offer.findById(offerId)
+        .populate('jobRequest')
+        .populate('payment.paymentId');
+      
+      if (!offer) {
+        throw new Error('Offer not found');
+      }
+
+      // Check authorization: only the seeker can mark as completed
+      if (offer.jobRequest.seeker.toString() !== userId.toString()) {
+        throw new Error('Access denied: only the seeker can mark the service as completed');
+      }
+
+      // Check if offer is in progress
+      if (offer.status !== 'in_progress') {
+        throw new Error('Only in-progress services can be marked as completed');
+      }
+
+      // Check if payment is in escrow
+      if (!offer.payment || offer.payment.status !== 'escrowed') {
+        throw new Error('Payment must be in escrow to release funds');
+      }
+
+      // Mark offer as completed
+      offer.status = 'completed';
+      offer.payment.status = 'released';
+      offer.payment.releasedAt = new Date();
+      await offer.save();
+
+      // Update job request status
+      await JobRequest.findByIdAndUpdate(offer.jobRequest._id, {
+        status: 'completed',
+        completedAt: new Date()
+      });
+
+      // Release funds from escrow if payment exists
+      if (offer.payment && offer.payment.paymentId) {
+        const Payment = (await import('../models/Payment.js')).default;
+        const payment = await Payment.findById(offer.payment.paymentId);
+        if (payment) {
+          await payment.releaseFromEscrow('service_completed');
+        }
+      }
+
+      // Notify provider that payment is released
+      const providerId = offer.provider;
+      const notification = new Notification({
+        userId: providerId,
+        type: 'payment_released',
+        message: `تم إكمال الخدمة وتم تحويل المبلغ إلى حسابك`,
+        relatedChatId: offer.conversation,
+        isRead: false
+      });
+      await notification.save();
+
+      // Emit Socket.IO event to provider's room
+      socketService.io.to(`user:${providerId}`).emit('notify:paymentReleased', {
+        notification: {
+          _id: notification._id,
+          type: notification.type,
+          message: notification.message,
+          relatedChatId: notification.relatedChatId,
+          isRead: notification.isRead,
+          createdAt: notification.createdAt
+        }
+      });
+
+      return offer;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Request service cancellation
+  async requestCancellation(offerId, userId, reason) {
+    try {
+      const offer = await Offer.findById(offerId)
+        .populate('jobRequest');
+      
+      if (!offer) {
+        throw new Error('Offer not found');
+      }
+
+      // Check authorization: only seeker or provider can cancel
+      const isSeeker = offer.jobRequest.seeker.toString() === userId.toString();
+      const isProvider = offer.provider.toString() === userId.toString();
+      
+      if (!isSeeker && !isProvider) {
+        throw new Error('Access denied: only seeker or provider can request cancellation');
+      }
+
+      // Check if offer can be cancelled
+      if (!['accepted', 'in_progress'].includes(offer.status)) {
+        throw new Error('Only accepted or in-progress services can be cancelled');
+      }
+
+      // Check if there's already a cancellation request
+      if (offer.cancellation && offer.cancellation.status === 'requested') {
+        throw new Error('A cancellation request is already pending');
+      }
+
+      // Calculate refund percentage based on time to service
+      let refundPercentage = 100; // Default full refund
+      
+      if (offer.payment && offer.payment.scheduledDate) {
+        refundPercentage = offer.calculateRefundPercentage();
+      }
+
+      // Update offer with cancellation request
+      offer.cancellation = {
+        status: 'requested',
+        requestedBy: userId,
+        requestedAt: new Date(),
+        reason: reason || 'No reason provided',
+        refundPercentage
+      };
+      
+      await offer.save();
+
+      // Notify the other party about cancellation request
+      const notifyUserId = isSeeker ? offer.provider : offer.jobRequest.seeker;
+      const requesterType = isSeeker ? 'طالب الخدمة' : 'مقدم الخدمة';
+      
+      const notification = new Notification({
+        userId: notifyUserId,
+        type: 'cancellation_requested',
+        message: `${requesterType} طلب إلغاء الخدمة. نسبة الاسترداد: ${refundPercentage}%`,
+        relatedChatId: offer.conversation,
+        isRead: false
+      });
+      await notification.save();
+
+      // Emit Socket.IO event
+      socketService.io.to(`user:${notifyUserId}`).emit('notify:cancellationRequested', {
+        notification: {
+          _id: notification._id,
+          type: notification.type,
+          message: notification.message,
+          relatedChatId: notification.relatedChatId,
+          isRead: notification.isRead,
+          createdAt: notification.createdAt
+        }
+      });
+
+      return {
+        success: true,
+        refundPercentage,
+        cancellation: offer.cancellation
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Process service cancellation (applies refund if applicable)
+  async processCancellation(offerId, adminId = null) {
+    try {
+      const offer = await Offer.findById(offerId)
+        .populate('jobRequest')
+        .populate('payment.paymentId');
+      
+      if (!offer) {
+        throw new Error('Offer not found');
+      }
+
+      // Check if cancellation was requested
+      if (!offer.cancellation || offer.cancellation.status !== 'requested') {
+        throw new Error('No pending cancellation request found');
+      }
+
+      // Mark offer as cancelled
+      offer.status = 'cancelled';
+      offer.cancellation.status = 'approved';
+      await offer.save();
+
+      // Update job request status
+      await JobRequest.findByIdAndUpdate(offer.jobRequest._id, {
+        status: 'cancelled'
+      });
+
+      // Process refund if payment exists
+      if (offer.payment && offer.payment.paymentId) {
+        const Payment = (await import('../models/Payment.js')).default;
+        const payment = await Payment.findById(offer.payment.paymentId);
+        
+        if (payment && payment.status === 'escrowed') {
+          // Process cancellation with appropriate refund percentage
+          await payment.processCancellation(
+            offer.cancellation.requestedBy,
+            offer.cancellation.reason,
+            offer.cancellation.refundPercentage
+          );
+        }
+      }
+
+      // Notify both parties
+      const seekerId = offer.jobRequest.seeker;
+      const providerId = offer.provider;
+      const refundPercentage = offer.cancellation.refundPercentage;
+
+      // Notify seeker
+      const seekerNotification = new Notification({
+        userId: seekerId,
+        type: 'service_cancelled',
+        message: `تم إلغاء الخدمة. نسبة استرداد المبلغ: ${refundPercentage}%`,
+        relatedChatId: offer.conversation,
+        isRead: false
+      });
+      await seekerNotification.save();
+
+      // Notify provider
+      const providerNotification = new Notification({
+        userId: providerId,
+        type: 'service_cancelled',
+        message: `تم إلغاء الخدمة. نسبة الاحتفاظ بالمبلغ: ${100 - refundPercentage}%`,
+        relatedChatId: offer.conversation,
+        isRead: false
+      });
+      await providerNotification.save();
+
+      // Emit Socket.IO events
+      socketService.io.to(`user:${seekerId}`).emit('notify:serviceCancelled', {
+        notification: {
+          _id: seekerNotification._id,
+          type: seekerNotification.type,
+          message: seekerNotification.message,
+          relatedChatId: seekerNotification.relatedChatId,
+          isRead: seekerNotification.isRead,
+          createdAt: seekerNotification.createdAt
+        }
+      });
+
+      socketService.io.to(`user:${providerId}`).emit('notify:serviceCancelled', {
+        notification: {
+          _id: providerNotification._id,
+          type: providerNotification.type,
+          message: providerNotification.message,
+          relatedChatId: providerNotification.relatedChatId,
+          isRead: providerNotification.isRead,
+          createdAt: providerNotification.createdAt
+        }
+      });
+
+      return {
+        success: true,
+        refundPercentage,
+        status: 'cancelled'
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 }
 

@@ -12,9 +12,9 @@ import Button from '../components/ui/Button';
 import FormTextarea from '../components/ui/FormTextarea';
 import PaymentModal from '../components/ui/PaymentModal';
 import ReportProblemModal from '../components/ui/ReportProblemModal';
-import { createCheckoutSession } from '../services/paymentService';
+import Modal from '../admin/components/UI/Modal';
 import { submitComplaint } from '../services/complaintService';
-import { Send, ArrowLeft, MessageCircle, User, CreditCard, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Send, ArrowLeft, MessageCircle, User, CreditCard, AlertTriangle, CheckCircle, AlertCircle, Shield } from 'lucide-react';
 
 interface Message {
   _id: string;
@@ -95,6 +95,13 @@ const ChatPage: React.FC = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [serviceInProgress, setServiceInProgress] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completionLoading, setCompletionLoading] = useState(false);
+  const [showCancellationModal, setShowCancellationModal] = useState(false);
+  const [cancellationLoading, setCancellationLoading] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [showNegotiationMobile, setShowNegotiationMobile] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -125,20 +132,27 @@ const ChatPage: React.FC = () => {
       if (conversation && conversation.jobRequestId && conversation.participants && accessToken) {
         const jobRequestId = conversation.jobRequestId._id;
         const providerId = conversation.participants.provider._id;
+        
+        console.log('Fetching offer ID for:', { jobRequestId, providerId });
+        
         try {
           const res = await fetch(`/api/offers?jobRequest=${jobRequestId}&provider=${providerId}`, {
             headers: { Authorization: `Bearer ${accessToken}` }
           });
           const data = await res.json();
+          console.log('Offers data:', data);
+          
           if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+            console.log('Found offer:', data.data[0]);
             setOfferId(data.data[0]._id);
             fetchNegotiation(data.data[0]._id);
             fetchNegotiationHistory(data.data[0]._id);
           } else {
+            console.log('No offers found for this conversation');
             setOfferId(null);
           }
-        } catch {
-          // Optionally log error
+        } catch (error) {
+          console.error('Error fetching offer ID:', error);
         }
       }
     };
@@ -177,55 +191,75 @@ const ChatPage: React.FC = () => {
             };
             addNewOffer(mappedOffer);
           }
-        } catch (err) {
+        } catch (error) {
           // Optionally log error
+          console.error('Error fetching offer details:', error);
         }
       }
     };
     fetchOfferIfMissing();
   }, [offerId, offers, accessToken, addNewOffer]);
 
-  // Check if payment is completed for this conversation
-  const checkPaymentStatus = async () => {
-    if (!chatId || !accessToken || !user) return;
+  // Check if payment is completed for this conversation and if service is in progress
+  const checkServiceStatus = async () => {
+    if (!chatId || !accessToken || !user || !offerId) return;
 
     try {
+      // First check offer status
+      const offerResponse = await fetch(`/api/offers/${offerId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      
+      if (offerResponse.ok) {
+        const offerData = await offerResponse.json();
+        if (offerData.success && offerData.data) {
+          const offerStatus = offerData.data.status;
+          setServiceInProgress(offerStatus === 'in_progress');
+          setPaymentCompleted(offerStatus === 'in_progress' || offerStatus === 'completed');
+        }
+      }
+      
+      // Also check payment status
       const response = await fetch(`/api/payment/check-status/${chatId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       
       if (response.ok) {
         const data = await response.json();
-        const isCompleted = data.success && data.data?.status === 'completed';
+        const isCompleted = data.success && (data.data?.status === 'completed' || data.data?.status === 'escrowed');
         setPaymentCompleted(isCompleted);
         console.log('Payment status check:', { status: data.data?.status, isCompleted });
       }
     } catch (error) {
-      console.error('Error checking payment status:', error);
+      console.error('Error checking service status:', error);
     }
   };
 
-  // Check payment status on mount and when dependencies change
+  // Check service status on mount and when dependencies change
   useEffect(() => {
-    checkPaymentStatus();
-  }, [chatId, accessToken, user]);
+    if (offerId) {
+      checkServiceStatus();
+    }
+  }, [offerId, chatId, accessToken, user]);
 
-  // Refresh payment status when user returns to the page (focus event)
+  // Refresh service status when user returns to the page (focus event)
   useEffect(() => {
     const handleFocus = () => {
-      checkPaymentStatus();
+      if (offerId) {
+        checkServiceStatus();
+      }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [chatId, accessToken, user]);
+  }, [offerId, chatId, accessToken, user]);
 
   // Check if user is returning from payment success page
   useEffect(() => {
     const fromPayment = searchParams.get('from_payment');
     if (fromPayment === 'success') {
       // Refresh payment status immediately
-      checkPaymentStatus();
+      checkServiceStatus();
       // Show success message
       showSuccess('تم الدفع بنجاح', 'تم إتمام عملية الدفع بنجاح');
       // Clean up URL parameter
@@ -237,7 +271,7 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     if (!paymentCompleted && chatId && accessToken && user) {
       const interval = setInterval(() => {
-        checkPaymentStatus();
+        checkServiceStatus();
       }, 30000); // Check every 30 seconds
 
       return () => clearInterval(interval);
@@ -371,29 +405,99 @@ const ChatPage: React.FC = () => {
   };
 
   const handlePaymentConfirm = async (amount: number) => {
-    if (!conversation || !user || !accessToken) return;
+    if (!conversation || !user || !accessToken || !offerId) return;
 
     setPaymentLoading(true);
     try {
-      const response = await createCheckoutSession({
-        conversationId: chatId!,
-        amount,
-        serviceTitle: conversation.jobRequestId.title,
-        providerId: conversation.participants.provider._id
-      }, accessToken);
+      // Use new escrow payment endpoint
+      const response = await fetch('/api/payments/create-escrow-payment', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          offerId,
+          amount
+        })
+      });
 
-      if (response.success && response.data.url) {
-        window.location.href = response.data.url;
+      const data = await response.json();
+      if (response.ok && data.success && data.data.url) {
+        window.location.href = data.data.url;
       } else {
-        setError(response.message || 'فشل في إنشاء جلسة الدفع');
+        showError('خطأ في عملية الدفع', data.message || 'فشل في إنشاء جلسة الدفع');
         setShowPaymentModal(false);
       }
     } catch (error) {
       console.error('Payment error:', error);
-      setError('حدث خطأ أثناء إنشاء جلسة الدفع');
+      showError('خطأ في عملية الدفع', 'حدث خطأ أثناء إنشاء جلسة الدفع');
       setShowPaymentModal(false);
     } finally {
       setPaymentLoading(false);
+    }
+  };
+
+  // Mark service as completed
+  const handleCompleteService = async () => {
+    if (!offerId || !accessToken) return;
+
+    setCompletionLoading(true);
+    try {
+      const response = await fetch(`/api/offers/${offerId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        showSuccess('تم تأكيد اكتمال الخدمة', 'تم تحرير المبلغ لمقدم الخدمة بنجاح');
+        setShowCompletionModal(false);
+        checkServiceStatus();
+      } else {
+        showError('خطأ في تأكيد اكتمال الخدمة', data.message || 'حدث خطأ أثناء تأكيد اكتمال الخدمة');
+      }
+    } catch (error) {
+      console.error('Service completion error:', error);
+      showError('خطأ في تأكيد اكتمال الخدمة', 'حدث خطأ أثناء تأكيد اكتمال الخدمة');
+    } finally {
+      setCompletionLoading(false);
+    }
+  };
+
+  // Request service cancellation
+  const handleRequestCancellation = async () => {
+    if (!offerId || !accessToken) return;
+
+    setCancellationLoading(true);
+    try {
+      const response = await fetch(`/api/offers/${offerId}/cancel-request`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          reason: cancellationReason || 'طلب إلغاء بدون سبب محدد'
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        showSuccess('تم طلب إلغاء الخدمة', `تم إرسال طلب الإلغاء بنجاح. نسبة الاسترداد المتوقعة: ${data.data.refundPercentage}%`);
+        setShowCancellationModal(false);
+        checkServiceStatus();
+      } else {
+        showError('خطأ في طلب إلغاء الخدمة', data.message || 'حدث خطأ أثناء طلب إلغاء الخدمة');
+      }
+    } catch (error) {
+      console.error('Cancellation request error:', error);
+      showError('خطأ في طلب إلغاء الخدمة', 'حدث خطأ أثناء طلب إلغاء الخدمة');
+    } finally {
+      setCancellationLoading(false);
     }
   };
 
@@ -543,7 +647,8 @@ const ChatPage: React.FC = () => {
                 </div>
                 {/* Action Buttons - Hidden on mobile */}
                 <div className="hidden md:flex items-center gap-3 flex-shrink-0">
-                  {isSeeker && ['assigned', 'in_progress'].includes(conversation.jobRequestId.status) && !paymentCompleted && (
+                  {/* Show payment button for seeker when offer is accepted but payment not completed */}
+                  {isSeeker && negotiationState[offerId!]?.canAcceptOffer && !paymentCompleted && (
                     <Button
                       variant="primary"
                       size="sm"
@@ -551,15 +656,44 @@ const ChatPage: React.FC = () => {
                       className="flex items-center gap-2"
                     >
                       <CreditCard className="w-4 h-4" />
-                      إتمام الدفع
+                      دفع ضمان الخدمة
                     </Button>
                   )}
-                  {isSeeker && paymentCompleted && (
-                    <div className="flex items-center gap-2 text-green-600 text-sm">
+                  
+                  {/* Show service completion button for seeker when service is in progress */}
+                  {isSeeker && serviceInProgress && (
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={() => setShowCompletionModal(true)}
+                      className="flex items-center gap-2"
+                    >
                       <CheckCircle className="w-4 h-4" />
-                      تم الدفع
+                      تأكيد اكتمال الخدمة
+                    </Button>
+                  )}
+                  
+                  {/* Show cancellation button only when payment has been made */}
+                  {(serviceInProgress || paymentCompleted) && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => setShowCancellationModal(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <AlertCircle className="w-4 h-4" />
+                      طلب إلغاء الخدمة
+                    </Button>
+                  )}
+                  
+                  {/* Show payment completed badge */}
+                  {paymentCompleted && (
+                    <div className="flex items-center gap-2 text-green-600 text-sm px-3 py-1 bg-green-50 rounded-full">
+                      <Shield className="w-4 h-4" />
+                      تم دفع ضمان الخدمة
                     </div>
                   )}
+                  
                   <Button
                     variant="outline"
                     size="sm"
@@ -595,34 +729,162 @@ const ChatPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                {/* Mobile Action Buttons */}
-                <div className="md:hidden flex gap-2">
-                  {isSeeker && ['assigned', 'in_progress'].includes(conversation.jobRequestId.status) && !paymentCompleted && (
+                                {/* Mobile Action Buttons */}
+                <div className="md:hidden flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    {/* Show payment button for seeker when offer is accepted but payment not completed */}
+                    {isSeeker && negotiationState[offerId!]?.canAcceptOffer && !paymentCompleted && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setShowPaymentModal(true)}
+                        className="flex items-center justify-center gap-2 flex-1"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        دفع ضمان الخدمة
+                      </Button>
+                    )}
+                    
+                    {/* Show service completion button for seeker when service is in progress */}
+                    {isSeeker && serviceInProgress && (
+                      <Button
+                        variant="success"
+                        size="sm"
+                        onClick={() => setShowCompletionModal(true)}
+                        className="flex items-center justify-center gap-2 flex-1"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        تأكيد اكتمال الخدمة
+                      </Button>
+                    )}
+                    
+                    {/* Toggle negotiation sidebar on mobile */}
                     <Button
-                      variant="primary"
+                      variant="secondary"
                       size="sm"
-                      onClick={() => setShowPaymentModal(true)}
-                      className="flex items-center gap-2 flex-1"
+                      onClick={() => setShowNegotiationMobile(!showNegotiationMobile)}
+                      className="flex items-center justify-center gap-2 flex-1"
                     >
-                      <CreditCard className="w-4 h-4" />
-                      إتمام الدفع
+                      {showNegotiationMobile ? 'إخفاء التفاوض' : 'عرض التفاوض'}
                     </Button>
-                  )}
-                  {isSeeker && paymentCompleted && (
-                    <div className="flex items-center gap-2 text-green-600 text-sm flex-1 justify-center">
-                      <CheckCircle className="w-4 h-4" />
-                      تم الدفع
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    {/* Show cancellation button only when payment has been made */}
+                    {(serviceInProgress || paymentCompleted) && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => setShowCancellationModal(true)}
+                        className="flex items-center justify-center gap-2 flex-1"
+                      >
+                        <AlertCircle className="w-4 h-4" />
+                        طلب إلغاء
+                      </Button>
+                    )}
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleReportIssue}
+                      className="flex items-center justify-center gap-2 flex-1"
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                      الإبلاغ عن مشكلة
+                    </Button>
+                  </div>
+                  
+                  {/* Show payment completed badge */}
+                  {paymentCompleted && (
+                    <div className="flex items-center justify-center gap-2 text-green-600 text-sm py-1 bg-green-50 rounded-full">
+                      <Shield className="w-4 h-4" />
+                      تم دفع ضمان الخدمة
                     </div>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleReportIssue}
-                    className="flex items-center gap-2 flex-1"
-                  >
-                    <AlertTriangle className="w-4 h-4" />
-                    الإبلاغ عن مشكلة
-                  </Button>
+                  
+                  {/* Mobile Negotiation Section */}
+                  {showNegotiationMobile && (
+                    <div className="mt-4 border-t border-gray-200 pt-4 pb-16">
+                      {!offerId && (
+                        <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4">
+                          <h3 className="font-bold text-amber-800 mb-2">معلومات التصحيح</h3>
+                          <p className="text-amber-700 text-sm">لم يتم العثور على معرّف العرض</p>
+                        </div>
+                      )}
+                      {offerId && !negotiationState[offerId] && (
+                        <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4">
+                          <h3 className="font-bold text-amber-800 mb-2">معلومات التصحيح</h3>
+                          <p className="text-amber-700 text-sm">معرّف العرض: {offerId}</p>
+                          <p className="text-amber-700 text-sm">لم يتم العثور على بيانات التفاوض</p>
+                          <button 
+                            onClick={() => {
+                              console.log('Manually fetching negotiation for:', offerId);
+                              fetchNegotiation(offerId);
+                              fetchNegotiationHistory(offerId);
+                            }}
+                            className="mt-2 bg-deep-teal text-white px-3 py-1 rounded-md text-xs"
+                          >
+                            إعادة تحميل بيانات التفاوض
+                          </button>
+                        </div>
+                      )}
+                      
+                      {offerId && negotiationState[offerId] && user && (
+                        <div className="pb-4 flex flex-col space-y-4">
+                          <div className="flex-none">
+                            <NegotiationSummary
+                            negotiation={negotiationState[offerId]}
+                            isProvider={user.id === conversation.participants.provider._id}
+                            isSeeker={user.id === conversation.participants.seeker._id}
+                            jobRequest={{
+                              id: conversation.jobRequestId._id,
+                              title: conversation.jobRequestId.title,
+                              description: conversation.jobRequestId.description || '',
+                              budget: {
+                                min: conversation.jobRequestId.budget.min,
+                                max: conversation.jobRequestId.budget.max,
+                                currency: 'EGP'
+                              },
+                              location: conversation.jobRequestId.location?.address || '',
+                              postedBy: {
+                                id: conversation.participants.seeker._id,
+                                name: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
+                                isPremium: false
+                              },
+                              createdAt: conversation.jobRequestId.createdAt,
+                              preferredDate: conversation.jobRequestId.deadline,
+                              status: conversation.jobRequestId.status === 'open' ? 'open' : 
+                                    conversation.jobRequestId.status === 'assigned' || conversation.jobRequestId.status === 'in_progress' ? 'accepted' : 'closed',
+                              category: '',
+                              availability: { days: [], timeSlots: [] }
+                            }}
+                            offer={offers.find(o => o.id === offerId) as Offer}
+                            onEditSave={async (terms) => {
+                              await updateNegotiation(offerId, terms);
+                              await resetNegotiation(offerId);
+                            }}
+                            onConfirm={() => {
+                              confirmNegotiation(offerId);
+                              // Auto-close mobile negotiation view after confirming
+                              setTimeout(() => setShowNegotiationMobile(false), 1500);
+                            }}
+                            onReset={() => resetNegotiation(offerId)}
+                          />
+                          </div>
+                          <div className="flex-none">
+                            <NegotiationHistory
+                              negotiationHistory={negotiationState[offerId]?.negotiationHistory}
+                              userMap={{
+                                [conversation.participants.seeker._id]: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
+                                [conversation.participants.provider._id]: `${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`
+                              }}
+                              isMobile={true}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -736,15 +998,61 @@ const ChatPage: React.FC = () => {
         </div>
         {/* Negotiation Sidebar (desktop only) */}
         <div className="hidden md:flex flex-col w-96 max-w-full h-full sticky top-8 bg-transparent">
-          <div className="h-full flex flex-col border-r border-gray-100 pl-6 overflow-y-auto" aria-label="ملخص التفاوض والتاريخ">
+          <div className="h-full flex flex-col border-r border-gray-100 pl-6 overflow-y-auto overflow-x-hidden" aria-label="ملخص التفاوض والتاريخ">
+            {/* Debug information */}
+            {!offerId && (
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4">
+                <h3 className="font-bold text-amber-800 mb-2">معلومات التصحيح</h3>
+                <p className="text-amber-700 text-sm">لم يتم العثور على معرّف العرض</p>
+              </div>
+            )}
+            {offerId && !negotiationState[offerId] && (
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4">
+                <h3 className="font-bold text-amber-800 mb-2">معلومات التصحيح</h3>
+                <p className="text-amber-700 text-sm">معرّف العرض: {offerId}</p>
+                <p className="text-amber-700 text-sm">لم يتم العثور على بيانات التفاوض</p>
+                <button 
+                  onClick={() => {
+                    console.log('Manually fetching negotiation for:', offerId);
+                    fetchNegotiation(offerId);
+                    fetchNegotiationHistory(offerId);
+                  }}
+                  className="mt-2 bg-deep-teal text-white px-3 py-1 rounded-md text-xs"
+                >
+                  إعادة تحميل بيانات التفاوض
+                </button>
+              </div>
+            )}
+            
             {offerId && negotiationState[offerId] && user && (
-              <>
-                <NegotiationSummary
+              <div className="flex flex-col space-y-4">
+                <div className="flex-none">
+                  <NegotiationSummary
                   negotiation={negotiationState[offerId]}
                   isProvider={user.id === conversation.participants.provider._id}
                   isSeeker={user.id === conversation.participants.seeker._id}
-                  // TODO: Replace 'any' with ServiceRequest type if possible. The jobRequestId object does not match the ServiceRequest type directly.
-                  jobRequest={conversation.jobRequestId as any}
+                  jobRequest={{
+                    id: conversation.jobRequestId._id,
+                    title: conversation.jobRequestId.title,
+                    description: conversation.jobRequestId.description || '',
+                    budget: {
+                      min: conversation.jobRequestId.budget.min,
+                      max: conversation.jobRequestId.budget.max,
+                      currency: 'EGP' // Default to EGP as currency
+                    },
+                    location: conversation.jobRequestId.location?.address || '',
+                    postedBy: {
+                      id: conversation.participants.seeker._id,
+                      name: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
+                      isPremium: false
+                    },
+                    createdAt: conversation.jobRequestId.createdAt,
+                    preferredDate: conversation.jobRequestId.deadline,
+                    status: conversation.jobRequestId.status === 'open' ? 'open' : 
+                           conversation.jobRequestId.status === 'assigned' || conversation.jobRequestId.status === 'in_progress' ? 'accepted' : 'closed',
+                    category: '',
+                    availability: { days: [], timeSlots: [] }
+                  }}
                   offer={offers.find(o => o.id === offerId) as Offer}
                   onEditSave={async (terms) => {
                     await updateNegotiation(offerId, terms);
@@ -753,31 +1061,132 @@ const ChatPage: React.FC = () => {
                   onConfirm={() => confirmNegotiation(offerId)}
                   onReset={() => resetNegotiation(offerId)}
                 />
-                <NegotiationHistory
-                  negotiationHistory={negotiationState[offerId]?.negotiationHistory}
-                  userMap={{
-                    [conversation.participants.seeker._id]: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
-                    [conversation.participants.provider._id]: `${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`
-                  }}
-                  isMobile={false}
-                />
-              </>
+                </div>
+                <div className="flex-none">
+                  <NegotiationHistory
+                    negotiationHistory={negotiationState[offerId]?.negotiationHistory}
+                    userMap={{
+                      [conversation.participants.seeker._id]: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
+                      [conversation.participants.provider._id]: `${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`
+                    }}
+                    isMobile={false}
+                  />
+                </div>
+              </div>
             )}
           </div>
         </div>
       </div>
 
       {/* Payment Modal */}
-      {conversation && (
+      {conversation && offerId && negotiationState[offerId] && (
         <PaymentModal
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
           onConfirm={handlePaymentConfirm}
           serviceTitle={conversation.jobRequestId.title}
           providerName={`${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`}
+          negotiatedPrice={negotiationState[offerId]?.currentTerms?.price}
+          scheduledDate={negotiationState[offerId]?.currentTerms?.date}
+          scheduledTime={negotiationState[offerId]?.currentTerms?.time}
           loading={paymentLoading}
         />
       )}
+      
+      {/* Service Completion Modal */}
+      <Modal
+        isOpen={showCompletionModal}
+        onClose={() => setShowCompletionModal(false)}
+        title="تأكيد اكتمال الخدمة"
+      >
+        <div className="space-y-4">
+          <div className="bg-green-50 rounded-lg p-4 flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-1" />
+            <div className="text-green-800">
+              <h3 className="font-semibold mb-1">تأكيد اكتمال الخدمة</h3>
+              <p className="text-sm">
+                بالضغط على زر التأكيد، أنت تؤكد أن الخدمة قد تم إنجازها بنجاح وأنك موافق على تحرير المبلغ المحتجز لمقدم الخدمة.
+              </p>
+              <p className="text-sm mt-2 font-medium">
+                ملاحظة: لا يمكن التراجع عن هذا الإجراء بعد التأكيد.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowCompletionModal(false)}
+              disabled={completionLoading}
+              className="flex-1"
+            >
+              إلغاء
+            </Button>
+            <Button
+              variant="success"
+              onClick={handleCompleteService}
+              disabled={completionLoading}
+              className="flex-1"
+            >
+              {completionLoading ? 'جاري التأكيد...' : 'تأكيد اكتمال الخدمة'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+      
+      {/* Cancellation Request Modal */}
+      <Modal
+        isOpen={showCancellationModal}
+        onClose={() => setShowCancellationModal(false)}
+        title="طلب إلغاء الخدمة"
+      >
+        <div className="space-y-4">
+          <div className="bg-amber-50 rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-1" />
+            <div className="text-amber-800">
+              <h3 className="font-semibold mb-1">سياسة الإلغاء</h3>
+              <ul className="text-sm space-y-1">
+                <li>• إلغاء قبل 12 ساعة من موعد الخدمة: استرداد 100% من المبلغ</li>
+                <li>• إلغاء خلال أقل من 12 ساعة: استرداد 70% فقط من المبلغ</li>
+              </ul>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              سبب طلب الإلغاء
+            </label>
+            <FormTextarea
+              value={cancellationReason}
+              onChange={(e) => setCancellationReason(e.target.value)}
+              placeholder="اذكر سبب طلب الإلغاء..."
+              className="resize-none border-2 border-gray-200"
+              rows={3}
+              maxLength={500}
+              disabled={cancellationLoading}
+            />
+            <p className="text-sm text-text-secondary mt-1">
+              {cancellationReason.length}/500
+            </p>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowCancellationModal(false)}
+              disabled={cancellationLoading}
+              className="flex-1"
+            >
+              إلغاء
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleRequestCancellation}
+              disabled={cancellationLoading}
+              className="flex-1"
+            >
+              {cancellationLoading ? 'جاري الإرسال...' : 'تأكيد طلب الإلغاء'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Report Problem Modal */}
       {conversation && (

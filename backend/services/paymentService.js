@@ -3,12 +3,15 @@ import Payment from '../models/Payment.js';
 import Conversation from '../models/Conversation.js';
 import JobRequest from '../models/JobRequest.js';
 import User from '../models/User.js';
+import Offer from '../models/Offer.js';
+import offerService from './offerService.js';
 
 export const getPaymentBySessionId = async (sessionId) => {
   try {
     const payment = await Payment.findBySessionId(sessionId)
       .populate('conversationId')
       .populate('jobRequestId')
+      .populate('offerId')
       .populate('seekerId', 'name email')
       .populate('providerId', 'name email');
     
@@ -36,7 +39,8 @@ export const getPaymentsByConversation = async (conversationId, userId) => {
 
     const payments = await Payment.findByConversation(conversationId)
       .populate('seekerId', 'name email')
-      .populate('providerId', 'name email');
+      .populate('providerId', 'name email')
+      .populate('offerId');
 
     return { success: true, data: payments };
   } catch (error) {
@@ -57,6 +61,7 @@ export const getUserPayments = async (userId, page = 1, limit = 10) => {
     })
     .populate('conversationId')
     .populate('jobRequestId')
+    .populate('offerId')
     .populate('seekerId', 'name email')
     .populate('providerId', 'name email')
     .sort({ createdAt: -1 })
@@ -125,44 +130,139 @@ export const getPaymentStats = async (userId) => {
   }
 };
 
-export const validatePaymentRequest = async (conversationId, userId, amount) => {
+export const validateEscrowPaymentRequest = async (offerId, userId, amount) => {
   try {
-    // Check if conversation exists
-    const conversation = await Conversation.findById(conversationId)
-      .populate('jobRequestId');
+    // Find the offer and check all validation rules
+    const offer = await Offer.findById(offerId)
+      .populate('jobRequest')
+      .populate('conversation');
 
-    if (!conversation) {
-      return { success: false, error: 'المحادثة غير موجودة' };
+    if (!offer) {
+      return { success: false, error: 'العرض غير موجود' };
     }
 
     // Check if user is the seeker
-    if (conversation.participants.seeker.toString() !== userId) {
+    if (offer.jobRequest.seeker.toString() !== userId) {
       return { success: false, error: 'فقط طالب الخدمة يمكنه إنشاء الدفع' };
     }
 
-    // Check if job request is in progress
-    if (conversation.jobRequestId.status !== 'in_progress') {
-      return { success: false, error: 'لا يمكن إنشاء الدفع إلا للخدمات قيد التنفيذ' };
+    // Check if offer is accepted (proper status for escrow)
+    if (offer.status !== 'accepted') {
+      return { success: false, error: 'يمكن إجراء الدفع فقط للعروض المقبولة' };
     }
 
-    // Check if payment already exists and is pending
-    const existingPayment = await Payment.findOne({
-      conversationId,
-      status: 'pending'
-    });
-
-    if (existingPayment) {
-      return { success: false, error: 'يوجد دفع معلق بالفعل لهذه المحادثة' };
+    // Check if offer already has a payment
+    if (offer.payment && offer.payment.paymentId) {
+      const existingPayment = await Payment.findById(offer.payment.paymentId);
+      if (existingPayment && ['pending', 'escrowed'].includes(existingPayment.status)) {
+        return { success: false, error: 'يوجد دفع بالفعل لهذا العرض' };
+      }
     }
 
-    // Validate amount
+    // Check if negotiation is complete with agreed price
+    if (!offer.negotiation || !offer.negotiation.price) {
+      return { success: false, error: 'يجب الاتفاق على السعر قبل الدفع' };
+    }
+
+    // Validate amount matches negotiated price
     if (!amount || amount <= 0) {
       return { success: false, error: 'المبلغ غير صحيح' };
     }
 
-    return { success: true, data: { conversation } };
+    // Make sure the payment amount matches the negotiated price
+    if (Math.abs(amount - offer.negotiation.price) > 1) { // Allow small rounding differences
+      return { success: false, error: 'المبلغ لا يتطابق مع السعر المتفق عليه' };
+    }
+
+    return { 
+      success: true, 
+      data: { 
+        offer,
+        conversation: offer.conversation,
+        jobRequest: offer.jobRequest
+      }
+    };
   } catch (error) {
-    console.error('Error validating payment request:', error);
+    console.error('Error validating escrow payment request:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const handleEscrowPaymentCompletion = async (session) => {
+  try {
+    const payment = await Payment.findOne({ stripeSessionId: session.id });
+    if (!payment) {
+      console.error('Payment record not found for session:', session.id);
+      return { success: false, error: 'Payment record not found' };
+    }
+
+    // Mark payment as escrowed
+    payment.status = 'escrowed';
+    payment.stripePaymentIntentId = session.payment_intent;
+    payment.escrow.status = 'held';
+    payment.escrow.heldAt = new Date();
+    await payment.save();
+
+    // Update offer payment status and move to in_progress
+    const result = await offerService.processEscrowPayment(payment.offerId, payment._id);
+
+    return { success: true, payment, offer: result };
+  } catch (error) {
+    console.error('Error handling escrow payment completion:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const releaseFundsFromEscrow = async (paymentId, userId) => {
+  try {
+    const payment = await Payment.findById(paymentId)
+      .populate({
+        path: 'offerId',
+        populate: {
+          path: 'jobRequest'
+        }
+      });
+
+    if (!payment) {
+      return { success: false, error: 'الدفع غير موجود' };
+    }
+
+    // Check if payment is in escrow
+    if (payment.status !== 'escrowed' || payment.escrow.status !== 'held') {
+      return { success: false, error: 'المبلغ غير موجود في الضمان' };
+    }
+
+    // Check authorization - only the seeker who made the payment can release funds
+    if (payment.seekerId.toString() !== userId) {
+      return { success: false, error: 'غير مصرح لك بتحرير الأموال من الضمان' };
+    }
+
+    // Update offer and release funds
+    await offerService.markServiceCompleted(payment.offerId._id, userId);
+
+    return { success: true, message: 'تم تحرير الأموال من الضمان بنجاح' };
+  } catch (error) {
+    console.error('Error releasing funds from escrow:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const requestCancellation = async (offerId, userId, reason) => {
+  try {
+    const result = await offerService.requestCancellation(offerId, userId, reason);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error requesting cancellation:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const processCancellation = async (offerId, adminId = null) => {
+  try {
+    const result = await offerService.processCancellation(offerId, adminId);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error processing cancellation:', error);
     return { success: false, error: error.message };
   }
 }; 

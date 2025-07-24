@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import Payment from '../models/Payment.js';
 import Conversation from '../models/Conversation.js';
 import JobRequest from '../models/JobRequest.js';
+import Offer from '../models/Offer.js';
+import * as paymentService from '../services/paymentService.js';
 
 dotenv.config();
 
@@ -10,70 +12,46 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-12-18.acacia',
 });
 
-export const createCheckoutSession = async (req, res) => {
+// Create a payment session for an escrow payment
+export const createEscrowPayment = async (req, res) => {
   try {
-    console.log('Creating checkout session with data:', req.body);
-    const { conversationId, amount, serviceTitle, providerId } = req.body;
+    console.log('Creating escrow payment with data:', req.body);
+    const { offerId, amount } = req.body;
     const userId = req.user._id;
 
-    if (!conversationId || !amount || !serviceTitle || !providerId) {
+    if (!offerId || !amount) {
       return res.status(400).json({
         success: false,
         message: 'جميع الحقول مطلوبة'
       });
     }
 
-    // Validate amount (should be positive and in cents)
-    const amountInCents = Math.round(parseFloat(amount) * 100);
-    if (amountInCents <= 0) {
+    // Validate amount (should be positive)
+    const paymentAmount = parseFloat(amount);
+    if (paymentAmount <= 0) {
       return res.status(400).json({
         success: false,
         message: 'المبلغ غير صحيح'
       });
     }
 
-    // Verify conversation exists and user is the seeker
-    const conversation = await Conversation.findById(conversationId)
-      .populate('jobRequestId')
-      .populate('participants.seeker')
-      .populate('participants.provider');
+    // Convert amount to cents for Stripe
+    const amountInCents = Math.round(paymentAmount * 100);
 
-    if (!conversation) {
-      return res.status(404).json({
-        success: false,
-        message: 'المحادثة غير موجودة'
-      });
-    }
-
-    console.log('Authorization check:');
-    console.log('User ID from request:', userId, 'Type:', typeof userId);
-    console.log('Seeker ID from conversation:', conversation.participants.seeker._id, 'Type:', typeof conversation.participants.seeker._id);
-    console.log('User ID as string:', userId.toString());
-    console.log('Seeker ID as string:', conversation.participants.seeker._id.toString());
-    console.log('Comparison result:', userId.toString() === conversation.participants.seeker._id.toString());
+    // Validate payment request using the service
+    const validationResult = await paymentService.validateEscrowPaymentRequest(offerId, userId, paymentAmount);
     
-    if (userId.toString() !== conversation.participants.seeker._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'غير مصرح لك بإنشاء الدفع لهذه المحادثة'
-      });
-    }
-
-    // Check if payment already exists and is completed
-    const existingPayment = await Payment.findOne({
-      conversationId,
-      status: 'completed'
-    });
-
-    if (existingPayment) {
+    if (!validationResult.success) {
       return res.status(400).json({
         success: false,
-        message: 'تم الدفع مسبقاً لهذه الخدمة'
+        message: validationResult.error
       });
     }
 
+    const { offer, conversation, jobRequest } = validationResult.data;
+
     // Create Stripe checkout session
-    console.log('Creating Stripe session with amount:', amountInCents, 'cents');
+    console.log('Creating Stripe escrow session with amount:', amountInCents, 'cents');
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -81,8 +59,8 @@ export const createCheckoutSession = async (req, res) => {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: serviceTitle,
-              description: `دفع مقابل الخدمة: ${serviceTitle}`,
+              name: jobRequest.title,
+              description: `دفع الضمان للخدمة: ${jobRequest.title}`,
             },
             unit_amount: amountInCents,
           },
@@ -90,35 +68,44 @@ export const createCheckoutSession = async (req, res) => {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/chat/${conversationId}`,
+      success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/success?session_id={CHECKOUT_SESSION_ID}&type=escrow`,
+      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/chat/${conversation._id}`,
       metadata: {
-        conversationId,
+        offerId: offerId.toString(),
+        conversationId: conversation._id.toString(),
+        jobRequestId: jobRequest._id.toString(),
         userId: userId.toString(),
-        providerId,
-        serviceTitle,
+        providerId: offer.provider.toString(),
+        serviceTitle: jobRequest.title,
         amount: amountInCents.toString(),
-        originalCurrency: 'EGP',
-        originalAmount: (amountInCents / 100).toString(),
+        originalCurrency: offer.budget.currency || 'EGP',
+        originalAmount: paymentAmount.toString(),
+        paymentType: 'escrow'
       },
       customer_email: req.user.email,
     });
     
-    console.log('Stripe session created:', session.id);
+    console.log('Stripe escrow session created:', session.id);
 
     // Create payment record in database
     const payment = new Payment({
-      conversationId,
-      jobRequestId: conversation.jobRequestId._id,
+      conversationId: conversation._id,
+      jobRequestId: jobRequest._id,
+      offerId: offerId,
       seekerId: userId,
-      providerId,
+      providerId: offer.provider,
       stripeSessionId: session.id,
       amount: amountInCents,
       currency: 'usd',
-      originalCurrency: 'EGP',
-      originalAmount: parseFloat(amount),
-      serviceTitle,
-      status: 'pending'
+      originalCurrency: offer.budget.currency || 'EGP',
+      originalAmount: paymentAmount,
+      serviceTitle: jobRequest.title,
+      serviceDate: offer.negotiation.date,
+      serviceTime: offer.negotiation.time,
+      status: 'pending',
+      escrow: {
+        status: 'pending'
+      }
     });
 
     await payment.save();
@@ -132,10 +119,10 @@ export const createCheckoutSession = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error creating checkout session:', error);
+    console.error('Error creating escrow payment session:', error);
     res.status(500).json({
       success: false,
-      message: 'حدث خطأ أثناء إنشاء جلسة الدفع'
+      message: 'حدث خطأ أثناء إنشاء جلسة الدفع للضمان'
     });
   }
 };
@@ -160,12 +147,23 @@ export const handleWebhook = async (req, res) => {
       
       console.log('Payment completed for session:', session.id);
       
-      // Handle successful payment
-      try {
-        await handlePaymentCompletion(session);
-        console.log('Payment completion processed successfully');
-      } catch (error) {
-        console.error('Error handling payment completion:', error);
+      // Determine payment type (regular or escrow)
+      if (session.metadata && session.metadata.paymentType === 'escrow') {
+        try {
+          // Handle escrow payment
+          await handleEscrowPaymentCompletion(session);
+          console.log('Escrow payment completion processed successfully');
+        } catch (error) {
+          console.error('Error handling escrow payment completion:', error);
+        }
+      } else {
+        // Handle regular payment
+        try {
+          await handlePaymentCompletion(session);
+          console.log('Regular payment completion processed successfully');
+        } catch (error) {
+          console.error('Error handling payment completion:', error);
+        }
       }
       break;
       
@@ -184,7 +182,19 @@ export const handleWebhook = async (req, res) => {
   res.json({ received: true });
 };
 
-// Helper function to handle payment completion
+// Helper function to handle escrow payment completion
+const handleEscrowPaymentCompletion = async (session) => {
+  try {
+    const result = await paymentService.handleEscrowPaymentCompletion(session);
+    if (!result.success) {
+      console.error('Error in handleEscrowPaymentCompletion service:', result.error);
+    }
+  } catch (error) {
+    console.error('Error in handleEscrowPaymentCompletion controller:', error);
+  }
+};
+
+// Helper function to handle regular payment completion
 const handlePaymentCompletion = async (session) => {
   try {
     // Find the payment record
@@ -217,6 +227,67 @@ const handlePaymentCompletion = async (session) => {
   }
 };
 
+// Release funds from escrow
+export const releaseFundsFromEscrow = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const userId = req.user._id;
+
+    const result = await paymentService.releaseFundsFromEscrow(paymentId, userId);
+    
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'تم تحرير الأموال من الضمان بنجاح'
+    });
+
+  } catch (error) {
+    console.error('Error releasing funds from escrow:', error);
+    res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء تحرير الأموال من الضمان'
+    });
+  }
+};
+
+// Request cancellation of a service
+export const requestCancellation = async (req, res) => {
+  try {
+    const { offerId } = req.params;
+    const { reason } = req.body;
+    const userId = req.user._id;
+
+    const result = await paymentService.requestCancellation(offerId, userId, reason);
+    
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.data,
+      message: 'تم طلب إلغاء الخدمة بنجاح'
+    });
+
+  } catch (error) {
+    console.error('Error requesting cancellation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء طلب إلغاء الخدمة'
+    });
+  }
+};
+
 // Check payment status by conversation ID
 export const checkPaymentStatus = async (req, res) => {
   try {
@@ -246,11 +317,19 @@ export const checkPaymentStatus = async (req, res) => {
     if (payment.status === 'pending') {
       try {
         const stripeSession = await stripe.checkout.sessions.retrieve(payment.stripeSessionId);
-        if (stripeSession.payment_status === 'paid' && payment.status !== 'completed') {
-          payment.status = 'completed';
-          payment.completedAt = new Date();
-          await payment.save();
-          console.log(`Payment ${payment.stripeSessionId} auto-synced to completed`);
+        if (stripeSession.payment_status === 'paid' && payment.status === 'pending') {
+          if (stripeSession.metadata && stripeSession.metadata.paymentType === 'escrow') {
+            await handleEscrowPaymentCompletion({
+              id: stripeSession.id,
+              payment_intent: stripeSession.payment_intent,
+              metadata: stripeSession.metadata
+            });
+          } else {
+            payment.status = 'completed';
+            payment.completedAt = new Date();
+            await payment.save();
+          }
+          console.log(`Payment ${payment.stripeSessionId} auto-synced`);
         }
       } catch (syncError) {
         console.error('Error auto-syncing payment:', syncError);
@@ -262,9 +341,12 @@ export const checkPaymentStatus = async (req, res) => {
       success: true,
       data: {
         status: payment.status,
+        escrowStatus: payment.escrow ? payment.escrow.status : null,
         exists: true,
         sessionId: payment.stripeSessionId,
-        completedAt: payment.completedAt
+        offerId: payment.offerId,
+        completedAt: payment.completedAt,
+        escrowedAt: payment.escrow ? payment.escrow.heldAt : null
       }
     });
 
@@ -276,8 +358,6 @@ export const checkPaymentStatus = async (req, res) => {
     });
   }
 };
-
-
 
 // Get payment details by session ID
 export const getPaymentDetails = async (req, res) => {
@@ -294,7 +374,8 @@ export const getPaymentDetails = async (req, res) => {
     // Find payment by session ID
     const payment = await Payment.findOne({ stripeSessionId: sessionId })
       .populate('seekerId', 'name email')
-      .populate('providerId', 'name email');
+      .populate('providerId', 'name email')
+      .populate('offerId');
 
     if (!payment) {
       return res.status(404).json({
@@ -304,25 +385,44 @@ export const getPaymentDetails = async (req, res) => {
     }
 
     // Check if user is authorized to view this payment
-    if (req.user._id.toString() !== payment.seekerId._id.toString()) {
+    if (req.user._id.toString() !== payment.seekerId._id.toString() && 
+        req.user._id.toString() !== payment.providerId._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'غير مصرح لك بعرض تفاصيل هذا الدفع'
       });
     }
 
+    const isEscrow = payment.escrow && payment.escrow.status;
+
     res.json({
       success: true,
       data: {
         sessionId: payment.stripeSessionId,
         amount: (payment.amount / 100).toFixed(2),
+        originalAmount: payment.originalAmount.toFixed(2),
+        originalCurrency: payment.originalCurrency,
         serviceTitle: payment.serviceTitle,
+        serviceDate: payment.serviceDate,
+        serviceTime: payment.serviceTime,
         providerName: payment.providerId.name.first + ' ' + payment.providerId.name.last,
         providerId: payment.providerId._id.toString(),
+        seekerId: payment.seekerId._id.toString(),
+        seekerName: payment.seekerId.name.first + ' ' + payment.seekerId.name.last,
         jobRequestId: payment.jobRequestId.toString(),
         conversationId: payment.conversationId.toString(),
+        offerId: payment.offerId ? payment.offerId._id.toString() : null,
         completedAt: payment.completedAt || payment.createdAt,
-        status: payment.status
+        status: payment.status,
+        isEscrow: !!isEscrow,
+        escrowStatus: isEscrow ? payment.escrow.status : null,
+        escrowHeldAt: payment.escrow ? payment.escrow.heldAt : null,
+        escrowReleasedAt: payment.escrow ? payment.escrow.releasedAt : null,
+        cancellation: payment.cancellation && payment.cancellation.status !== 'none' ? {
+          status: payment.cancellation.status,
+          refundPercentage: payment.cancellation.refundPercentage,
+          requestedAt: payment.cancellation.requestedAt
+        } : null
       }
     });
 
