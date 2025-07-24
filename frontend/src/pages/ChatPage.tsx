@@ -782,12 +782,59 @@ const ChatPage: React.FC = () => {
         user={user}
         onLogout={() => {}}
       >
-        <div className="max-w-4xl mx-auto">
-          <BaseCard className="animate-pulse">
-            <div className="h-96 flex items-center justify-center">
-              <div className="text-text-secondary">جاري تحميل المحادثة...</div>
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6 h-[85vh] min-h-[600px] max-h-[1000px]">
+          {/* Main Chat Area Skeleton */}
+          <div className="flex-1 flex flex-col">
+            <BaseCard className="flex-1 flex flex-col h-full">
+              {/* Chat Header Skeleton */}
+              <div className="border-b border-gray-100">
+                <div className="p-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gray-200 rounded-full skeleton-pulse"></div>
+                    <div className="w-12 h-12 bg-gray-200 rounded-full skeleton-pulse"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-6 bg-gray-200 rounded skeleton-pulse w-3/4"></div>
+                      <div className="h-4 bg-gray-200 rounded skeleton-pulse w-1/2"></div>
+                      <div className="flex gap-4">
+                        <div className="h-3 bg-gray-200 rounded skeleton-pulse w-1/3"></div>
+                        <div className="h-3 bg-gray-200 rounded skeleton-pulse w-1/4"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Messages Skeleton */}
+              <div className="flex-1 p-4 space-y-4">
+                <div className="flex justify-start">
+                  <div className="w-64 h-16 bg-gray-200 rounded-2xl skeleton-pulse"></div>
+                </div>
+                <div className="flex justify-end">
+                  <div className="w-48 h-12 bg-gray-200 rounded-2xl skeleton-pulse"></div>
+                </div>
+                <div className="flex justify-start">
+                  <div className="w-56 h-20 bg-gray-200 rounded-2xl skeleton-pulse"></div>
+                </div>
+                <div className="flex justify-end">
+                  <div className="w-52 h-14 bg-gray-200 rounded-2xl skeleton-pulse"></div>
+                </div>
+              </div>
+              
+              {/* Input Skeleton */}
+              <div className="p-4 border-t border-gray-100">
+                <div className="h-20 bg-gray-200 rounded-xl skeleton-pulse"></div>
+              </div>
+            </BaseCard>
+          </div>
+          
+          {/* Sidebar Skeleton */}
+          <div className="hidden md:flex flex-col w-96 max-w-full h-full">
+            <div className="h-full flex flex-col border-r border-gray-100 pl-6 space-y-4">
+              <div className="h-64 bg-gray-200 rounded-lg skeleton-pulse"></div>
+              <div className="h-48 bg-gray-200 rounded-lg skeleton-pulse"></div>
+              <div className="h-32 bg-gray-200 rounded-lg skeleton-pulse"></div>
             </div>
-          </BaseCard>
+          </div>
         </div>
       </PageLayout>
     );
@@ -801,16 +848,30 @@ const ChatPage: React.FC = () => {
         onLogout={() => {}}
       >
         <div className="max-w-4xl mx-auto">
-          <BaseCard className="text-center py-12">
-            <MessageCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-text-primary mb-2">حدث خطأ</h3>
-            <p className="text-text-secondary mb-4">{error || 'المحادثة غير موجودة'}</p>
-            <Button
-              variant="primary"
-              onClick={() => navigate('/conversations')}
-            >
-              العودة للمحادثات
-            </Button>
+          <BaseCard className="text-center py-16">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+              <MessageCircle className="w-12 h-12 text-red-500" />
+            </div>
+            <h3 className="text-2xl font-bold text-text-primary mb-3">حدث خطأ</h3>
+            <p className="text-text-secondary mb-6 max-w-md mx-auto leading-relaxed">
+              {error || 'المحادثة غير موجودة أو لا يمكن الوصول إليها'}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button
+                variant="primary"
+                onClick={() => navigate('/conversations')}
+                className="px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                العودة للمحادثات
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 rounded-xl"
+              >
+                إعادة تحميل الصفحة
+              </Button>
+            </div>
           </BaseCard>
         </div>
       </PageLayout>
@@ -830,10 +891,10 @@ const ChatPage: React.FC = () => {
       user={user}
       onLogout={() => {}}
     >
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6 h-[85vh] min-h-[600px] max-h-[1000px]">
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6 h-[85vh] min-h-[600px] max-h-[1000px] p-4">
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col">
-          <BaseCard className="flex-1 flex flex-col h-full">
+          <BaseCard className="flex-1 flex flex-col h-full shadow-lg border-0">
             {/* Chat Header */}
             <div className="border-b border-gray-100">
               {/* Main Header Row */}
@@ -869,8 +930,8 @@ const ChatPage: React.FC = () => {
                       </div>
                       {connected ? (
                         <span className="flex items-center gap-1 text-green-600">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span>متصل</span>
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse-glow"></div>
+                          <span className="font-medium">متصل</span>
                         </span>
                       ) : (
                         <span className="flex items-center gap-1 text-gray-500">
@@ -1161,7 +1222,7 @@ const ChatPage: React.FC = () => {
             {/* Messages Container */}
             <div
               ref={messagesContainerRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-warm-cream/20 to-white"
+              className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-warm-cream/20 via-white to-warm-cream/10 chat-scrollbar"
               aria-label="رسائل المحادثة"
               onScroll={(e) => {
                 const target = e.target as HTMLDivElement;
@@ -1171,27 +1232,41 @@ const ChatPage: React.FC = () => {
               }}
             >
               {hasMore && (
-                <div className="text-center">
+                <div className="text-center py-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={loadMoreMessages}
                     disabled={loading}
-                    className="bg-white/80 backdrop-blur-sm"
+                    className="bg-white/90 backdrop-blur-sm border-gray-200 hover:bg-white hover:border-deep-teal transition-all duration-200 shadow-sm"
                   >
-                    {loading ? 'جاري التحميل...' : 'تحميل المزيد'}
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-deep-teal"></div>
+                        جاري التحميل...
+                      </div>
+                    ) : (
+                      'تحميل المزيد'
+                    )}
                   </Button>
                 </div>
               )}
               
               {messages.length === 0 && !loading && (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 max-w-md text-center">
-                    <MessageCircle className="w-12 h-12 text-primary/50 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-text-primary mb-2">لم تبدأ المحادثة بعد</h3>
-                    <p className="text-text-secondary mb-4">
-                      ابدأ المحادثة مع {otherParticipant?.name.first} {otherParticipant?.name.last} للتفاوض على تفاصيل الخدمة.
+                <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
+                  <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100 max-w-md text-center transform hover:scale-105 transition-all duration-300">
+                    <div className="bg-gradient-to-br from-primary/10 to-deep-teal/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <MessageCircle className="w-10 h-10 text-deep-teal" />
+                    </div>
+                    <h3 className="text-xl font-bold text-text-primary mb-3">لم تبدأ المحادثة بعد</h3>
+                    <p className="text-text-secondary mb-6 leading-relaxed">
+                      ابدأ المحادثة مع <span className="font-semibold text-deep-teal">{otherParticipant?.name.first} {otherParticipant?.name.last}</span> للتفاوض على تفاصيل الخدمة.
                     </p>
+                    <div className="bg-gradient-to-r from-deep-teal/5 to-primary/5 p-4 rounded-lg border border-deep-teal/20">
+                      <p className="text-sm text-text-secondary">
+                        💡 <strong>نصيحة:</strong> ابدأ بالترحيب واشرح متطلباتك بوضوح للحصول على أفضل النتائج
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1201,36 +1276,41 @@ const ChatPage: React.FC = () => {
                 const showDate = index === 0 ||
                   new Date(message.timestamp).toDateString() !==
                   new Date(messages[index - 1]?.timestamp).toDateString();
+                const isLastMessage = index === messages.length - 1;
+                
                 return (
-                  <div key={message._id}>
+                  <div key={message._id} className={`transition-all duration-300 ${isLastMessage ? 'animate-fade-in' : ''}`}>
                     {showDate && (
-                      <div className="text-center my-4">
-                        <span className="inline-block bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-text-secondary border border-gray-200">
+                      <div className="text-center my-6">
+                        <span className="inline-block bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full text-sm text-text-secondary border border-gray-200 shadow-sm font-medium">
                           {formatDate(message.timestamp)}
                         </span>
                       </div>
                     )}
-                    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-2`}>
+                    <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-3 group`}>
                       <div
-                        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md ${
+                        className={`max-w-xs lg:max-w-md px-5 py-4 rounded-2xl shadow-sm transition-all duration-300 hover:shadow-md transform hover:scale-[1.02] message-bubble chat-message ${
                           isOwnMessage
-                            ? 'bg-deep-teal text-white rounded-br-md'
-                            : 'bg-white text-text-primary rounded-bl-md border border-gray-100'
+                            ? 'bg-gradient-to-br from-deep-teal to-deep-teal/90 text-white rounded-br-lg'
+                            : 'bg-white text-text-primary rounded-bl-lg border border-gray-100 hover:border-gray-200'
                         }`}
                       >
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                        <div className={`flex items-center justify-end mt-2 ${
-                          isOwnMessage ? 'text-white/70' : 'text-text-secondary'
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                        <div className={`flex items-center justify-end mt-3 ${
+                          isOwnMessage ? 'text-white/80' : 'text-text-secondary/70'
                         }`}>
-                          <span className="text-xs">
+                          <span className="text-xs font-medium">
                             {formatTime(message.timestamp)}
                           </span>
                           {isOwnMessage && (
-                            <div className="ml-2 w-2 h-2">
+                            <div className="ml-2 flex items-center gap-1">
                               {message.read ? (
-                                <div className="w-2 h-2 bg-white/70 rounded-full"></div>
+                                <div className="flex items-center gap-1">
+                                  <div className="w-2 h-2 bg-white/80 rounded-full"></div>
+                                  <div className="w-2 h-2 bg-white/80 rounded-full"></div>
+                                </div>
                               ) : (
-                                <div className="w-2 h-2 bg-white/50 rounded-full"></div>
+                                <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse"></div>
                               )}
                             </div>
                           )}
@@ -1243,35 +1323,57 @@ const ChatPage: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
             {/* Message Input */}
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-100 bg-white">
-              <div className="space-y-3">
-                <FormTextarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="اكتب رسالتك هنا..."
-                  className="resize-none border-2 border-gray-200 focus:border-deep-teal rounded-xl"
-                  rows={2}
-                  maxLength={2000}
-                  disabled={sending}
-                  size="lg"
-                />
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-100 bg-white/95 backdrop-blur-sm">
+              <div className="space-y-4">
+                <div className="relative">
+                  <FormTextarea
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="اكتب رسالتك هنا..."
+                    className="resize-none border-2 border-gray-200 focus:border-deep-teal rounded-xl pr-12 transition-all duration-200 hover:border-gray-300 focus:shadow-lg focus:shadow-deep-teal/10"
+                    rows={2}
+                    maxLength={2000}
+                    disabled={sending}
+                    size="lg"
+                  />
+                  <div className="absolute top-3 right-3 flex items-center gap-2">
+                    {newMessage.length > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-text-secondary/60">
+                        <span>{newMessage.length}</span>
+                        <span>/</span>
+                        <span>2000</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2 text-xs text-text-secondary">
+                  <div className="flex items-center gap-3 text-xs text-text-secondary">
+                    <div className="flex items-center gap-1">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      <span>متصل</span>
+                    </div>
+                    <span>•</span>
                     <span>اضغط Enter للإرسال</span>
                     <span>•</span>
-                    <span>{newMessage.length}/2000</span>
+                    <span>Shift + Enter للسطر الجديد</span>
                   </div>
                   <Button
                     type="submit"
                     variant="primary"
                     size="md"
                     disabled={!newMessage.trim() || sending}
-                    className="px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+                    className="px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 disabled:transform-none disabled:opacity-50"
                   >
                     {sending ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>جاري الإرسال...</span>
+                      </div>
                     ) : (
-                      <Send className="w-4 h-4" />
+                      <div className="flex items-center gap-2">
+                        <Send className="w-4 h-4" />
+                        <span>إرسال</span>
+                      </div>
                     )}
                   </Button>
                 </div>
