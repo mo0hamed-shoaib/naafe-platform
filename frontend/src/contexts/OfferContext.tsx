@@ -150,11 +150,25 @@ export const OfferProvider: React.FC<OfferProviderProps> = ({ children }) => {
   // Reset negotiation confirmations
   const resetNegotiation = useCallback(async (offerId: string) => {
     if (!accessToken) return;
-    await fetch(`/api/offers/${offerId}/reset-confirmation`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-    await fetchNegotiation(offerId);
+    try {
+      const response = await fetch(`/api/offers/${offerId}/reset-confirmation`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Error resetting negotiation:', data.error?.message || data.message || 'Unknown error');
+        throw new Error(data.error?.message || data.message || 'Failed to reset negotiation confirmations');
+      }
+      
+      await fetchNegotiation(offerId);
+      return data;
+    } catch (error) {
+      console.error('Error in resetNegotiation:', error);
+      throw error;
+    }
   }, [accessToken, fetchNegotiation]);
 
   // Fetch negotiation history

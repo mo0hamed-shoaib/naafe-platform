@@ -5,7 +5,8 @@ import {
   checkPaymentStatus, 
   createEscrowPayment,
   releaseFundsFromEscrow,
-  requestCancellation
+  requestCancellation,
+  getMyTransactions
 } from '../controllers/paymentController.js';
 import { authenticateToken, requireRole } from '../middlewares/auth.middleware.js';
 import adService from '../services/adService.js';
@@ -54,5 +55,8 @@ router.post('/release-funds/:paymentId', authenticateToken, requireRole(['seeker
 
 // Request service cancellation
 router.post('/cancel-service/:offerId', authenticateToken, requireRole(['seeker', 'provider']), requestCancellation);
+
+// Get all transactions for the current user
+router.get('/my-transactions', authenticateToken, getMyTransactions);
 
 export default router; 

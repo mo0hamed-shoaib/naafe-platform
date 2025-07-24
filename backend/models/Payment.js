@@ -35,6 +35,14 @@ const paymentSchema = new mongoose.Schema({
     type: String,
     sparse: true
   },
+  stripePayoutId: {
+    type: String,
+    sparse: true
+  },
+  stripeRefundId: {
+    type: String,
+    sparse: true
+  },
   amount: {
     type: Number,
     required: true,
@@ -90,6 +98,25 @@ const paymentSchema = new mongoose.Schema({
     releaseReason: {
       type: String,
       enum: ['service_completed', 'auto_release', 'admin_action', 'dispute_resolved'],
+    }
+  },
+  payout: {
+    status: {
+      type: String,
+      enum: ['pending', 'processing', 'processed', 'failed'],
+      default: 'pending'
+    },
+    amount: {
+      type: Number
+    },
+    processedAt: {
+      type: Date
+    },
+    failedAt: {
+      type: Date
+    },
+    failureReason: {
+      type: String
     }
   },
   cancellation: {
@@ -171,6 +198,13 @@ paymentSchema.methods.releaseFromEscrow = function(reason = 'service_completed')
   this.escrow.releasedAt = new Date();
   this.escrow.releaseReason = reason;
   this.completedAt = new Date();
+  
+  // Mark payout as processing - actual payout will be handled by payment service
+  this.payout = {
+    status: 'processing',
+    amount: this.amount
+  };
+  
   return this.save();
 };
 
@@ -197,6 +231,15 @@ paymentSchema.methods.processCancellation = function(requestedBy, reason, refund
     // Partial refund
     this.status = 'partial_refund';
     this.escrow.status = 'partial_refund';
+    
+    // If partial refund, provider gets remaining amount
+    const providerAmount = this.amount - refundAmount;
+    if (providerAmount > 0) {
+      this.payout = {
+        status: 'processing',
+        amount: providerAmount
+      };
+    }
   }
   
   this.escrow.refundedAt = new Date();

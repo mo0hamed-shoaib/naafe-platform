@@ -216,6 +216,9 @@ const ChatPage: React.FC = () => {
           const offerStatus = offerData.data.status;
           setServiceInProgress(offerStatus === 'in_progress');
           setPaymentCompleted(offerStatus === 'in_progress' || offerStatus === 'completed');
+          
+          // Save to localStorage
+          localStorage.setItem(`service_status_${offerId}`, offerStatus);
         }
       }
       
@@ -228,6 +231,12 @@ const ChatPage: React.FC = () => {
         const data = await response.json();
         const isCompleted = data.success && (data.data?.status === 'completed' || data.data?.status === 'escrowed');
         setPaymentCompleted(isCompleted);
+        
+        // Save to localStorage
+        if (isCompleted) {
+          localStorage.setItem(`payment_completed_${offerId}`, 'true');
+        }
+        
         console.log('Payment status check:', { status: data.data?.status, isCompleted });
       }
     } catch (error) {
@@ -238,6 +247,20 @@ const ChatPage: React.FC = () => {
   // Check service status on mount and when dependencies change
   useEffect(() => {
     if (offerId) {
+      // First check localStorage for cached status
+      const cachedServiceStatus = localStorage.getItem(`service_status_${offerId}`);
+      const cachedPaymentStatus = localStorage.getItem(`payment_completed_${offerId}`);
+      
+      if (cachedServiceStatus) {
+        setServiceInProgress(cachedServiceStatus === 'in_progress');
+        setPaymentCompleted(cachedServiceStatus === 'in_progress' || cachedServiceStatus === 'completed');
+      }
+      
+      if (cachedPaymentStatus === 'true') {
+        setPaymentCompleted(true);
+      }
+      
+      // Then fetch fresh status from server
       checkServiceStatus();
     }
   }, [offerId, chatId, accessToken, user]);
@@ -246,6 +269,20 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     const handleFocus = () => {
       if (offerId) {
+        // Check localStorage first
+        const cachedServiceStatus = localStorage.getItem(`service_status_${offerId}`);
+        const cachedPaymentStatus = localStorage.getItem(`payment_completed_${offerId}`);
+        
+        if (cachedServiceStatus) {
+          setServiceInProgress(cachedServiceStatus === 'in_progress');
+          setPaymentCompleted(cachedServiceStatus === 'in_progress' || cachedServiceStatus === 'completed');
+        }
+        
+        if (cachedPaymentStatus === 'true') {
+          setPaymentCompleted(true);
+        }
+        
+        // Then fetch fresh status
         checkServiceStatus();
       }
     };
@@ -403,13 +440,159 @@ const ChatPage: React.FC = () => {
     }
   };
 
+  const handleAcceptOffer = async () => {
+    if (!offerId || !accessToken) return;
+    
+    try {
+      // First refresh the negotiation state to make sure we have the latest data
+      console.log('Refreshing negotiation state before accepting offer');
+      await fetchNegotiation(offerId);
+      
+      // Debug logging
+      console.log('Attempting to accept offer:', offerId);
+      console.log('Negotiation state:', negotiationState[offerId]);
+      
+      // First check if both parties have confirmed the negotiation
+      if (!negotiationState[offerId]?.confirmationStatus?.seeker || !negotiationState[offerId]?.confirmationStatus?.provider) {
+        console.log('Confirmation status issue:', {
+          seekerConfirmed: negotiationState[offerId]?.confirmationStatus?.seeker,
+          providerConfirmed: negotiationState[offerId]?.confirmationStatus?.provider
+        });
+        showError('تأكيد التفاوض مطلوب', 'يجب على كلا الطرفين تأكيد شروط التفاوض قبل قبول العرض');
+        return;
+      }
+
+      // Check if all required fields are set
+      const currentTerms = negotiationState[offerId]?.currentTerms;
+      console.log('Current negotiation terms:', currentTerms);
+      
+      if (!currentTerms?.price || !currentTerms?.date || !currentTerms?.time || !currentTerms?.materials || !currentTerms?.scope) {
+        console.log('Missing required fields:', {
+          price: !!currentTerms?.price,
+          date: !!currentTerms?.date,
+          time: !!currentTerms?.time,
+          materials: !!currentTerms?.materials,
+          scope: !!currentTerms?.scope
+        });
+        showError('بيانات التفاوض غير مكتملة', 'يجب تحديد جميع شروط التفاوض: السعر، التاريخ، الوقت، المواد، ونطاق العمل');
+        return;
+      }
+      
+      // First check if the offer is already accepted
+      const checkResponse = await fetch(`/api/offers/${offerId}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      
+      if (checkResponse.ok) {
+        const checkData = await checkResponse.json();
+        if (checkData.success && checkData.data && checkData.data.status === 'accepted') {
+          console.log('Offer is already accepted, showing payment modal directly');
+          
+          // Update local state to reflect the offer is accepted
+          setPaymentCompleted(true);
+          
+          showSuccess('العرض مقبول بالفعل', 'يمكنك الآن إكمال الدفع');
+          setShowPaymentModal(true);
+          return;
+        }
+      }
+      
+      // Call backend to accept offer
+      console.log('Sending accept offer request to backend');
+      const response = await fetch(`/api/offers/${offerId}/accept`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      console.log('Accept offer response:', data);
+      
+      if (response.ok && data.success) {
+        // Update local state to reflect the offer is now accepted
+        setPaymentCompleted(true);
+        
+        showSuccess('تم قبول العرض', 'تم قبول العرض بنجاح، يمكنك الآن إكمال الدفع');
+        
+        // Make sure we have the latest negotiation state and service status
+        await fetchNegotiation(offerId);
+        await checkServiceStatus();
+        
+        // Show payment modal
+        setShowPaymentModal(true);
+      } else {
+        // Handle specific error cases
+        if (data.error?.code === 'AGREEMENT_INCOMPLETE') {
+          showError('فشل في قبول العرض', 'يجب التأكد من اكتمال جميع شروط التفاوض وتأكيد الطرفين عليها');
+          
+          // Try to refresh the negotiation state to get the latest data
+          await fetchNegotiation(offerId);
+          checkServiceStatus();
+        } else if (data.error?.message?.includes('status')) {
+          showError('فشل في قبول العرض', 'حالة العرض الحالية لا تسمح بالقبول. قد يكون العرض تم قبوله بالفعل أو تم تغيير حالته');
+          
+          // Check if the offer is already accepted
+          await checkServiceStatus();
+          
+          // If it's already accepted, show the payment modal
+          const offerResponse = await fetch(`/api/offers/${offerId}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          
+          if (offerResponse.ok) {
+            const offerData = await offerResponse.json();
+            if (offerData.success && offerData.data && offerData.data.status === 'accepted') {
+              // Update local state to reflect the offer is accepted
+              setPaymentCompleted(true);
+              
+              showSuccess('العرض مقبول بالفعل', 'يمكنك الآن إكمال الدفع');
+              setShowPaymentModal(true);
+            }
+          }
+        } else {
+          showError('فشل في قبول العرض', data.error?.message || data.message || 'حدث خطأ أثناء محاولة قبول العرض');
+        }
+      }
+    } catch (error) {
+      console.error('Error accepting offer:', error);
+      showError('فشل في قبول العرض', 'حدث خطأ أثناء محاولة قبول العرض');
+      
+      // Try to refresh the state anyway
+      try {
+        await fetchNegotiation(offerId);
+        checkServiceStatus();
+      } catch (refreshError) {
+        console.error('Error refreshing state after acceptance error:', refreshError);
+      }
+    }
+  };
+
   const handlePaymentConfirm = async (amount: number) => {
     if (!conversation || !user || !accessToken || !offerId) return;
+
+    // Debug role check
+    const seekerId = conversation.participants.seeker._id;
+    const isSeeker = user.id === seekerId;
+    console.log('Payment authorization check:', {
+      currentUserId: user.id,
+      seekerId: seekerId,
+      isSeeker,
+      providerId: conversation.participants.provider._id,
+      isProvider: user.id === conversation.participants.provider._id
+    });
+
+    if (!isSeeker) {
+      showError('خطأ في عملية الدفع', 'فقط طالب الخدمة يمكنه إنشاء الدفع');
+      setShowPaymentModal(false);
+      return;
+    }
 
     setPaymentLoading(true);
     try {
       // Use new escrow payment endpoint
-      const response = await fetch('/api/payments/create-escrow-payment', {
+      const response = await fetch('/api/payment/create-escrow-payment', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -425,12 +608,13 @@ const ChatPage: React.FC = () => {
       if (response.ok && data.success && data.data.url) {
         window.location.href = data.data.url;
       } else {
-        showError('خطأ في عملية الدفع', data.message || 'فشل في إنشاء جلسة الدفع');
+        console.error('Payment error response:', data);
+        showError('خطأ في عملية الدفع', data.message || 'حدث خطأ أثناء عملية الدفع');
         setShowPaymentModal(false);
       }
     } catch (error) {
       console.error('Payment error:', error);
-      showError('خطأ في عملية الدفع', 'حدث خطأ أثناء إنشاء جلسة الدفع');
+      showError('خطأ في عملية الدفع', 'حدث خطأ في اتصال الشبكة');
       setShowPaymentModal(false);
     } finally {
       setPaymentLoading(false);
@@ -651,12 +835,24 @@ const ChatPage: React.FC = () => {
                     <Button
                       variant="primary"
                       size="sm"
-                      onClick={() => setShowPaymentModal(true)}
+                      onClick={handleAcceptOffer}
                       className="flex items-center gap-2"
                     >
                       <CreditCard className="w-4 h-4" />
-                      دفع ضمان الخدمة
+                      قبول وبدء الدفع
                     </Button>
+                  )}
+                  
+                  {/* Show guidance if negotiation is not confirmed by both parties */}
+                  {isSeeker && offerId && negotiationState[offerId] && 
+                   !negotiationState[offerId]?.canAcceptOffer && 
+                   !paymentCompleted && (
+                    <div className="text-amber-600 text-sm px-3 py-1 bg-amber-50 rounded-full flex items-center gap-1">
+                      <AlertTriangle className="w-4 h-4" />
+                      {!negotiationState[offerId]?.confirmationStatus?.seeker ? 
+                        'يجب عليك تأكيد شروط التفاوض' : 
+                        'بانتظار تأكيد مقدم الخدمة للشروط'}
+                    </div>
                   )}
                   
                   {/* Show service completion button for seeker when service is in progress */}
@@ -714,12 +910,26 @@ const ChatPage: React.FC = () => {
                       <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => setShowPaymentModal(true)}
+                        onClick={handleAcceptOffer}
                         className="flex items-center justify-center gap-2 flex-1"
                       >
                         <CreditCard className="w-4 h-4" />
-                        دفع ضمان الخدمة
+                        قبول وبدء الدفع
                       </Button>
+                    )}
+                    
+                    {/* Show guidance if negotiation is not confirmed by both parties */}
+                    {isSeeker && offerId && negotiationState[offerId] && 
+                     !negotiationState[offerId]?.canAcceptOffer && 
+                     !paymentCompleted && (
+                      <div className="text-amber-600 text-sm py-1 px-2 bg-amber-50 rounded-full flex items-center gap-1 flex-1 justify-center">
+                        <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">
+                          {!negotiationState[offerId]?.confirmationStatus?.seeker ? 
+                            'يجب تأكيد الشروط' : 
+                            'بانتظار تأكيد مقدم الخدمة'}
+                        </span>
+                      </div>
                     )}
                     
                     {/* Show service completion button for seeker when service is in progress */}
@@ -1033,10 +1243,31 @@ const ChatPage: React.FC = () => {
                   offer={offers.find(o => o.id === offerId) as Offer}
                   onEditSave={async (terms) => {
                     await updateNegotiation(offerId, terms);
-                    await resetNegotiation(offerId); // Reset confirmations after edit
+                    try {
+                      await resetNegotiation(offerId); // Reset confirmations after edit
+                      showSuccess('تم تحديث شروط التفاوض', 'تم تحديث شروط التفاوض وإعادة تعيين التأكيدات بنجاح');
+                    } catch (error) {
+                      console.error('Error resetting confirmations after edit:', error);
+                      // Still show success for the edit, but warn about reset failure
+                      showSuccess('تم تحديث شروط التفاوض', 'تم تحديث شروط التفاوض بنجاح، لكن فشلت إعادة تعيين التأكيدات');
+                    }
                   }}
                   onConfirm={() => confirmNegotiation(offerId)}
-                  onReset={() => resetNegotiation(offerId)}
+                  onReset={async () => {
+                    try {
+                      await resetNegotiation(offerId);
+                      showSuccess('تم إعادة تعيين التأكيدات', 'تم إعادة تعيين تأكيدات التفاوض بنجاح');
+                      // Refresh the offer state to ensure we have the latest data
+                      await fetchNegotiation(offerId);
+                      checkServiceStatus();
+                    } catch (error) {
+                      console.error('Error resetting confirmations:', error);
+                      showError('فشل في إعادة تعيين التأكيدات', 'حدث خطأ أثناء محاولة إعادة تعيين تأكيدات التفاوض. قد تكون حالة العرض لا تسمح بإعادة التعيين.');
+                      // Refresh the offer state anyway to ensure we have the latest data
+                      await fetchNegotiation(offerId);
+                      checkServiceStatus();
+                    }
+                  }}
                 />
                 </div>
                 <div className="flex-none">

@@ -73,7 +73,7 @@ export const createEscrowPayment = async (
   try {
     console.log('Making escrow payment request for offer:', data.offerId);
     
-    const response = await fetch('/api/payments/create-escrow-payment', {
+    const response = await fetch('/api/payment/create-escrow-payment', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -110,7 +110,7 @@ export const releaseFundsFromEscrow = async (
   accessToken: string
 ): Promise<{ success: boolean; message?: string }> => {
   try {
-    const response = await fetch(`/api/payments/release-funds/${paymentId}`, {
+    const response = await fetch(`/api/payment/release-funds/${paymentId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -136,7 +136,7 @@ export const requestCancellation = async (
   accessToken: string
 ): Promise<{ success: boolean; message?: string; refundPercentage?: number }> => {
   try {
-    const response = await fetch(`/api/payments/cancel-service/${offerId}`, {
+    const response = await fetch(`/api/payment/cancel-service/${offerId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

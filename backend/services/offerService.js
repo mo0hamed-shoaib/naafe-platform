@@ -310,22 +310,47 @@ class OfferService {
         throw new Error('Access denied');
       }
       
-      // Can only accept offers with agreement reached status
-      if (offer.status !== 'agreement_reached') {
-        throw new Error('Can only accept offers with confirmed agreement. Please finalize the negotiation terms first.');
+      // Log current offer state for debugging
+      logger.info(`Accepting offer ${offerId} - Current status: ${offer.status}`);
+      logger.info(`Negotiation state: seekerConfirmed=${!!offer.negotiation?.seekerConfirmed}, providerConfirmed=${!!offer.negotiation?.providerConfirmed}`);
+      
+      // If offer is already accepted, just return it
+      if (offer.status === 'accepted') {
+        logger.info(`Offer ${offerId} is already accepted, returning as is`);
+        return offer;
       }
       
-      // Ensure both parties have confirmed the negotiation terms
+      // If offer is not in agreement_reached status, try to update it if both parties have confirmed
+      if (offer.status !== 'agreement_reached') {
+        if (offer.negotiation?.seekerConfirmed && offer.negotiation?.providerConfirmed) {
+          logger.info(`Offer ${offerId} has both confirmations but status is ${offer.status}. Updating to agreement_reached.`);
+          offer.status = 'agreement_reached';
+          await offer.save();
+        } else {
+          logger.warn(`Cannot accept offer ${offerId} - Status is ${offer.status}, not agreement_reached`);
+          throw new Error('Can only accept offers with confirmed agreement. Please finalize the negotiation terms first.');
+        }
+      }
+      
+      // Double-check confirmations
       if (!offer.negotiation || !offer.negotiation.seekerConfirmed || !offer.negotiation.providerConfirmed) {
+        logger.warn(`Cannot accept offer ${offerId} - Missing confirmation: seekerConfirmed=${!!offer.negotiation?.seekerConfirmed}, providerConfirmed=${!!offer.negotiation?.providerConfirmed}`);
         throw new Error('Both parties must confirm all negotiation terms before accepting');
       }
       
       // Ensure required negotiation fields are set
       const requiredFields = ['price', 'date', 'time', 'materials', 'scope'];
+      const missingFields = [];
+      
       for (const field of requiredFields) {
         if (!offer.negotiation[field]) {
-          throw new Error(`Negotiation field '${field}' must be set before accepting`);
+          missingFields.push(field);
         }
+      }
+      
+      if (missingFields.length > 0) {
+        logger.warn(`Cannot accept offer ${offerId} - Missing fields: ${missingFields.join(', ')}`);
+        throw new Error(`Negotiation fields '${missingFields.join(', ')}' must be set before accepting`);
       }
       
       // Update offer status
@@ -379,6 +404,7 @@ class OfferService {
       
       return offer;
     } catch (error) {
+      logger.error(`Error in acceptOffer: ${error.message}`);
       throw error;
     }
   }
@@ -503,194 +529,235 @@ class OfferService {
 
   // Confirm negotiation for an offer
   async confirmNegotiation(offerId, userId) {
-    const Offer = (await import('../models/Offer.js')).default;
-    const offer = await Offer.findById(offerId).populate('jobRequest');
-    if (!offer) throw new Error('Offer not found');
-    
-    // Only provider or job request seeker can confirm
-    const isProvider = offer.provider.toString() === userId.toString();
-    const isSeeker = offer.jobRequest.seeker.toString() === userId.toString();
-    
-    if (!isProvider && !isSeeker) {
-      throw new Error('Access denied');
-    }
-    
-         // Allow confirmation for multiple valid statuses
-     if (!['pending', 'negotiating', 'agreement_reached'].includes(offer.status)) {
-       throw new Error('Can only confirm negotiation for pending, negotiating, or agreement_reached offers');
-     }
-    
-    // Initialize negotiation object if it doesn't exist
-    if (!offer.negotiation) {
-      offer.negotiation = {
-        negotiationHistory: []
-      };
-    }
-    
-    const negotiation = offer.negotiation;
-    const requiredFields = ['price', 'date', 'time', 'materials', 'scope'];
-    
-    // Check for required fields
-    for (const field of requiredFields) {
-      if (!negotiation[field]) throw new Error(`Negotiation field '${field}' must be set before confirmation`);
-    }
-    
-    // Update confirmation status based on user role
-    if (isProvider) {
-      negotiation.providerConfirmed = true;
-    } else {
-      negotiation.seekerConfirmed = true;
-    }
-    
-    // Update metadata
-    negotiation.lastModifiedBy = userId;
-    negotiation.lastModifiedAt = new Date();
-    
-    // Ensure negotiationHistory array is initialized
-    if (!Array.isArray(negotiation.negotiationHistory)) {
-      negotiation.negotiationHistory = [];
-    }
-    
-    // Add confirmation entry to history
-    negotiation.negotiationHistory.push({
-      field: 'confirmation',
-      oldValue: false,
-      newValue: true,
-      changedBy: userId,
-      timestamp: new Date(),
-      note: 'Party confirmed negotiation terms'
-    });
-    
-    offer.negotiation = negotiation;
-    
-    // If both parties have confirmed, update status to agreement_reached
-    if (negotiation.seekerConfirmed && negotiation.providerConfirmed) {
-      offer.status = 'agreement_reached';
+    try {
+      const Offer = (await import('../models/Offer.js')).default;
+      const offer = await Offer.findById(offerId).populate('jobRequest');
+      if (!offer) throw new Error('Offer not found');
       
-      // Add notification about agreement reached
-      const seekerId = offer.jobRequest.seeker;
+      // Only provider or job request seeker can confirm
+      const isProvider = offer.provider.toString() === userId.toString();
+      const isSeeker = offer.jobRequest.seeker.toString() === userId.toString();
       
-      // Notify seeker
-      const seekerNotification = new Notification({
-        userId: seekerId,
-        type: 'agreement_reached',
-        message: 'تم التوصل لاتفاق على جميع الشروط، يمكنك الآن قبول العرض والمتابعة للدفع',
-        relatedChatId: offer.conversation,
-        isRead: false
+      if (!isProvider && !isSeeker) {
+        throw new Error('Access denied');
+      }
+      
+      // Allow confirmation for multiple valid statuses
+      if (!['pending', 'negotiating', 'agreement_reached'].includes(offer.status)) {
+        throw new Error('Can only confirm negotiation for pending, negotiating, or agreement_reached offers');
+      }
+      
+      // Initialize negotiation object if it doesn't exist
+      if (!offer.negotiation) {
+        offer.negotiation = {
+          negotiationHistory: []
+        };
+      }
+      
+      const negotiation = offer.negotiation;
+      const requiredFields = ['price', 'date', 'time', 'materials', 'scope'];
+      
+      // Check for required fields
+      for (const field of requiredFields) {
+        if (!negotiation[field]) throw new Error(`Negotiation field '${field}' must be set before confirmation`);
+      }
+      
+      // Update confirmation status based on user role
+      if (isProvider) {
+        negotiation.providerConfirmed = true;
+      } else {
+        negotiation.seekerConfirmed = true;
+      }
+      
+      // Update metadata
+      negotiation.lastModifiedBy = userId;
+      negotiation.lastModifiedAt = new Date();
+      
+      // Ensure negotiationHistory array is initialized
+      if (!Array.isArray(negotiation.negotiationHistory)) {
+        negotiation.negotiationHistory = [];
+      }
+      
+      // Add confirmation entry to history
+      negotiation.negotiationHistory.push({
+        field: 'confirmation',
+        oldValue: false,
+        newValue: true,
+        changedBy: userId,
+        timestamp: new Date(),
+        note: 'Party confirmed negotiation terms'
       });
-      await seekerNotification.save();
       
-      // Notify provider
-      const providerId = offer.provider;
-      const providerNotification = new Notification({
-        userId: providerId,
-        type: 'agreement_reached',
-        message: 'تم التوصل لاتفاق على جميع الشروط، بانتظار قبول العرض والدفع من قبل طالب الخدمة',
-        relatedChatId: offer.conversation,
-        isRead: false
-      });
-      await providerNotification.save();
+      offer.negotiation = negotiation;
       
-      // Emit Socket.IO events - using a safer approach to avoid circular imports
+      // If both parties have confirmed, update status to agreement_reached
+      if (negotiation.seekerConfirmed && negotiation.providerConfirmed) {
+        logger.info(`Both parties confirmed for offer ${offerId}, setting status to agreement_reached`);
+        offer.status = 'agreement_reached';
+        
+        // Add notification about agreement reached
+        const seekerId = offer.jobRequest.seeker;
+        
+        // Notify seeker
+        const seekerNotification = new Notification({
+          userId: seekerId,
+          type: 'agreement_reached',
+          message: 'تم التوصل لاتفاق على جميع الشروط، يمكنك الآن قبول العرض والمتابعة للدفع',
+          relatedChatId: offer.conversation,
+          isRead: false
+        });
+        await seekerNotification.save();
+        
+        // Notify provider
+        const providerId = offer.provider;
+        const providerNotification = new Notification({
+          userId: providerId,
+          type: 'agreement_reached',
+          message: 'تم التوصل لاتفاق على جميع الشروط، بانتظار قبول العرض والدفع من قبل طالب الخدمة',
+          relatedChatId: offer.conversation,
+          isRead: false
+        });
+        await providerNotification.save();
+        
+        // Emit Socket.IO events - using a safer approach to avoid circular imports
+        try {
+          // Try the global socketService first
+          if (socketService && socketService.io) {
+            socketService.io.to(`user:${seekerId}`).emit('notify:agreementReached', {
+              notification: {
+                _id: seekerNotification._id,
+                type: seekerNotification.type,
+                message: seekerNotification.message,
+                relatedChatId: seekerNotification.relatedChatId,
+                isRead: seekerNotification.isRead,
+                createdAt: seekerNotification.createdAt
+              }
+            });
+            
+            socketService.io.to(`user:${providerId}`).emit('notify:agreementReached', {
+              notification: {
+                _id: providerNotification._id,
+                type: providerNotification.type,
+                message: providerNotification.message,
+                relatedChatId: providerNotification.relatedChatId,
+                isRead: providerNotification.isRead,
+                createdAt: providerNotification.createdAt
+              }
+            });
+          } else {
+            logger.warn('Socket service not initialized for agreement notifications');
+          }
+        } catch (socketError) {
+          logger.error('Error sending agreement notifications via socket: ' + socketError.message);
+          // Don't fail the transaction if socket notifications fail
+        }
+      } else {
+        // If not both confirmed, ensure status is negotiating
+        if (offer.status === 'agreement_reached') {
+          logger.info(`Only one party confirmed for offer ${offerId}, setting status back to negotiating`);
+          offer.status = 'negotiating';
+        }
+      }
+      
+      await offer.save();
+      
+      // Emit real-time negotiation update to both provider and seeker safely
       try {
-        // Try the global socketService first
+        // Try to use the global socketService first
         if (socketService && socketService.io) {
-          socketService.io.to(`user:${seekerId}`).emit('notify:agreementReached', {
-            notification: {
-              _id: seekerNotification._id,
-              type: seekerNotification.type,
-              message: seekerNotification.message,
-              relatedChatId: seekerNotification.relatedChatId,
-              isRead: seekerNotification.isRead,
-              createdAt: seekerNotification.createdAt
-            }
-          });
-          
-          socketService.io.to(`user:${providerId}`).emit('notify:agreementReached', {
-            notification: {
-              _id: providerNotification._id,
-              type: providerNotification.type,
-              message: providerNotification.message,
-              relatedChatId: providerNotification.relatedChatId,
-              isRead: providerNotification.isRead,
-              createdAt: providerNotification.createdAt
-            }
-          });
+          socketService.io.to(`user:${offer.provider}`).emit('negotiation:update', { offerId });
+          socketService.io.to(`user:${offer.jobRequest.seeker}`).emit('negotiation:update', { offerId });
         } else {
-          logger.warn('Socket service not initialized for agreement notifications');
+          logger.warn(`Socket service not available for negotiation:update on offer ${offerId}`);
         }
       } catch (socketError) {
-        logger.error('Error sending agreement notifications via socket: ' + socketError.message);
         // Don't fail the transaction if socket notifications fail
+        logger.error('Socket notification error: ' + socketError.message);
       }
+      
+      return offer.negotiation;
+    } catch (error) {
+      logger.error(`Error in confirmNegotiation: ${error.message}`);
+      throw error;
     }
-    
-    await offer.save();
-    
-    // Emit real-time negotiation update to both provider and seeker safely
-    try {
-      // Try to use the global socketService first
-      if (socketService && socketService.io) {
-        socketService.io.to(`user:${offer.provider}`).emit('negotiation:update', { offerId });
-        socketService.io.to(`user:${offer.jobRequest.seeker}`).emit('negotiation:update', { offerId });
-      } else {
-        logger.warn(`Socket service not available for negotiation:update on offer ${offerId}`);
-      }
-    } catch (socketError) {
-      // Don't fail the transaction if socket notifications fail
-      logger.error('Socket notification error: ' + socketError.message);
-    }
-    
-    return offer.negotiation;
   }
 
   // Reset negotiation confirmations for an offer
   async resetNegotiationConfirmation(offerId, userId) {
-    const Offer = (await import('../models/Offer.js')).default;
-    const offer = await Offer.findById(offerId).populate('jobRequest');
-    if (!offer) throw new Error('Offer not found');
-    // Only provider or job request seeker can reset
-    if (
-      offer.provider.toString() !== userId.toString() &&
-      offer.jobRequest.seeker.toString() !== userId.toString()
-    ) {
-      throw new Error('Access denied');
-    }
-    // Only allow reset if offer is pending or agreement_reached (before payment)
-    if (!['pending', 'agreement_reached'].includes(offer.status)) {
-      throw new Error('Can only reset negotiation for pending or agreement_reached offers');
-    }
-    const negotiation = offer.negotiation || {};
-    negotiation.seekerConfirmed = false;
-    negotiation.providerConfirmed = false;
-    negotiation.lastModifiedBy = userId;
-    negotiation.lastModifiedAt = new Date();
-    negotiation.negotiationHistory = negotiation.negotiationHistory || [];
-    negotiation.negotiationHistory.push({
-      field: 'confirmation',
-      oldValue: true,
-      newValue: false,
-      changedBy: userId,
-      timestamp: new Date(),
-      note: 'Confirmations reset by user request'
-    });
-    offer.negotiation = negotiation;
-    await offer.save();
-    
-    // Emit real-time negotiation update to both provider and seeker safely
     try {
-      // Try to use the global socketService first
-      if (socketService && socketService.io) {
-        socketService.io.to(`user:${offer.provider}`).emit('negotiation:update', { offerId });
-        socketService.io.to(`user:${offer.jobRequest.seeker}`).emit('negotiation:update', { offerId });
-      } else {
-        logger.warn(`Socket service not available for negotiation:update on offer ${offerId}`);
+      const Offer = (await import('../models/Offer.js')).default;
+      const offer = await Offer.findById(offerId).populate('jobRequest');
+      if (!offer) throw new Error('Offer not found');
+      
+      // Log the current state for debugging
+      logger.info(`Resetting confirmation for offer ${offerId} - Current status: ${offer.status}`);
+      logger.info(`Current negotiation state: seekerConfirmed=${!!offer.negotiation?.seekerConfirmed}, providerConfirmed=${!!offer.negotiation?.providerConfirmed}`);
+      
+      // Only provider or job request seeker can reset
+      if (
+        offer.provider.toString() !== userId.toString() &&
+        offer.jobRequest.seeker.toString() !== userId.toString()
+      ) {
+        throw new Error('Access denied');
       }
-    } catch (socketError) {
-      // Don't fail the transaction if socket notifications fail
-      logger.error('Socket notification error: ' + socketError.message);
+      
+      // Allow reset for any status except completed, cancelled, or rejected
+      // This is more permissive than before to handle edge cases
+      const nonResetableStatuses = ['completed', 'cancelled', 'rejected'];
+      if (nonResetableStatuses.includes(offer.status)) {
+        logger.warn(`Cannot reset negotiation for offer ${offerId} - Status is ${offer.status}, which cannot be reset`);
+        throw new Error(`Cannot reset negotiation for ${offer.status} offers`);
+      }
+      
+      const negotiation = offer.negotiation || {};
+      
+      // Save the current confirmation status for logging
+      const previousSeekerConfirmed = negotiation.seekerConfirmed;
+      const previousProviderConfirmed = negotiation.providerConfirmed;
+      
+      // Reset confirmations
+      negotiation.seekerConfirmed = false;
+      negotiation.providerConfirmed = false;
+      negotiation.lastModifiedBy = userId;
+      negotiation.lastModifiedAt = new Date();
+      negotiation.negotiationHistory = negotiation.negotiationHistory || [];
+      negotiation.negotiationHistory.push({
+        field: 'confirmation',
+        oldValue: { seekerConfirmed: previousSeekerConfirmed, providerConfirmed: previousProviderConfirmed },
+        newValue: { seekerConfirmed: false, providerConfirmed: false },
+        changedBy: userId,
+        timestamp: new Date(),
+        note: 'Confirmations reset by user request'
+      });
+      
+      // If status was agreement_reached or accepted, set it back to negotiating
+      if (['agreement_reached', 'accepted'].includes(offer.status)) {
+        logger.info(`Resetting offer ${offerId} status from ${offer.status} to negotiating`);
+        offer.status = 'negotiating';
+      }
+      
+      offer.negotiation = negotiation;
+      await offer.save();
+      
+      // Emit real-time negotiation update to both provider and seeker safely
+      try {
+        // Try to use the global socketService first
+        if (socketService && socketService.io) {
+          socketService.io.to(`user:${offer.provider}`).emit('negotiation:update', { offerId });
+          socketService.io.to(`user:${offer.jobRequest.seeker}`).emit('negotiation:update', { offerId });
+        } else {
+          logger.warn(`Socket service not available for negotiation:update on offer ${offerId}`);
+        }
+      } catch (socketError) {
+        // Don't fail the transaction if socket notifications fail
+        logger.error('Socket notification error: ' + socketError.message);
+      }
+      
+      return offer.negotiation;
+    } catch (error) {
+      logger.error(`Error in resetNegotiationConfirmation: ${error.message}`);
+      throw error;
     }
-    return offer.negotiation;
   }
 
   // Get negotiation history for an offer

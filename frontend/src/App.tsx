@@ -34,6 +34,7 @@ import AdvertisePage from './pages/AdvertisePage';
 import AdminIdentityVerifications from './admin/pages/AdminIdentityVerifications';
 import ProviderDetailsPage from './pages/ProviderDetailsPage';
 import HireProviderPage from './pages/HireProviderPage';
+import TransactionsPage from './pages/TransactionsPage';
 
 const App = () => {
   return (
@@ -114,6 +115,11 @@ const App = () => {
                 </ProtectedRoute>
               } />
               <Route path="/advertise" element={<AdvertisePage />} />
+              <Route path="/transactions" element={
+                <ProtectedRoute>
+                  <TransactionsPage />
+                </ProtectedRoute>
+              } />
               <Route path="/provider/:id" element={<div className="min-h-screen bg-warm-cream flex items-center justify-center"><p className="text-2xl text-text-secondary">Provider Details Page (Coming Soon)</p></div>} />
                 <Route path="/admin" element={
                   <ProtectedRoute requiredRoles={['admin']}>
