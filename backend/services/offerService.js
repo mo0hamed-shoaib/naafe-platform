@@ -458,8 +458,10 @@ class OfferService {
     ) {
       throw new Error('Access denied');
     }
-    // Only allow update if offer is pending
-    if (offer.status !== 'pending') throw new Error('Can only update negotiation for pending offers');
+    // Allow updates for multiple valid statuses
+    if (!['pending', 'negotiating', 'agreement_reached'].includes(offer.status)) {
+      throw new Error('Can only update negotiation for pending, negotiating, or agreement_reached offers');
+    }
     const negotiation = offer.negotiation || {};
     const fields = ['price', 'date', 'time', 'materials', 'scope'];
     let changes = [];
@@ -513,10 +515,10 @@ class OfferService {
       throw new Error('Access denied');
     }
     
-    // Only allow confirm if offer is pending or negotiating
-    if (!['pending', 'negotiating'].includes(offer.status)) {
-      throw new Error('Can only confirm negotiation for pending or negotiating offers');
-    }
+         // Allow confirmation for multiple valid statuses
+     if (!['pending', 'negotiating', 'agreement_reached'].includes(offer.status)) {
+       throw new Error('Can only confirm negotiation for pending, negotiating, or agreement_reached offers');
+     }
     
     // Initialize negotiation object if it doesn't exist
     if (!offer.negotiation) {
@@ -654,8 +656,10 @@ class OfferService {
     ) {
       throw new Error('Access denied');
     }
-    // Only allow reset if offer is pending
-    if (offer.status !== 'pending') throw new Error('Can only reset negotiation for pending offers');
+    // Only allow reset if offer is pending or agreement_reached (before payment)
+    if (!['pending', 'agreement_reached'].includes(offer.status)) {
+      throw new Error('Can only reset negotiation for pending or agreement_reached offers');
+    }
     const negotiation = offer.negotiation || {};
     negotiation.seekerConfirmed = false;
     negotiation.providerConfirmed = false;

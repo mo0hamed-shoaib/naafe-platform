@@ -332,10 +332,10 @@ const ChatPage: React.FC = () => {
     };
   }, [connected, on, emit, chatId]);
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // Auto-scroll disabled
+  // useEffect(() => {
+  //   // No auto-scrolling implementation
+  // }, [messages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -359,7 +359,6 @@ const ChatPage: React.FC = () => {
 
       // Send via Socket.IO
       emit('send-message', messageData);
-      
     } catch (error) {
       console.error('Error sending message:', error);
       setError('فشل إرسال الرسالة');
@@ -707,28 +706,6 @@ const ChatPage: React.FC = () => {
               </div>
               {/* Service Details */}
               <div className="px-4 pb-4 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="font-medium text-text-primary mb-1">الميزانية</p>
-                    <p className="text-text-secondary">
-                      {conversation.jobRequestId.budget.min} - {conversation.jobRequestId.budget.max} جنيه
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="font-medium text-text-primary mb-1">التاريخ المفضل</p>
-                    <p className="text-text-secondary">
-                      {conversation.jobRequestId.deadline ? 
-                        new Date(conversation.jobRequestId.deadline).toLocaleDateString('ar-EG') : 
-                        'غير محدد'}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="font-medium text-text-primary mb-1">تاريخ النشر</p>
-                    <p className="text-text-secondary">
-                      {new Date(conversation.jobRequestId.createdAt).toLocaleDateString('ar-EG')}
-                    </p>
-                  </div>
-                </div>
                                 {/* Mobile Action Buttons */}
                 <div className="md:hidden flex flex-col gap-2">
                   <div className="flex gap-2">
