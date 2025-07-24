@@ -947,52 +947,69 @@ const ChatPage: React.FC = () => {
                 <div className="hidden md:flex items-center gap-3 flex-wrap">
                   {/* Primary Actions */}
                   <div className="flex items-center gap-2">
-                    {/* Show payment button for seeker when offer is accepted but payment not completed */}
-                    {isSeeker && offerId && negotiationState[offerId]?.canAcceptOffer && !paymentCompleted && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={handleAcceptOffer}
-                        className="flex items-center gap-2"
-                      >
-                        <CreditCard className="w-4 h-4" />
-                        قبول وبدء الدفع
-                      </Button>
-                    )}
-                    
-                    {/* Show service completion button for seeker when service is in progress */}
-                    {isSeeker && serviceInProgress && (
-                      <Button
-                        variant="success"
-                        size="sm"
-                        onClick={() => setShowCompletionModal(true)}
-                        className="flex items-center gap-2"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        تأكيد اكتمال الخدمة
-                      </Button>
-                    )}
-                    
-                    {/* Show cancellation button only when payment has been made */}
-                    {(serviceInProgress || paymentCompleted) && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => setShowCancellationModal(true)}
-                        className="flex items-center gap-2"
-                      >
-                        <AlertCircle className="w-4 h-4" />
-                        طلب إلغاء الخدمة
-                      </Button>
+                    {/* Disable all actions if cancelled or cancellation requested */}
+                    {!(currentOffer?.status === 'cancelled' || currentOffer?.status === 'cancellation_requested') && (
+                      <>
+                        {/* Show payment button for seeker when offer is accepted but payment not completed */}
+                        {isSeeker && offerId && negotiationState[offerId]?.canAcceptOffer && !paymentCompleted && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={handleAcceptOffer}
+                            className="flex items-center gap-2"
+                          >
+                            <CreditCard className="w-4 h-4" />
+                            قبول وبدء الدفع
+                          </Button>
+                        )}
+                        {/* Show service completion button for seeker when service is in progress */}
+                        {isSeeker && serviceInProgress && (
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => setShowCompletionModal(true)}
+                            className="flex items-center gap-2"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            تأكيد اكتمال الخدمة
+                          </Button>
+                        )}
+                        {/* Show cancellation button only when payment has been made */}
+                        {(serviceInProgress || paymentCompleted) && (
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => setShowCancellationModal(true)}
+                            className="flex items-center gap-2"
+                          >
+                            <AlertCircle className="w-4 h-4" />
+                            طلب إلغاء الخدمة
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
 
                   {/* Status Indicators */}
                   <div className="flex items-center gap-2">
+                    {/* Show cancellation status badge if offer is cancelled or cancellation requested */}
+                    {currentOffer?.status === 'cancelled' && (
+                      <div className="flex items-center gap-2 text-red-600 text-sm px-3 py-1 bg-red-50 rounded-full">
+                        <AlertCircle className="w-4 h-4" />
+                        تم إلغاء الخدمة
+                      </div>
+                    )}
+                    {currentOffer?.status === 'cancellation_requested' && (
+                      <div className="flex items-center gap-2 text-amber-600 text-sm px-3 py-1 bg-amber-50 rounded-full">
+                        <AlertTriangle className="w-4 h-4" />
+                        تم طلب إلغاء الخدمة - بانتظار المعالجة
+                      </div>
+                    )}
                     {/* Show guidance if negotiation is not confirmed by both parties */}
                     {isSeeker && offerId && negotiationState[offerId] && 
                      !negotiationState[offerId]?.canAcceptOffer && 
-                     !paymentCompleted && (
+                     !paymentCompleted &&
+                     currentOffer?.status !== 'cancelled' && currentOffer?.status !== 'cancellation_requested' && (
                       <div className="text-amber-600 text-sm px-3 py-1 bg-amber-50 rounded-full flex items-center gap-1">
                         <AlertTriangle className="w-4 h-4" />
                         {!negotiationState[offerId]?.confirmationStatus?.seeker ? 
@@ -1000,14 +1017,13 @@ const ChatPage: React.FC = () => {
                           'بانتظار تأكيد مقدم الخدمة للشروط'}
                       </div>
                     )}
-                    
                     {/* Show payment status badge */}
                     {paymentCompleted && currentOffer?.status === 'completed' ? (
                       <div className="flex items-center gap-2 text-green-600 text-sm px-3 py-1 bg-green-50 rounded-full">
                         <CheckCircle className="w-4 h-4" />
                         تم تحرير المبلغ وإكمال الخدمة
                       </div>
-                    ) : paymentCompleted && (
+                    ) : paymentCompleted && currentOffer?.status !== 'cancelled' && currentOffer?.status !== 'cancellation_requested' && (
                       <div className="flex items-center gap-2 text-blue-600 text-sm px-3 py-1 bg-blue-50 rounded-full">
                         <Shield className="w-4 h-4" />
                         الخدمة قيد التنفيذ
@@ -1408,6 +1424,21 @@ const ChatPage: React.FC = () => {
                 >
                   إعادة تحميل بيانات التفاوض
                 </button>
+              </div>
+            )}
+            {/* Show cancellation status badge in sidebar */}
+            {currentOffer?.status === 'cancelled' && (
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200 mb-4 text-center">
+                <AlertCircle className="w-6 h-6 text-red-600 mx-auto mb-2" />
+                <div className="font-bold text-red-700">تم إلغاء الخدمة</div>
+                <div className="text-sm text-red-600">لا يمكن اتخاذ أي إجراء آخر على هذه الخدمة.</div>
+              </div>
+            )}
+            {currentOffer?.status === 'cancellation_requested' && (
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4 text-center">
+                <AlertTriangle className="w-6 h-6 text-amber-600 mx-auto mb-2" />
+                <div className="font-bold text-amber-700">تم طلب إلغاء الخدمة</div>
+                <div className="text-sm text-amber-700">بانتظار معالجة طلب الإلغاء من الإدارة.</div>
               </div>
             )}
             {offerId && negotiationState[offerId] && user && conversation && (

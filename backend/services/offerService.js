@@ -949,46 +949,90 @@ class OfferService {
         refundPercentage = offer.calculateRefundPercentage();
       }
 
-      // Update offer with cancellation request
+      // Update offer with cancellation request and immediately approve it
       offer.cancellation = {
-        status: 'requested',
+        status: 'approved',
         requestedBy: userId,
         requestedAt: new Date(),
         reason: reason || 'No reason provided',
         refundPercentage
       };
-      
+      // Set offer status to 'cancelled' immediately
+      if (['accepted', 'in_progress', 'cancellation_requested'].includes(offer.status)) {
+        offer.status = 'cancelled';
+      }
       await offer.save();
 
-      // Notify the other party about cancellation request
-      const notifyUserId = isSeeker ? offer.provider : offer.jobRequest.seeker;
-      const requesterType = isSeeker ? 'طالب الخدمة' : 'مقدم الخدمة';
-      
-      const notification = new Notification({
-        userId: notifyUserId,
-        type: 'cancellation_requested',
-        message: `${requesterType} طلب إلغاء الخدمة. نسبة الاسترداد: ${refundPercentage}%`,
+      // Update job request status
+      await JobRequest.findByIdAndUpdate(offer.jobRequest._id, {
+        status: 'cancelled'
+      });
+
+      // Process refund if payment exists
+      if (offer.payment && offer.payment.paymentId) {
+        const Payment = (await import('../models/Payment.js')).default;
+        const payment = await Payment.findById(offer.payment.paymentId);
+        if (payment && payment.status === 'escrowed') {
+          await payment.processCancellation(
+            offer.cancellation.requestedBy,
+            offer.cancellation.reason,
+            offer.cancellation.refundPercentage
+          );
+        }
+      }
+
+      // Notify both parties
+      const seekerId = offer.jobRequest.seeker;
+      const providerId = offer.provider;
+      // Use the already defined refundPercentage
+
+      // Notify seeker
+      const seekerNotification = new Notification({
+        userId: seekerId,
+        type: 'service_cancelled',
+        message: `تم إلغاء الخدمة. نسبة استرداد المبلغ: ${refundPercentage}%`,
         relatedChatId: offer.conversation,
         isRead: false
       });
-      await notification.save();
+      await seekerNotification.save();
 
-      // Emit Socket.IO event
-      socketService.io.to(`user:${notifyUserId}`).emit('notify:cancellationRequested', {
+      // Notify provider
+      const providerNotification = new Notification({
+        userId: providerId,
+        type: 'service_cancelled',
+        message: `تم إلغاء الخدمة. نسبة الاحتفاظ بالمبلغ: ${100 - refundPercentage}%`,
+        relatedChatId: offer.conversation,
+        isRead: false
+      });
+      await providerNotification.save();
+
+      // Emit Socket.IO events
+      socketService.io.to(`user:${seekerId}`).emit('notify:serviceCancelled', {
         notification: {
-          _id: notification._id,
-          type: notification.type,
-          message: notification.message,
-          relatedChatId: notification.relatedChatId,
-          isRead: notification.isRead,
-          createdAt: notification.createdAt
+          _id: seekerNotification._id,
+          type: seekerNotification.type,
+          message: seekerNotification.message,
+          relatedChatId: seekerNotification.relatedChatId,
+          isRead: seekerNotification.isRead,
+          createdAt: seekerNotification.createdAt
+        }
+      });
+      socketService.io.to(`user:${providerId}`).emit('notify:serviceCancelled', {
+        notification: {
+          _id: providerNotification._id,
+          type: providerNotification.type,
+          message: providerNotification.message,
+          relatedChatId: providerNotification.relatedChatId,
+          isRead: providerNotification.isRead,
+          createdAt: providerNotification.createdAt
         }
       });
 
       return {
         success: true,
         refundPercentage,
-        cancellation: offer.cancellation
+        cancellation: offer.cancellation,
+        status: offer.status
       };
     } catch (error) {
       throw error;

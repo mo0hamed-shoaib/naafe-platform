@@ -422,6 +422,29 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${negotiationStatus === 'تم الاتفاق' ? 'bg-green-100 text-green-800' : negotiationStatus === 'قيد التفاوض' ? 'bg-yellow-100 text-yellow-800' : negotiationStatus === 'لم تبدأ المحادثة' ? 'bg-gray-200 text-gray-500' : 'bg-gray-100 text-gray-600'}`}>{negotiationStatus}</span>
               </div>
 
+              {/* Agreed Terms Summary (if both agreed) */}
+              {negotiation && negotiation.canAcceptOffer && (
+                <div className="mb-2 text-green-800 bg-green-50 border border-green-100 rounded p-2 text-sm text-center font-semibold">
+                  {(() => {
+                    const terms = negotiation.currentTerms || {};
+                    const price = terms.price ? `على ${terms.price.toLocaleString('ar-EG')} جنيه` : '';
+                    const date = terms.date ? `في ${new Date(terms.date).toLocaleDateString('ar-EG')}` : '';
+                    let time = '';
+                    if (terms.time) {
+                      // Format time as HH:mm ص/م
+                      const [h, m] = terms.time.split(":");
+                      let hour = Number(h);
+                      const minute = m || '00';
+                      const period = hour < 12 ? 'ص' : 'م';
+                      hour = hour % 12 || 12;
+                      time = `الساعة ${hour}:${minute} ${period}`;
+                    }
+                    const details = [price, date, time].filter(Boolean).join(' ');
+                    return details ? `تم الاتفاق ${details}` : 'تم الاتفاق على جميع الشروط';
+                  })()}
+                </div>
+              )}
+
               {/* Negotiation Summary (if exists) */}
               {negotiation && user && conversationId && (
                 <NegotiationSummary
