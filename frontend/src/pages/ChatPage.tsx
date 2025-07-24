@@ -956,27 +956,26 @@ const ChatPage: React.FC = () => {
               {/* Service Details */}
               <div className="px-4 pb-4 space-y-3">
                 {/* Mobile Action Buttons */}
-                <div className="md:hidden flex flex-col gap-2">
-                  {/* Show payment button for seeker when offer is accepted but payment not completed */}
+                <div className="md:hidden space-y-2">
+                  {/* Payment/Guidance Section */}
                   {isSeeker && offerId && negotiationState[offerId]?.canAcceptOffer && !paymentCompleted && (
                     <Button
                       variant="primary"
                       size="sm"
                       onClick={handleAcceptOffer}
-                      className="flex items-center justify-center gap-2 flex-1"
+                      className="flex items-center justify-center gap-2 w-full"
                     >
                       <CreditCard className="w-4 h-4" />
                       قبول وبدء الدفع
                     </Button>
                   )}
                   
-                  {/* Show guidance if negotiation is not confirmed by both parties */}
                   {isSeeker && offerId && negotiationState[offerId] && 
                    !negotiationState[offerId]?.canAcceptOffer && 
                    !paymentCompleted && (
-                    <div className="text-amber-600 text-sm py-1 px-2 bg-amber-50 rounded-full flex items-center gap-1 flex-1 justify-center">
-                      <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                      <span className="truncate">
+                    <div className="text-amber-600 text-sm py-2 px-3 bg-amber-50 rounded-lg flex items-center gap-1 justify-center">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      <span>
                         {!negotiationState[offerId]?.confirmationStatus?.seeker ? 
                           'يجب تأكيد الشروط' : 
                           'بانتظار تأكيد مقدم الخدمة'}
@@ -984,67 +983,68 @@ const ChatPage: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Show service completion button for seeker when service is in progress */}
+                  {/* Service completion for seeker when service is in progress */}
                   {isSeeker && serviceInProgress && (
                     <Button
                       variant="success"
                       size="sm"
                       onClick={() => setShowCompletionModal(true)}
-                      className="flex items-center justify-center gap-2 flex-1"
+                      className="flex items-center justify-center gap-2 w-full"
                     >
                       <CheckCircle className="w-4 h-4" />
                       تأكيد اكتمال الخدمة
                     </Button>
                   )}
                   
+                  {/* Payment status badge */}
+                  {paymentCompleted && currentOffer?.status === 'completed' ? (
+                    <div className="flex items-center justify-center gap-2 text-green-600 text-sm py-2 bg-green-50 rounded-lg">
+                      <CheckCircle className="w-4 h-4" />
+                      تم تحرير المبلغ وإكمال الخدمة
+                    </div>
+                  ) : paymentCompleted && (
+                    <div className="flex items-center justify-center gap-2 text-blue-600 text-sm py-2 bg-blue-50 rounded-lg">
+                      <Shield className="w-4 h-4" />
+                      الخدمة قيد التنفيذ
+                    </div>
+                  )}
+                  
+                  {/* Action buttons row */}
+                  <div className="flex gap-2">
+                    {/* Show cancellation button only when payment has been made */}
+                    {(serviceInProgress || paymentCompleted) && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => setShowCancellationModal(true)}
+                        className="flex items-center justify-center gap-2 flex-1"
+                      >
+                        <AlertCircle className="w-4 h-4" />
+                        طلب إلغاء
+                      </Button>
+                    )}
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleReportIssue}
+                      className="flex items-center justify-center gap-2 flex-1"
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                      الإبلاغ عن مشكلة
+                    </Button>
+                  </div>
+                  
                   {/* Toggle negotiation sidebar on mobile */}
                   <Button
                     variant="secondary"
                     size="sm"
                     onClick={() => setShowNegotiationMobile(!showNegotiationMobile)}
-                    className="flex items-center justify-center gap-2 flex-1"
+                    className="flex items-center justify-center gap-2 w-full"
                   >
                     {showNegotiationMobile ? 'إخفاء التفاوض' : 'عرض التفاوض'}
                   </Button>
                 </div>
-                
-                <div className="flex gap-2">
-                  {/* Show cancellation button only when payment has been made */}
-                  {(serviceInProgress || paymentCompleted) && (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setShowCancellationModal(true)}
-                      className="flex items-center justify-center gap-2 flex-1"
-                    >
-                      <AlertCircle className="w-4 h-4" />
-                      طلب إلغاء
-                    </Button>
-                  )}
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleReportIssue}
-                    className="flex items-center justify-center gap-2 flex-1"
-                  >
-                    <AlertTriangle className="w-4 h-4" />
-                    الإبلاغ عن مشكلة
-                  </Button>
-                </div>
-                
-                {/* Show payment status badge */}
-                {paymentCompleted && currentOffer?.status === 'completed' ? (
-                  <div className="flex items-center justify-center gap-2 text-green-600 text-sm py-1 bg-green-50 rounded-full">
-                    <CheckCircle className="w-4 h-4" />
-                    تم تحرير المبلغ وإكمال الخدمة
-                  </div>
-                ) : paymentCompleted && (
-                  <div className="flex items-center justify-center gap-2 text-blue-600 text-sm py-1 bg-blue-50 rounded-full">
-                    <Shield className="w-4 h-4" />
-                    الخدمة قيد التنفيذ
-                  </div>
-                )}
                 
                 {/* Mobile Negotiation Section */}
                 {showNegotiationMobile && (
@@ -1127,18 +1127,16 @@ const ChatPage: React.FC = () => {
                             }}
                           />
                         </div>
-                        {!paymentCompleted && (
-                          <div className="flex-none">
-                            <NegotiationHistory
-                              negotiationHistory={negotiationState[offerId]?.negotiationHistory}
-                              userMap={{
-                                [conversation.participants.seeker._id]: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
-                                [conversation.participants.provider._id]: `${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`
-                              }}
-                              isMobile={true}
-                            />
-                          </div>
-                        )}
+                                        <div className="flex-none">
+                  <NegotiationHistory
+                    negotiationHistory={negotiationState[offerId]?.negotiationHistory}
+                    userMap={{
+                      [conversation.participants.seeker._id]: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
+                      [conversation.participants.provider._id]: `${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`
+                    }}
+                    isMobile={true}
+                  />
+                </div>
                       </div>
                     )}
                   </div>
@@ -1364,18 +1362,16 @@ const ChatPage: React.FC = () => {
                     }}
                   />
                 </div>
-                {!paymentCompleted && (
-                  <div className="flex-none">
-                    <NegotiationHistory
-                      negotiationHistory={negotiationState[offerId]?.negotiationHistory}
-                      userMap={{
-                        [conversation.participants.seeker._id]: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
-                        [conversation.participants.provider._id]: `${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`
-                      }}
-                      isMobile={false}
-                    />
-                  </div>
-                )}
+                <div className="flex-none">
+                  <NegotiationHistory
+                    negotiationHistory={negotiationState[offerId]?.negotiationHistory}
+                    userMap={{
+                      [conversation.participants.seeker._id]: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
+                      [conversation.participants.provider._id]: `${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`
+                    }}
+                    isMobile={false}
+                  />
+                </div>
               </div>
             )}
           </div>

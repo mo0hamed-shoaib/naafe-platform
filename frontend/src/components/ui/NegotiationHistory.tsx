@@ -17,6 +17,28 @@ const fieldLabels: Record<string, string> = {
   confirmation: 'تأكيد الاتفاق',
 };
 
+// Helper function to format values for display
+const formatValue = (value: any): string => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  
+  if (typeof value === 'boolean') {
+    return value ? 'نعم' : 'لا';
+  }
+  
+  if (typeof value === 'object') {
+    // Handle confirmation status objects
+    if (value.hasOwnProperty('seekerConfirmed') && value.hasOwnProperty('providerConfirmed')) {
+      return `المشترك: ${value.seekerConfirmed ? 'نعم' : 'لا'}, المزود: ${value.providerConfirmed ? 'نعم' : 'لا'}`;
+    }
+    // For other objects, return a JSON representation
+    return JSON.stringify(value);
+  }
+  
+  return String(value);
+};
+
 const NegotiationHistory: React.FC<NegotiationHistoryProps> = ({ negotiationHistory, userMap = {}, isMobile }) => {
   const [collapsed, setCollapsed] = useState(true); // Start collapsed by default
   
@@ -53,7 +75,7 @@ const NegotiationHistory: React.FC<NegotiationHistoryProps> = ({ negotiationHist
                   <span className="font-medium text-deep-teal">{fieldLabels[entry.field] || entry.field}:</span>
                   {entry.oldValue !== undefined && entry.oldValue !== null && (
                     <span className="bg-red-50 text-red-700 px-2 py-0.5 rounded text-xs">
-                      {entry.oldValue === true ? 'نعم' : entry.oldValue === false ? 'لا' : entry.oldValue}
+                      {formatValue(entry.oldValue)}
                     </span>
                   )}
                   {entry.oldValue !== undefined && entry.newValue !== undefined && (
@@ -61,7 +83,7 @@ const NegotiationHistory: React.FC<NegotiationHistoryProps> = ({ negotiationHist
                   )}
                   {entry.newValue !== undefined && entry.newValue !== null && (
                     <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded text-xs">
-                      {entry.newValue === true ? 'نعم' : entry.newValue === false ? 'لا' : entry.newValue}
+                      {formatValue(entry.newValue)}
                     </span>
                   )}
                 </div>
