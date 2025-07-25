@@ -54,14 +54,14 @@ const pricingPlans = [
   {
     name: 'الخطة المميزة',
     price: '49',
-    currency: 'جنيه',
+    currency: '$',
     period: 'شهرياً',
     description: 'احصل على مزايا متقدمة لتعزيز نشاطك',
     features: planFeatures.map(f => f.premiumText),
     buttonText: 'اشترك الآن',
     buttonVariant: 'primary' as const,
     popular: true,
-    planId: 'price_1RmmwcCjj2jIemB8xZhcobwz'
+    planId: 'price_1RohKaCjj2jIemB8nRmN9CwQ'
   }
 ];
 
@@ -163,7 +163,7 @@ const Pricing: React.FC = () => {
           'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          planId: 'price_1RmmwcCjj2jIemB8xZhcobwz',
+          planId: 'price_1RohKaCjj2jIemB8nRmN9CwQ',
           planName,
           successUrl: `${window.location.origin}/pricing?success=true`,
           cancelUrl: `${window.location.origin}/pricing?canceled=true`,
@@ -498,7 +498,7 @@ const Pricing: React.FC = () => {
               className="focus:ring-2 focus:ring-accent focus:ring-offset-2"
               onClick={() => {
                 handleCloseCompareModal();
-                handleSubscribe('الخطة المميزة', 'price_1RmmwcCjj2jIemB8xZhcobwz');
+                handleSubscribe('الخطة المميزة', 'price_1RohKaCjj2jIemB8nRmN9CwQ');
               }}
             >
               اشترك الآن

@@ -249,7 +249,7 @@ const SearchPage = () => {
       if (leadFilters.maxBudget) params.set('maxBudget', leadFilters.maxBudget);
       if (leadFilters.government) params.set('location.government', leadFilters.government);
       if (leadFilters.city) params.set('location.city', leadFilters.city);
-      const res = await fetch(`/api/providers/me/targeted-leads?${params.toString()}`, {
+      const res = await fetch(`/api/users/providers/me/targeted-leads?${params.toString()}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const data = await res.json();

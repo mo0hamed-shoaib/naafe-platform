@@ -31,7 +31,10 @@ app.use(cors({
 })); // Enable CORS
 // Parse JSON for all routes except webhook
 app.use((req, res, next) => {
-  if (req.path === '/api/payment/webhook') {
+  if (
+    req.path === '/api/payment/webhook' ||
+    req.path === '/api/subscriptions/webhook'
+  ) {
     // For Stripe webhooks, we need raw body
     express.raw({ type: 'application/json' })(req, res, next);
   } else {

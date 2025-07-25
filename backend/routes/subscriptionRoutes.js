@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 import Stripe from 'stripe';
+import fs from 'fs';
 
 const router = express.Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -92,12 +93,14 @@ router.post('/create-checkout-session', authenticateToken, async (req, res) => {
  * @access  Public (Stripe webhook)
  * @returns {object} Success response
  */
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/webhook', async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
 
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    console.log('Received Stripe event:', event.type);
+    console.log('Event data:', JSON.stringify(event.data.object, null, 2));
   } catch (err) {
     console.error('Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -108,7 +111,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     switch (event.type) {
       case 'checkout.session.completed':
         const session = event.data.object;
-        
         // Check if this is a subscription or ad payment
         if (session.metadata?.adId) {
           // Handle ad payment completion
@@ -134,33 +136,60 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     res.json({ received: true });
   } catch (error) {
     console.error('Webhook handler error:', error);
+    if (error.stack) {
+      console.error(error.stack);
+    }
     res.status(500).json({ error: 'Webhook handler failed' });
   }
 });
 
 // Helper functions for webhook handlers
 async function handleSubscriptionCreated(session) {
-  const userId = session.metadata?.userId;
-  const planName = session.metadata?.planName;
+  try {
+    const userId = session.metadata?.userId;
+    const planName = session.metadata?.planName;
 
-  if (userId) {
-    // Update user subscription status in database
-    const User = (await import('../models/User.js')).default;
-    const user = await User.findById(userId);
-    if (user && user.roles.includes('provider')) {
-      await User.findByIdAndUpdate(userId, {
-        'subscription.status': 'active',
-        'subscription.planName': planName,
-        'subscription.stripeCustomerId': session.customer,
-        'subscription.stripeSubscriptionId': session.subscription,
-        'subscription.currentPeriodEnd': new Date(session.subscription_data?.trial_end * 1000),
-        'isPremium': true
-      });
-      console.log(`Subscription created for provider ${userId}: ${planName}`);
-    } else {
-      // If not a provider, do not set isPremium
-      console.log(`Subscription attempted for non-provider user ${userId}, ignored.`);
+    // Fetch subscription from Stripe to get current_period_end
+    let currentPeriodEnd = null;
+    if (session.subscription) {
+      try {
+        const subscription = await stripe.subscriptions.retrieve(session.subscription);
+        if (subscription && subscription.current_period_end) {
+          currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+        }
+      } catch (stripeErr) {
+        console.error('Error fetching subscription from Stripe:', stripeErr);
+      }
     }
+
+    if (userId) {
+      const User = (await import('../models/User.js')).default;
+      const user = await User.findById(userId);
+      if (user && user.roles.includes('provider')) {
+        const updateFields = {
+          'subscription.status': 'active',
+          'subscription.planName': planName,
+          'subscription.stripeCustomerId': session.customer,
+          'subscription.stripeSubscriptionId': session.subscription,
+          'isPremium': true
+        };
+        if (currentPeriodEnd) {
+          updateFields['subscription.currentPeriodEnd'] = currentPeriodEnd;
+        }
+        const updateResult = await User.findByIdAndUpdate(userId, updateFields);
+        console.log(`Subscription created for provider ${userId}: ${planName}`);
+      } else {
+        console.log(`Subscription attempted for non-provider user ${userId}, ignored.`);
+      }
+    } else {
+      console.log('handleSubscriptionCreated: No userId in session metadata');
+    }
+  } catch (err) {
+    console.error('Error in handleSubscriptionCreated:', err);
+    if (err.stack) {
+      console.error(err.stack);
+    }
+    throw err;
   }
 }
 

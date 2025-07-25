@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import ServiceCard from './ServiceCard';
 import BaseCard from './ui/BaseCard';
-import { ServiceProvider } from '../types';
+// import { ServiceProvider } from '../types';
 
 const FeaturedProviders: React.FC = () => {
-  const [providers, setProviders] = useState<ServiceProvider[]>([]);
+  // Use any[] because backend returns raw user objects, not ServiceProvider
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [providers, setProviders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
-    fetch('/api/providers/featured')
+    fetch('/api/users/providers/featured')
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.data.providers)) {
@@ -33,7 +35,7 @@ const FeaturedProviders: React.FC = () => {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(3)].map((_, idx) => (
-              <BaseCard key={idx} className="animate-pulse h-64" />
+              <BaseCard key={idx} className="animate-pulse h-64">&nbsp;</BaseCard>
             ))}
           </div>
         ) : error ? (
@@ -50,9 +52,46 @@ const FeaturedProviders: React.FC = () => {
           </div>
         ) : providers.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {providers.map((provider) => (
-              <ServiceCard key={provider._id || provider.id} provider={{ ...provider, featured: true }} onViewDetails={() => window.location.href = `/provider/${provider._id || provider.id}`} featured />
-            ))}
+            {providers.map((provider) => {
+              // Flatten providerProfile fields
+              const profile = provider.providerProfile || {};
+              const locationObj = provider.profile?.location || {};
+              const gov = locationObj.government || '';
+              const city = locationObj.city || '';
+              const location = [gov, city].filter(Boolean).join('، ') || 'غير محدد';
+              const mappedProvider = {
+                id: provider._id || provider.id,
+                name: provider.name,
+                rating: profile.rating ?? 0,
+                category: profile.category || '',
+                description: profile.description || '',
+                title: profile.title || '',
+                location,
+                startingPrice: profile.startingPrice ?? 0,
+                imageUrl: provider.avatarUrl || '',
+                isPremium: provider.isPremium,
+                isTopRated: provider.isTopRated,
+                completedJobs: profile.totalJobsCompleted ?? 0,
+                isVerified: provider.isVerified,
+                providerUpgradeStatus: provider.providerUpgradeStatus,
+                availability: profile.availability || { days: [], timeSlots: [] },
+                budgetMin: profile.budgetMin ?? 0,
+                budgetMax: profile.budgetMax ?? 0,
+                memberSince: provider.createdAt,
+                skills: profile.skills || [],
+                workingDays: profile.workingDays || [],
+                startTime: profile.startTime || '',
+                endTime: profile.endTime || '',
+              };
+              return (
+                <ServiceCard
+                  key={mappedProvider.id}
+                  provider={mappedProvider}
+                  onViewDetails={() => window.location.href = `/provider/${mappedProvider.id}`}
+                  featured
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12 text-lg text-yellow-700">لا يوجد مقدمو خدمات مميزون حالياً</div>

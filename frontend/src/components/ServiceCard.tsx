@@ -95,7 +95,9 @@ const ServiceCard = ({ provider, onViewDetails, featured }: ServiceCardProps) =>
           {/* Provider Info */}
           <div className="flex-1 min-w-0">
             <h3 className="text-xl font-bold text-deep-teal truncate leading-tight mb-1">
-              {provider.name}
+              {typeof provider.name === 'object' && provider.name !== null && 'first' in provider.name && 'last' in provider.name
+                ? `${(provider.name as { first: string; last: string }).first} ${(provider.name as { first: string; last: string }).last}`
+                : provider.name}
             </h3>
             {/* Address */}
             <div className="flex items-center gap-2 mb-1">
@@ -165,7 +167,7 @@ const ServiceCard = ({ provider, onViewDetails, featured }: ServiceCardProps) =>
           <div className="bg-gray-50 rounded-lg p-1">
             <div className="text-sm font-bold text-bright-orange flex items-center justify-center gap-1">
               <Star className="w-3 h-3 fill-current" />
-              {provider.rating.toFixed(1)}
+              {typeof provider.rating === 'number' && !isNaN(provider.rating) ? provider.rating.toFixed(1) : 'غير متوفر'}
             </div>
             <div className="text-xs text-text-secondary">تقييم</div>
           </div>
