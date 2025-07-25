@@ -212,9 +212,10 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
     setShowMobileSearch(false);
   };
 
+  // Navigation items: only show 'للإشتراك' for providers
   const navigationItems = [
     { label: 'الخدمات', href: '/categories' },
-    { label: 'للإشتراك', href: '/pricing' },
+    ...(isProvider ? [{ label: 'للإشتراك', href: '/pricing' }] : []),
     { label: 'أعلن معنا', href: '/advertise' },
     { label: 'استكشف', href: '/search' },
   ];

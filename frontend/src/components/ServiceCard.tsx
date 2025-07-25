@@ -10,6 +10,7 @@ import { ServiceProvider } from '../types';
 interface ServiceCardProps {
   provider: ServiceProvider;
   onViewDetails: (providerId: string) => void;
+  featured?: boolean;
 }
 
 // Helper to format time as 12-hour with Arabic AM/PM
@@ -22,7 +23,7 @@ function formatTimeArabic12hr(time: string) {
   return `${hour12}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
-const ServiceCard = ({ provider, onViewDetails }: ServiceCardProps) => {
+const ServiceCard = ({ provider, onViewDetails, featured }: ServiceCardProps) => {
   // Format member since
   let memberSinceText = '';
   if (provider.memberSince) {
@@ -46,19 +47,27 @@ const ServiceCard = ({ provider, onViewDetails }: ServiceCardProps) => {
     <BaseCard className={`
       h-full flex flex-col hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1
       relative
-      ${provider.isPremium 
-        ? 'border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-100 shadow-xl hover:shadow-2xl overflow-hidden' 
-        : 'border border-gray-200 hover:border-soft-teal/30'
+      ${featured
+        ? 'border-4 border-yellow-500 bg-gradient-to-br from-yellow-100 via-orange-50 to-yellow-200 shadow-2xl overflow-hidden'
+        : provider.isPremium
+          ? 'border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-100 shadow-xl hover:shadow-2xl overflow-hidden'
+          : 'border border-gray-200 hover:border-soft-teal/30'
       }
       ${provider.isTopRated ? 'ring-2 ring-teal-300' : ''}
     `}>
+      {/* Featured Tag - Top Right */}
+      {featured && (
+        <span className="absolute right-4 top-4 z-30 text-xs font-bold bg-yellow-400 text-white px-3 py-1 rounded-full shadow-lg border-2 border-yellow-600">
+          مميز
+        </span>
+      )}
       {/* Category Badge - Top Left Absolute */}
       <span className="absolute left-4 top-4 z-20 text-base font-bold bg-soft-teal/30 text-deep-teal px-4 py-1 rounded-lg whitespace-nowrap" style={{ fontSize: '1.1rem' }}>
         {translateCategory(provider.category)}
       </span>
       {/* Premium Background Effect */}
-      {provider.isPremium && (
-        <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/5 to-orange-400/5 pointer-events-none"></div>
+      {(provider.isPremium || featured) && (
+        <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/10 to-orange-400/10 pointer-events-none"></div>
       )}
       <div className="relative z-10 p-5 flex flex-col h-full">
         {/* Header Section - Avatar and Name */}
@@ -69,12 +78,17 @@ const ServiceCard = ({ provider, onViewDetails }: ServiceCardProps) => {
               src={provider.imageUrl || '/default-avatar.png'}
               alt={`${provider.name} profile`}
               className={`w-20 h-20 rounded-full object-cover border-2 ${
-                provider.isPremium ? 'border-yellow-300' : 'border-gray-200'
+                (provider.isPremium || featured) ? 'border-yellow-400' : 'border-gray-200'
               }`}
             />
-            {provider.isPremium && (
+            {(provider.isPremium || featured) && (
               <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
                 <PremiumBadge size="md" />
+              </div>
+            )}
+            {provider.isVerified && (
+              <div className="absolute -top-2 right-0">
+                <span className="inline-block bg-green-500 text-white text-xs px-2 py-0.5 rounded-full shadow">موثوق</span>
               </div>
             )}
           </div>

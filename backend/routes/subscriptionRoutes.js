@@ -22,6 +22,17 @@ router.post('/create-checkout-session', authenticateToken, async (req, res) => {
     const { planId, planName, successUrl, cancelUrl } = req.body;
     const userId = req.user._id;
 
+    // Restrict premium subscription to providers only
+    if (!req.user.roles.includes('provider')) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'NOT_PROVIDER',
+          message: 'Only providers can subscribe to premium.'
+        }
+      });
+    }
+
     if (!planId) {
       return res.status(400).json({
         success: false,
@@ -135,48 +146,55 @@ async function handleSubscriptionCreated(session) {
   if (userId) {
     // Update user subscription status in database
     const User = (await import('../models/User.js')).default;
-    await User.findByIdAndUpdate(userId, {
-      'subscription.status': 'active',
-      'subscription.planName': planName,
-      'subscription.stripeCustomerId': session.customer,
-      'subscription.stripeSubscriptionId': session.subscription,
-      'subscription.currentPeriodEnd': new Date(session.subscription_data?.trial_end * 1000),
-      'isPremium': true
-    });
-
-    console.log(`Subscription created for user ${userId}: ${planName}`);
+    const user = await User.findById(userId);
+    if (user && user.roles.includes('provider')) {
+      await User.findByIdAndUpdate(userId, {
+        'subscription.status': 'active',
+        'subscription.planName': planName,
+        'subscription.stripeCustomerId': session.customer,
+        'subscription.stripeSubscriptionId': session.subscription,
+        'subscription.currentPeriodEnd': new Date(session.subscription_data?.trial_end * 1000),
+        'isPremium': true
+      });
+      console.log(`Subscription created for provider ${userId}: ${planName}`);
+    } else {
+      // If not a provider, do not set isPremium
+      console.log(`Subscription attempted for non-provider user ${userId}, ignored.`);
+    }
   }
 }
 
 async function handleSubscriptionUpdated(subscription) {
   const User = (await import('../models/User.js')).default;
-  
   // Find user by Stripe customer ID
   const user = await User.findOne({ 'subscription.stripeCustomerId': subscription.customer });
-  
-  if (user) {
+  if (user && user.roles.includes('provider')) {
     await User.findByIdAndUpdate(user._id, {
       'subscription.status': subscription.status,
       'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
       'isPremium': subscription.status === 'active'
     });
-
-    console.log(`Subscription updated for user ${user._id}: ${subscription.status}`);
+    console.log(`Subscription updated for provider ${user._id}: ${subscription.status}`);
+  } else if (user) {
+    // If not a provider, ensure isPremium is false
+    await User.findByIdAndUpdate(user._id, {
+      'subscription.status': subscription.status,
+      'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
+      'isPremium': false
+    });
+    console.log(`Subscription update for non-provider user ${user._id}, isPremium set to false.`);
   }
 }
 
 async function handleSubscriptionDeleted(subscription) {
   const User = (await import('../models/User.js')).default;
-  
   // Find user by Stripe customer ID
   const user = await User.findOne({ 'subscription.stripeCustomerId': subscription.customer });
-  
   if (user) {
     await User.findByIdAndUpdate(user._id, {
       'subscription.status': 'canceled',
       'isPremium': false
     });
-
     console.log(`Subscription canceled for user ${user._id}`);
   }
 }

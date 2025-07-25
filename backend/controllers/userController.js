@@ -1,6 +1,7 @@
 import userService from '../services/userService.js';
 import { logger } from '../middlewares/logging.middleware.js';
 import UpgradeRequest from '../models/UpgradeRequest.js';
+import jobRequestService from '../services/jobRequestService.js';
 
 class UserController {
   /**
@@ -488,6 +489,44 @@ class UserController {
         },
         timestamp: new Date().toISOString()
       });
+    }
+  }
+
+  /**
+   * Get up to 5 featured premium providers for homepage/category
+   * GET /api/providers/featured
+   */
+  async getFeaturedPremiumProviders(req, res) {
+    try {
+      const providers = await userService.getFeaturedPremiumProviders(5);
+      res.status(200).json({
+        success: true,
+        data: { providers },
+        message: 'Featured premium providers retrieved successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error(`Get featured premium providers error: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Internal server error' },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Get targeted leads for the current provider (premium only)
+   * GET /api/providers/me/targeted-leads
+   */
+  async getTargetedLeads(req, res) {
+    try {
+      const providerId = req.user._id;
+      const filters = req.query;
+      const leads = await jobRequestService.getTargetedLeadsForProvider(providerId, filters);
+      res.status(200).json({ success: true, data: { leads }, message: 'Targeted leads retrieved successfully' });
+    } catch (error) {
+      res.status(400).json({ success: false, error: { message: error.message } });
     }
   }
 

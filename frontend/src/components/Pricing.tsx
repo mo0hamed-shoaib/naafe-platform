@@ -15,23 +15,37 @@ import { useToast } from '../contexts/ToastContext';
 import BaseCard from './ui/BaseCard';
 
 // New pricing data for Nafee' platform
+const planFeatures = [
+  {
+    premiumText: 'مطابقة ذكية للفرص',
+    freeText: 'مطابقة يدوية للفرص',
+  },
+  {
+    premiumText: 'الظهور في قسم المميزين في الصفحة الرئيسية وصفحة الفئات',
+    freeText: 'الظهور في نتائج البحث بعد المميزين',
+  },
+  {
+    premiumText: 'خصم رسوم المنصة 5%',
+    freeText: 'رسوم المنصة 15%',
+  },
+  {
+    premiumText: 'بطاقة تقديم مميزة',
+    freeText: 'ملف شخصي أساسي',
+  },
+  {
+    premiumText: 'أسبوع مجاني من الإعلان في أعلى نتائج البحث عند الاشتراك',
+    freeText: 'إعلانات مدفوعة فقط (لا يوجد أسبوع مجاني)',
+  },
+];
+
 const pricingPlans = [
   {
     name: 'الخطة المجانية',
     price: '0',
     currency: 'جنيه',
     period: 'شهرياً',
-    description: 'ابدأ مجاناً واستمتع بالخدمات الأساسية',
-    features: [
-      { text: 'نشر طلبات محدودة (3 شهرياً)', included: true },
-      { text: 'عرض الخدمات الأساسية', included: true },
-      { text: 'الملف الشخصي الأساسي', included: true },
-      { text: 'دعم المجتمع', included: true },
-      { text: 'المطابقة بالذكاء الاصطناعي', included: false },
-      { text: 'رفع المستندات (اختياري)', included: true },
-      { text: 'شارة التحقق', included: false },
-      { text: 'خصم رسوم المنصة', included: false },
-    ],
+    description: 'ابدأ مجاناً واستفد من الأساسيات للباحثين ومقدمي الخدمات الجدد',
+    features: planFeatures.map(f => f.freeText),
     buttonText: 'ابدأ مجاناً',
     buttonVariant: 'outline' as const,
     popular: false,
@@ -43,16 +57,7 @@ const pricingPlans = [
     currency: 'جنيه',
     period: 'شهرياً',
     description: 'احصل على مزايا متقدمة لتعزيز نشاطك',
-    features: [
-      { text: 'نشر طلبات غير محدود', included: true },
-      { text: 'عرض الخدمات المميزة', included: true },
-      { text: 'الملف الشخصي المميز', included: true },
-      { text: 'المطابقة بالذكاء الاصطناعي', included: true },
-      { text: 'رفع المستندات (مطلوب) + شارة المراجعة', included: true },
-      { text: 'دعم ذو أولوية', included: true },
-      { text: 'شارة البائع الموثوق', included: true },
-      { text: 'خصم 5% رسوم المنصة', included: true },
-    ],
+    features: planFeatures.map(f => f.premiumText),
     buttonText: 'اشترك الآن',
     buttonVariant: 'primary' as const,
     popular: true,
@@ -130,6 +135,15 @@ const Pricing: React.FC = () => {
   const { showSuccess, showError } = useToast();
 
   const isPremium = !!user?.isPremium;
+  const isProvider = user?.roles?.includes('provider');
+
+  // Only show premium plan for providers
+  const visiblePlans = pricingPlans.filter(plan => {
+    if (plan.name === 'الخطة المميزة') {
+      return isProvider;
+    }
+    return true;
+  });
 
   const handleSubscribe = async (planName: string, planId: string | null) => {
     if (!planId) {
@@ -215,12 +229,17 @@ const Pricing: React.FC = () => {
           <p className="text-xl text-text-secondary max-w-3xl mx-auto leading-relaxed">
             سواء كنت هنا للربح أو للحصول على المساعدة، خططنا مصممة لدعمك
           </p>
+          {!isProvider && (
+            <div className="mt-6 text-lg text-red-600 font-semibold">
+              الاشتراك المميز متاح فقط لمقدمي الخدمات (البائعين). إذا كنت ترغب في الاستفادة من المزايا المتقدمة، يرجى ترقية حسابك إلى مقدم خدمة.
+            </div>
+          )}
         </section>
 
         {/* Pricing Plans */}
         <section className="mb-16">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {pricingPlans.map((plan, index) => {
+            {visiblePlans.map((plan, index) => {
               // Button logic
               let buttonText = plan.buttonText;
               let buttonDisabled = false;
@@ -236,7 +255,11 @@ const Pricing: React.FC = () => {
                   buttonVariant = 'outline';
                 }
               } else if (plan.name === 'الخطة المميزة') {
-                if (isPremium) {
+                if (!isProvider) {
+                  buttonText = 'متاح فقط لمقدمي الخدمات';
+                  buttonDisabled = true;
+                  buttonVariant = 'outline';
+                } else if (isPremium) {
                   buttonText = 'أنت مشترك بالفعل';
                   buttonDisabled = true;
                   buttonVariant = 'primary';
@@ -255,7 +278,7 @@ const Pricing: React.FC = () => {
                     plan.popular 
                       ? 'border-accent' 
                       : 'border-deep-teal/40'
-                  }`}
+                  } min-h-[540px] flex flex-col justify-between`}
                 >
                   {plan.popular && (
                     <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
@@ -264,57 +287,56 @@ const Pricing: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  <div className="text-center mb-8">
-                    <h3 className="text-2xl font-bold text-deep-teal mb-2">
-                      {plan.name}
-                    </h3>
-                    <div className="mb-4">
-                      <span className="text-4xl font-bold text-deep-teal">
-                        {plan.price}
-                      </span>
-                      <span className="text-lg text-text-secondary">
-                        {plan.currency}/{plan.period}
-                      </span>
-                    </div>
-                    <p className="text-text-primary font-medium">{plan.description}</p>
-                  </div>
-                  <ul className="space-y-4 mb-8">
-                    {plan.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-start gap-3">
-                        {feature.included ? (
-                          <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" aria-hidden="true" />
-                        ) : (
-                          <X className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
-                        )}
-                        <span className={`text-sm ${
-                          feature.included ? 'text-text-primary' : 'text-gray-400 line-through'
-                        }`}>
-                          {feature.text}
+                  <div className="flex-grow flex flex-col">
+                    <div className="text-center mb-8">
+                      <h3 className="text-2xl font-bold text-deep-teal mb-2">
+                        {plan.name}
+                      </h3>
+                      <div className="mb-4">
+                        <span className="text-4xl font-bold text-deep-teal">
+                          {plan.price}
                         </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    variant={buttonVariant}
-                    size="lg"
-                    className="w-full focus:ring-2 focus:ring-accent focus:ring-offset-2"
-                    onClick={() => handleSubscribe(plan.name, plan.planId)}
-                    disabled={buttonDisabled || showLoading}
-                  >
-                    {showLoading ? 'جاري التوجيه...' : buttonText}
-                  </Button>
-                  {/* Cancel subscription for premium users */}
-                  {plan.name === 'الخطة المميزة' && isPremium && (
+                        <span className="text-lg text-text-secondary">
+                          {plan.currency}/{plan.period}
+                        </span>
+                      </div>
+                      <p className="text-text-primary font-medium">{plan.description}</p>
+                    </div>
+                    <ul className="space-y-4 mb-8">
+                      {plan.features.map((feature, featureIndex) => {
+                        if (!feature) return null;
+                        return (
+                          <li key={featureIndex} className="flex items-start gap-3">
+                            <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                            <span className="text-sm text-text-primary">{feature}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                  <div>
                     <Button
-                      variant="danger"
-                      size="sm"
-                      className="w-full mt-3 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                      onClick={() => setIsCancelModalOpen(true)}
-                      disabled={loading === 'cancel'}
+                      variant={buttonVariant}
+                      size="lg"
+                      className="w-full focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                      onClick={() => handleSubscribe(plan.name, plan.planId)}
+                      disabled={buttonDisabled || showLoading}
                     >
-                      إلغاء الاشتراك
+                      {showLoading ? 'جاري التوجيه...' : buttonText}
                     </Button>
-                  )}
+                    {/* Cancel subscription for premium users */}
+                    {plan.name === 'الخطة المميزة' && isPremium && isProvider && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        className="w-full mt-3 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                        onClick={() => setIsCancelModalOpen(true)}
+                        disabled={loading === 'cancel'}
+                      >
+                        إلغاء الاشتراك
+                      </Button>
+                    )}
+                  </div>
                 </div>
               );
             })}

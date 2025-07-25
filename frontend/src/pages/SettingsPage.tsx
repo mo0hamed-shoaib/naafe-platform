@@ -42,6 +42,8 @@ const SettingsPage: React.FC = () => {
   ];
 
   const isAdmin = user?.roles?.includes('admin');
+  const isProvider = user?.roles?.includes('provider');
+  const isPremium = !!user?.isPremium;
 
   // Fix address state initialization to avoid type errors
   const [address, setAddress] = useState<{
@@ -233,6 +235,13 @@ const SettingsPage: React.FC = () => {
   //     setSaving(false);
   //   }
   // };
+
+  useEffect(() => {
+    if (isProvider && isPremium) {
+      // Removed as per new UX decision
+    }
+    // eslint-disable-next-line
+  }, [isProvider, isPremium]);
 
   const renderAccountInformation = () => (
     <SettingsSection
@@ -525,6 +534,9 @@ const SettingsPage: React.FC = () => {
             )}
             
             {renderContent()}
+
+            {/* Targeted Leads for Premium Providers */}
+            {/* Removed as per new UX decision */}
           </div>
         </main>
       </div>

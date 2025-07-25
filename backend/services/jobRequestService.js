@@ -539,6 +539,38 @@ class JobRequestService {
     }
     throw new Error('Invalid review submission');
   }
+
+  // Get targeted leads for a premium provider
+  async getTargetedLeadsForProvider(providerId, filters = {}) {
+    const provider = await User.findById(providerId);
+    if (!provider || !provider.roles.includes('provider') || !provider.isPremium) {
+      // Only premium providers can access targeted leads
+      return [];
+    }
+    // Build query based on provider's skills/location and filters
+    const query = { status: 'open' };
+    if (provider.providerProfile && provider.providerProfile.skills && provider.providerProfile.skills.length > 0) {
+      query.requiredSkills = { $in: provider.providerProfile.skills };
+    }
+    if (filters.minBudget) {
+      query['budget.max'] = { $gte: filters.minBudget };
+    }
+    if (filters.maxBudget) {
+      query['budget.min'] = { $lte: filters.maxBudget };
+    }
+    if (filters.location) {
+      query['location.government'] = filters.location.government;
+      if (filters.location.city) {
+        query['location.city'] = filters.location.city;
+      }
+    }
+    // Add more filters as needed
+    const jobRequests = await JobRequest.find(query)
+      .populate('seeker', 'name email avatarUrl isPremium createdAt')
+      .sort({ createdAt: -1 })
+      .limit(filters.limit || 20);
+    return jobRequests;
+  }
 }
 
 export default new JobRequestService(); 

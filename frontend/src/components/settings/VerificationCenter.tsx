@@ -16,6 +16,8 @@ const steps = [
 
 const VerificationCenter: React.FC = () => {
   const { accessToken } = useAuth();
+  // Remove isProvider check, allow all users
+
   const [step, setStep] = useState(0);
   const [idFront, setIdFront] = useState<string | null>(null);
   const [idBack, setIdBack] = useState<string | null>(null);

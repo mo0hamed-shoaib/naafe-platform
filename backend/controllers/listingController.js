@@ -239,26 +239,35 @@ class ListingController {
         });
         return;
       }
-      
+      // Custom logic: Reserve first 5 results for premium providers, then append free providers
+      // 1. Find all matching listings, populate provider
+      const allListings = await ServiceListing.find(query)
+        .populate('provider', 'name avatarUrl isPremium isTopRated isVerified totalJobsCompleted providerProfile roles')
+        .sort({ createdAt: -1 });
+      // 2. Separate premium and free providers
+      const premiumListings = allListings.filter(l => l.provider && l.provider.isPremium);
+      const freeListings = allListings.filter(l => !l.provider || !l.provider.isPremium);
+      // 3. Take up to 5 premium listings for the top
+      const featuredPremium = premiumListings.slice(0, 5).map(l => ({ ...l.toObject(), featured: true }));
+      // 4. Remaining listings (premium after 5 + all free)
+      const restPremium = premiumListings.slice(5).map(l => ({ ...l.toObject(), featured: false }));
+      const restFree = freeListings.map(l => ({ ...l.toObject(), featured: false }));
+      // 5. Combine for final result
+      const combined = [...featuredPremium, ...restPremium, ...restFree];
+      // 6. Paginate
       const skip = (parseInt(page) - 1) * parseInt(limit);
-      const [listings, totalCount] = await Promise.all([
-        ServiceListing.find(query)
-          .populate('provider', 'name avatarUrl isPremium isTopRated isVerified totalJobsCompleted providerProfile')
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(parseInt(limit)),
-        ServiceListing.countDocuments(query)
-      ]);
+      const paginated = combined.slice(skip, skip + parseInt(limit));
+      // 7. Response
       res.status(200).json({
         success: true,
         data: {
-          listings,
+          listings: paginated,
           pagination: {
             page: parseInt(page),
             limit: parseInt(limit),
-            totalCount,
-            totalPages: Math.ceil(totalCount / limit),
-            hasNext: parseInt(page) * parseInt(limit) < totalCount,
+            totalCount: combined.length,
+            totalPages: Math.ceil(combined.length / limit),
+            hasNext: parseInt(page) * parseInt(limit) < combined.length,
             hasPrev: parseInt(page) > 1
           }
         },

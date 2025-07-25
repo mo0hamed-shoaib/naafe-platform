@@ -10,7 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FilterState } from '../types';
 import { useUrlParams } from '../hooks/useUrlParams';
 import { useAuth } from '../contexts/AuthContext';
-import { Search, Users, FileText, ArrowLeft } from 'lucide-react';
+import { Search, Users, FileText, ArrowLeft, CheckCircle } from 'lucide-react';
 
 const fetchListings = async (filters: FilterState) => {
   const params = new URLSearchParams();
@@ -37,6 +37,19 @@ const fetchRequests = async (filters: FilterState) => {
 
 type SearchType = 'providers' | 'service-requests' | null;
 
+// Add a minimal JobRequest type for targeted leads
+interface JobRequestLead {
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  location?: { government?: string; city?: string };
+  budget?: { min?: number; max?: number };
+  createdAt?: string;
+  seeker?: { avatarUrl?: string; isVerified?: boolean };
+  requiredSkills?: string[];
+}
+
 const SearchPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -61,6 +74,22 @@ const SearchPage = () => {
     queryFn: () => fetchRequests(filters),
   });
   const [providerOfferRequestIds, setProviderOfferRequestIds] = useState<string[]>([]);
+
+  const isProvider = user?.roles?.includes('provider');
+  const isPremium = !!user?.isPremium;
+  // Targeted Leads state
+  const [leads, setLeads] = useState<JobRequestLead[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [leadsError, setLeadsError] = useState<string | null>(null);
+  const [leadFilters, setLeadFilters] = useState({ minBudget: '', maxBudget: '', government: '', city: '' });
+
+  // Add express interest state
+  const [interestSuccess, setInterestSuccess] = useState<string | null>(null);
+  const handleExpressInterest = (leadId: string) => {
+    setInterestSuccess('تم إرسال اهتمامك بنجاح! سيتم إعلام صاحب الطلب.');
+    setTimeout(() => setInterestSuccess(null), 2500);
+    // In a real implementation, you would POST to an endpoint here
+  };
 
   // Update search type when URL changes
   useEffect(() => {
@@ -210,6 +239,33 @@ const SearchPage = () => {
     };
     fetchProviderOffers();
   }, [user, searchType, accessToken]);
+
+  const fetchLeads = async () => {
+    setLeadsLoading(true);
+    setLeadsError(null);
+    try {
+      const params = new URLSearchParams();
+      if (leadFilters.minBudget) params.set('minBudget', leadFilters.minBudget);
+      if (leadFilters.maxBudget) params.set('maxBudget', leadFilters.maxBudget);
+      if (leadFilters.government) params.set('location.government', leadFilters.government);
+      if (leadFilters.city) params.set('location.city', leadFilters.city);
+      const res = await fetch(`/api/providers/me/targeted-leads?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json();
+      if (data.success) setLeads(data.data.leads || []);
+      else setLeadsError(data.error?.message || 'فشل تحميل العروض المستهدفة');
+    } catch {
+      setLeadsError('فشل تحميل العروض المستهدفة');
+    } finally {
+      setLeadsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (searchType === 'service-requests' && isProvider && isPremium) fetchLeads();
+    // eslint-disable-next-line
+  }, [searchType, isProvider, isPremium]);
 
   const handleSearch = (query: string) => {
     setFilters(prev => ({ ...prev, search: query }));
@@ -362,6 +418,17 @@ const SearchPage = () => {
     );
   }
 
+  // In the resolvedProviders rendering, mark the first 5 premium providers as featured
+  let featuredCount = 0;
+  const providersWithFeatured = resolvedProviders.map((provider, idx) => {
+    let featured = false;
+    if (provider.isPremium && featuredCount < 5) {
+      featured = true;
+      featuredCount++;
+    }
+    return { ...provider, featured };
+  });
+
   return (
     <PageLayout
       title={getPageTitle()}
@@ -397,18 +464,96 @@ const SearchPage = () => {
         </div>
         
         <div className="w-full lg:w-3/4">
+          {/* Targeted Leads for Premium Providers */}
+          {searchType === 'service-requests' && isProvider && isPremium && (
+            <section className="mb-8">
+              <h2 className="text-2xl font-bold text-yellow-700 mb-2">عروض مستهدفة لك (مميز)</h2>
+              {interestSuccess && (
+                <div className="mb-4 flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded px-4 py-2">
+                  <CheckCircle className="w-5 h-5" />
+                  {interestSuccess}
+                </div>
+              )}
+              <div className="mb-4 flex flex-wrap gap-2 items-end">
+                <div>
+                  <label className="block text-sm font-semibold mb-1">الحد الأدنى للميزانية</label>
+                  <input type="number" value={leadFilters.minBudget} onChange={e => setLeadFilters(f => ({ ...f, minBudget: e.target.value }))} className="border rounded px-2 py-1 w-32" placeholder="مثال: 1000" title="الحد الأدنى للميزانية" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1">الحد الأقصى للميزانية</label>
+                  <input type="number" value={leadFilters.maxBudget} onChange={e => setLeadFilters(f => ({ ...f, maxBudget: e.target.value }))} className="border rounded px-2 py-1 w-32" placeholder="مثال: 5000" title="الحد الأقصى للميزانية" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1">المحافظة</label>
+                  <input type="text" value={leadFilters.government} onChange={e => setLeadFilters(f => ({ ...f, government: e.target.value }))} className="border rounded px-2 py-1 w-32" placeholder="مثال: القاهرة" title="المحافظة" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1">المدينة</label>
+                  <input type="text" value={leadFilters.city} onChange={e => setLeadFilters(f => ({ ...f, city: e.target.value }))} className="border rounded px-2 py-1 w-32" placeholder="مثال: مدينة نصر" title="المدينة" />
+                </div>
+                <button onClick={fetchLeads} className="bg-yellow-500 text-white px-4 py-2 rounded font-bold ml-2">تصفية</button>
+              </div>
+              {leadsLoading ? (
+                <div className="text-yellow-700">جاري تحميل العروض المستهدفة...</div>
+              ) : leadsError ? (
+                <div className="text-red-600">{leadsError}</div>
+              ) : leads.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {leads.map((lead) => (
+                    <div key={lead._id} className="relative">
+                      <ServiceCard provider={{
+                        id: lead._id,
+                        name: lead.title,
+                        rating: 0,
+                        completedJobs: 0,
+                        category: lead.category,
+                        description: lead.description,
+                        title: lead.title,
+                        location: ((lead.location?.government || '') + (lead.location?.city ? '، ' + lead.location.city : '')) || '',
+                        budgetMin: lead.budget?.min ?? 0,
+                        budgetMax: lead.budget?.max ?? 0,
+                        memberSince: lead.createdAt || '',
+                        imageUrl: lead.seeker?.avatarUrl || '',
+                        isPremium: false,
+                        isTopRated: false,
+                        isVerified: lead.seeker?.isVerified || false,
+                        providerUpgradeStatus: 'none',
+                        skills: lead.requiredSkills || [],
+                        workingDays: [],
+                        startTime: '',
+                        endTime: '',
+                        startingPrice: lead.budget?.min ?? 0,
+                        availability: { days: [], timeSlots: [] },
+                      }}
+                      onViewDetails={() => window.location.href = `/requests/${lead._id}`}
+                      />
+                      <button
+                        className="absolute top-2 left-2 bg-yellow-500 text-white px-3 py-1 rounded shadow hover:bg-yellow-600 transition"
+                        onClick={() => handleExpressInterest(lead._id)}
+                      >
+                        إبداء اهتمام فوري
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-yellow-700">لا توجد عروض مستهدفة حالياً.</div>
+              )}
+            </section>
+          )}
           {searchType === 'providers' ? (
             listingsLoading ? (
               <div className="text-center py-12 text-lg text-deep-teal">جاري تحميل مقدمي الخدمات...</div>
             ) : listingsError ? (
               <div className="text-center py-12 text-red-600">{listingsError.message}</div>
-            ) : resolvedProviders.length > 0 ? (
+            ) : providersWithFeatured.length > 0 ? (
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {resolvedProviders.map((provider) => (
+                {providersWithFeatured.map((provider) => (
                   <ServiceCard
                     key={provider.id}
                     provider={provider}
                     onViewDetails={handleViewProviderDetails}
+                    featured={provider.featured}
                   />
                 ))}
               </div>

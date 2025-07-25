@@ -86,12 +86,23 @@ class UserService {
   async getPublicUserProfile(userId, requestingUserId) {
     const user = await User.findById(userId).lean();
     if (!user) throw new Error('User not found');
-    // Return both profiles if present
+    // Add trust signals for premium providers
+    let trustSignals = {};
+    if (user.roles.includes('provider') && user.isPremium) {
+      trustSignals = {
+        totalJobsCompleted: user.providerProfile?.totalJobsCompleted || 0,
+        averageRating: user.providerProfile?.rating || 0,
+        memberSince: user.createdAt,
+        isVerified: user.isVerified || false
+      };
+    }
+    // Return both profiles if present, plus trust signals
     return {
       ...user,
       seekerProfile: user.seekerProfile || null,
       providerProfile: user.providerProfile || null,
-      roles: user.roles || []
+      roles: user.roles || [],
+      ...trustSignals
     };
   }
 
@@ -318,6 +329,18 @@ class UserService {
     user.isBlocked = false;
     await user.save();
     return user;
+  }
+
+  // Get up to 5 premium providers for featured sections
+  async getFeaturedPremiumProviders(limit = 5) {
+    const users = await User.find({
+      roles: 'provider',
+      isPremium: true
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select('name avatarUrl providerProfile isPremium isTopRated isVerified createdAt');
+    return users;
   }
 }
 

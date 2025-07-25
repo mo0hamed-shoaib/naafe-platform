@@ -116,4 +116,9 @@ router.patch('/:id/block', authenticateToken, requireRole(['admin']), userContro
 // Admin: Unblock a user
 router.patch('/:id/unblock', authenticateToken, requireRole(['admin']), userController.unblockUser);
 
+// Featured premium providers for homepage/category
+router.get('/providers/featured', userController.getFeaturedPremiumProviders);
+// Targeted leads for premium providers
+router.get('/providers/me/targeted-leads', authenticateToken, userController.getTargetedLeads);
+
 export default router; 

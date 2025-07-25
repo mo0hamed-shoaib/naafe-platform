@@ -6,6 +6,7 @@ import Categories from '../components/landing/Categories';
 import Testimonials from '../components/landing/Testimonials';
 import BecomeAPro from '../components/landing/BecomeAPro';
 import ScrollToTopButton from '../components/landing/ScrollToTopButton';
+import FeaturedProviders from '../components/FeaturedProviders';
 
 const LandingPage = () => {
   return (
@@ -13,6 +14,7 @@ const LandingPage = () => {
       <Header />
       <main className="flex-1">
         <Hero />
+        <FeaturedProviders />
         <HowItWorks />
         <Categories />
         <Testimonials />

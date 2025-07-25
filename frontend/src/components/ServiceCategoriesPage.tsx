@@ -6,6 +6,7 @@ import CategoryCard from './CategoryCard';
 import { useFilters } from '../hooks/useFilters';
 import { useAuth } from '../contexts/AuthContext';
 import { ComponentType } from 'react';
+import FeaturedProviders from './FeaturedProviders';
 
 interface Category {
   _id: string;
@@ -89,6 +90,7 @@ const ServiceCategoriesPage = () => {
       user={user}
       onLogout={logout}
     >
+      <FeaturedProviders />
       <FilterForm
         filters={filters}
         onFiltersChange={updateFilters}

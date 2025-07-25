@@ -18,6 +18,7 @@ class VerificationService {
   async requestVerification(userId, verificationData) {
     const user = await User.findById(userId);
     if (!user) throw new Error('User not found');
+    // Remove restriction: allow both providers and seekers
     if (user.verification && user.verification.status === 'pending') throw new Error('Already pending');
     if (user.verification && user.verification.status === 'approved') throw new Error('Already verified');
     if (user.verification && user.verification.attempts >= 3) throw new Error('Maximum attempts reached');
