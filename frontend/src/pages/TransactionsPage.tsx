@@ -15,23 +15,24 @@ import { useAuth } from '../contexts/AuthContext';
 import { Search } from 'lucide-react';
 import Modal from '../admin/components/UI/Modal';
 import FormInput from '../components/ui/FormInput';
-import FormSelect from '../components/ui/FormSelect';
+import UnifiedSelect from '../components/ui/UnifiedSelect';
 
-interface Transaction extends Record<string, unknown> {
-  _id: string;
+// Update Transaction type for unified API
+interface Transaction {
+  id: string;
+  type: 'service' | 'subscription' | 'refund' | string;
   amount: number;
   currency: string;
+  date: string;
   status: string;
-  createdAt: string;
-  seekerId: { _id: string; name: { first: string; last: string } };
-  providerId: { _id: string; name: { first: string; last: string } };
-  serviceTitle: string;
-  paymentMethod: string;
-  type?: string;
+  description: string;
+  relatedId?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any; // For SortableTable compatibility
 }
 
 const TransactionsPage: React.FC = () => {
-  const { accessToken, user } = useAuth();
+  const { accessToken } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,7 +41,6 @@ const TransactionsPage: React.FC = () => {
   const [sortKey, setSortKey] = useState<keyof Transaction | undefined>(undefined);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [search, setSearch] = useState('');
-  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -52,12 +52,12 @@ const TransactionsPage: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`/api/payment/my-transactions?page=${page}&limit=20`, {
+        const res = await fetch(`/api/payment/transactions?page=${page}&limit=20`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
         const data = await res.json();
         if (data.success) {
-          setTransactions(data.data.payments);
+          setTransactions(data.data.transactions);
           setTotalPages(data.data.pagination.pages);
         } else {
           setError(data.message || 'فشل في جلب المعاملات');
@@ -71,47 +71,55 @@ const TransactionsPage: React.FC = () => {
     if (accessToken) fetchTransactions();
   }, [accessToken, page]);
 
-  useEffect(() => {
-    // Filter transactions by search, status, type, and date
-    let filtered = transactions;
+  // Filtering
+  const filtered = transactions.filter(t => {
     if (search) {
-      filtered = filtered.filter(t =>
-        t.serviceTitle?.toLowerCase().includes(search.toLowerCase()) ||
-        `${t.seekerId.name.first} ${t.seekerId.name.last}`.includes(search) ||
-        `${t.providerId.name.first} ${t.providerId.name.last}`.includes(search)
-      );
+      const serviceTitleMatch = t.description?.toLowerCase().includes(search.toLowerCase());
+      // Assuming seekerId and providerId are not directly available in this new structure
+      // For now, we'll rely on description for search
+      return serviceTitleMatch;
     }
     if (statusFilter) {
-      filtered = filtered.filter(t => t.status === statusFilter);
+      return t.status === statusFilter;
     }
     if (typeFilter) {
-      filtered = filtered.filter(t => {
-        if (typeFilter === 'refund') return t.status === 'refunded' || t.status === 'partial_refund';
-        if (typeFilter === 'pay') return t.status === 'completed' && t.seekerId._id === user?.id;
-        if (typeFilter === 'receive') return t.status === 'completed' && t.providerId._id === user?.id;
-        if (typeFilter === 'escrow') return t.status === 'escrowed';
-        return true;
-      });
+      return t.type === typeFilter;
     }
     if (dateFrom) {
-      filtered = filtered.filter(t => new Date(t.createdAt) >= new Date(dateFrom));
+      return new Date(t.date) >= new Date(dateFrom);
     }
     if (dateTo) {
-      filtered = filtered.filter(t => new Date(t.createdAt) <= new Date(dateTo));
+      return new Date(t.date) <= new Date(dateTo);
     }
-    setFilteredTransactions(filtered);
-  }, [search, transactions, statusFilter, typeFilter, dateFrom, dateTo, user]);
+    return true;
+  });
+
+  // Icon/color for type
+  const typeIcon = (type: string) => {
+    switch (type) {
+      case 'service': return <span className="text-blue-600" title="دفع خدمة">🛠️</span>;
+      case 'subscription': return <span className="text-yellow-600" title="اشتراك">⭐</span>;
+      case 'refund': return <span className="text-green-600" title="استرداد">↩️</span>;
+      default: return <span>💸</span>;
+    }
+  };
 
   const columns: Column<Transaction>[] = [
     {
-      key: 'createdAt',
+      key: 'date',
       label: 'التاريخ',
       sortable: true,
       render: (value) => value ? new Date(value as string).toLocaleDateString('ar-EG') : '',
     },
     {
-      key: 'serviceTitle',
-      label: 'الخدمة',
+      key: 'type',
+      label: 'النوع',
+      sortable: false,
+      render: (value, item) => <span className="flex items-center gap-1">{typeIcon(item.type)} {item.type === 'service' ? 'خدمة' : item.type === 'subscription' ? 'اشتراك' : item.type === 'refund' ? 'استرداد' : 'أخرى'}</span>,
+    },
+    {
+      key: 'description',
+      label: 'الوصف',
       sortable: false,
       render: (value) => value as string || '',
     },
@@ -119,7 +127,7 @@ const TransactionsPage: React.FC = () => {
       key: 'amount',
       label: 'المبلغ',
       sortable: true,
-      render: (value, item) => value !== undefined ? `${value} ${(item.currency === 'egp' ? 'جنيه' : (item.currency as string).toUpperCase())}` : '',
+      render: (value, item) => value !== undefined ? `${value} ${(item.currency === 'EGP' ? 'جنيه' : (item.currency as string).toUpperCase())}` : '',
     },
     {
       key: 'status',
@@ -127,65 +135,31 @@ const TransactionsPage: React.FC = () => {
       sortable: true,
       render: (value) => {
         const statusMap: Record<string, string> = {
-          completed: 'مكتمل',
-          escrowed: 'في الضمان',
-          pending: 'قيد الانتظار',
-          failed: 'فشل',
-          cancelled: 'ملغي',
+          succeeded: 'مكتمل',
           refunded: 'مسترد',
-          partial_refund: 'استرداد جزئي',
+          failed: 'فشل',
+          pending: 'قيد الانتظار',
+          canceled: 'ملغي',
+          inactive: 'غير نشط',
+          active: 'نشط',
+          completed: 'مكتمل',
+          escrowed: 'محتجز في الضمان',
         };
         const colorMap: Record<string, string> = {
+          succeeded: 'text-green-600',
+          refunded: 'text-purple-600',
+          failed: 'text-red-600',
+          pending: 'text-amber-600',
+          canceled: 'text-gray-500',
+          inactive: 'text-gray-500',
+          active: 'text-green-600',
           completed: 'text-green-600',
           escrowed: 'text-blue-600',
-          pending: 'text-amber-600',
-          failed: 'text-red-600',
-          cancelled: 'text-gray-500',
-          refunded: 'text-purple-600',
-          partial_refund: 'text-purple-500',
         };
         const v = value as string;
         return <span className={colorMap[v] || ''}>{statusMap[v] || v}</span>;
       },
     },
-    {
-      key: 'paymentMethod',
-      label: 'طريقة الدفع',
-      sortable: false,
-      render: (value) => value === 'card' ? 'بطاقة' : (value as string || ''),
-    },
-    {
-      key: 'seekerId',
-      label: 'دافع المبلغ',
-      sortable: false,
-      render: (_value, item) => `${item.seekerId.name.first} ${item.seekerId.name.last}`,
-    },
-    {
-      key: 'providerId',
-      label: 'مستلم المبلغ',
-      sortable: false,
-      render: (_value, item) => `${item.providerId.name.first} ${item.providerId.name.last}`,
-    },
-    {
-      key: 'type',
-      label: 'نوع المعاملة',
-      sortable: false,
-      render: (_value, item) => {
-        if (item.status === 'refunded' || item.status === 'partial_refund') return 'استرداد';
-        if (item.status === 'completed' && item.seekerId._id === user?.id) return 'دفع';
-        if (item.status === 'completed' && item.providerId._id === user?.id) return 'تحويل';
-        if (item.status === 'escrowed') return 'إيداع ضمان';
-        return 'معاملة';
-      }
-    },
-    {
-      key: 'actions' as keyof Transaction,
-      label: 'تفاصيل',
-      sortable: false,
-      render: (_value, item) => (
-        <Button size="xs" variant="outline" onClick={() => setSelectedTransaction(item)}>عرض</Button>
-      )
-    }
   ];
 
   const handleSort = (key: keyof Transaction, direction: SortDirection) => {
@@ -206,7 +180,8 @@ const TransactionsPage: React.FC = () => {
           <div className="flex-1 min-w-[200px]">
             <FormInput
               type="text"
-              variant="search"
+              variant="default"
+              size="md"
               placeholder="ابحث عن معاملة أو خدمة..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -214,36 +189,35 @@ const TransactionsPage: React.FC = () => {
             />
           </div>
           <div className="min-w-[160px]">
-            <FormSelect
+            <UnifiedSelect
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
+              onChange={setStatusFilter}
               options={[
-                { value: '', label: 'كل الحالات' },
-                { value: 'completed', label: 'مكتمل' },
-                { value: 'escrowed', label: 'في الضمان' },
-                { value: 'pending', label: 'قيد الانتظار' },
-                { value: 'failed', label: 'فشل' },
-                { value: 'cancelled', label: 'ملغي' },
+                { value: 'succeeded', label: 'مكتمل' },
                 { value: 'refunded', label: 'مسترد' },
-                { value: 'partial_refund', label: 'استرداد جزئي' },
+                { value: 'failed', label: 'فشل' },
+                { value: 'pending', label: 'قيد الانتظار' },
+                { value: 'canceled', label: 'ملغي' },
+                { value: 'inactive', label: 'غير نشط' },
+                { value: 'active', label: 'نشط' },
+                { value: 'completed', label: 'مكتمل' },
+                { value: 'escrowed', label: 'محتجز في الضمان' },
               ]}
-              placeholder="كل الحالات"
-              size="sm"
+              placeholder="اختر الحالة"
+              size="md"
             />
           </div>
           <div className="min-w-[160px]">
-            <FormSelect
+            <UnifiedSelect
               value={typeFilter}
-              onChange={e => setTypeFilter(e.target.value)}
+              onChange={setTypeFilter}
               options={[
-                { value: '', label: 'كل الأنواع' },
-                { value: 'pay', label: 'دفع' },
-                { value: 'receive', label: 'تحويل' },
-                { value: 'escrow', label: 'إيداع ضمان' },
+                { value: 'service', label: 'خدمة' },
+                { value: 'subscription', label: 'اشتراك' },
                 { value: 'refund', label: 'استرداد' },
               ]}
-              placeholder="كل الأنواع"
-              size="sm"
+              placeholder="اختر النوع"
+              size="md"
             />
           </div>
           <div className="min-w-[140px]">
@@ -252,7 +226,8 @@ const TransactionsPage: React.FC = () => {
               value={dateFrom}
               onChange={e => setDateFrom(e.target.value)}
               placeholder="من التاريخ"
-              size="sm"
+              variant="default"
+              size="md"
             />
           </div>
           <div className="min-w-[140px]">
@@ -261,7 +236,8 @@ const TransactionsPage: React.FC = () => {
               value={dateTo}
               onChange={e => setDateTo(e.target.value)}
               placeholder="إلى التاريخ"
-              size="sm"
+              variant="default"
+              size="md"
             />
           </div>
         </div>
@@ -271,7 +247,7 @@ const TransactionsPage: React.FC = () => {
           <div className="text-center py-12 text-red-600">{error}</div>
         ) : (
           <SortableTable<Transaction>
-            data={filteredTransactions}
+            data={filtered}
             columns={columns}
             onSort={handleSort}
             sortKey={sortKey}
@@ -308,13 +284,11 @@ const TransactionsPage: React.FC = () => {
       >
         {selectedTransaction && (
           <div className="space-y-3 text-sm">
-            <div><span className="font-bold">الخدمة:</span> {selectedTransaction.serviceTitle}</div>
-            <div><span className="font-bold">المبلغ:</span> {selectedTransaction.amount} {selectedTransaction.currency === 'egp' ? 'جنيه' : selectedTransaction.currency.toUpperCase()}</div>
+            <div><span className="font-bold">النوع:</span> {selectedTransaction.type === 'service' ? 'خدمة' : selectedTransaction.type === 'subscription' ? 'اشتراك' : selectedTransaction.type === 'refund' ? 'استرداد' : 'أخرى'}</div>
+            <div><span className="font-bold">الوصف:</span> {selectedTransaction.description}</div>
+            <div><span className="font-bold">المبلغ:</span> {selectedTransaction.amount} {selectedTransaction.currency === 'EGP' ? 'جنيه' : selectedTransaction.currency.toUpperCase()}</div>
             <div><span className="font-bold">الحالة:</span> {selectedTransaction.status}</div>
-            <div><span className="font-bold">طريقة الدفع:</span> {selectedTransaction.paymentMethod === 'card' ? 'بطاقة' : selectedTransaction.paymentMethod}</div>
-            <div><span className="font-bold">دافع المبلغ:</span> {selectedTransaction.seekerId.name.first} {selectedTransaction.seekerId.name.last}</div>
-            <div><span className="font-bold">مستلم المبلغ:</span> {selectedTransaction.providerId.name.first} {selectedTransaction.providerId.name.last}</div>
-            <div><span className="font-bold">تاريخ الإنشاء:</span> {new Date(selectedTransaction.createdAt).toLocaleString('ar-EG')}</div>
+            <div><span className="font-bold">تاريخ المعاملة:</span> {new Date(selectedTransaction.date).toLocaleString('ar-EG')}</div>
             {/* Add more fields as needed */}
           </div>
         )}

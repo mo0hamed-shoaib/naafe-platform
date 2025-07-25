@@ -539,3 +539,202 @@ export const getMyTransactions = async (req, res) => {
     res.status(500).json({ success: false, message: 'حدث خطأ أثناء جلب المعاملات' });
   }
 }; 
+
+// Unified transactions: service payments, subscriptions, refunds
+export const getUnifiedTransactions = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const User = (await import('../models/User.js')).default;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const stripeCustomerId = user.subscription?.stripeCustomerId;
+
+    // 1. Fetch service/job payments from Payment model
+    const paymentsResult = await import('../services/paymentService.js').then(m => m.getUserPayments(userId, 1, 100));
+    const servicePayments = paymentsResult.success ? paymentsResult.data.payments.map(p => ({
+      id: p._id,
+      type:
+        p.status === 'refunded' || p.status === 'partial_refund' || p.status === 'cancelled'
+          ? 'refund'
+          : 'service',
+      amount:
+        p.status === 'refunded' || p.status === 'partial_refund' || p.status === 'cancelled'
+          ? -Math.round((p.cancellation?.refundAmount || p.amount) / 100)
+          : p.amount / 100,
+      currency: p.originalCurrency || 'EGP',
+      date: p.updatedAt || p.createdAt,
+      status: p.status,
+      description:
+        p.status === 'refunded'
+          ? 'استرداد كامل'
+          : p.status === 'partial_refund'
+            ? 'استرداد جزئي'
+            : p.status === 'cancelled'
+              ? 'إلغاء خدمة واسترداد'
+              : p.serviceTitle || 'دفع خدمة',
+      relatedId: p.jobRequestId || p.offerId || null
+    })) : [];
+
+    // 2. Fetch Stripe charges and refunds for subscriptions
+    let stripeTransactions = [];
+    const seenRefundIds = new Set();
+    if (user.email) {
+      const Stripe = (await import('stripe')).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' });
+      // Fetch all Stripe customers for this email
+      const customers = await stripe.customers.list({ email: user.email, limit: 100 });
+      let allCharges = [];
+      let allChargeIds = new Set();
+      for (const customer of customers.data) {
+        const charges = await stripe.charges.list({ customer: customer.id, limit: 100 });
+        allCharges = allCharges.concat(charges.data);
+        for (const c of charges.data) allChargeIds.add(c.id);
+        for (const charge of charges.data) {
+          // Subscription payment
+          if (charge.invoice) {
+            stripeTransactions.push({
+              id: charge.id,
+              type: 'subscription',
+              amount: charge.amount / 100,
+              currency: charge.currency.toUpperCase(),
+              date: new Date(charge.created * 1000),
+              status: charge.status,
+              description: 'دفع اشتراك مميز',
+              relatedId: charge.invoice
+            });
+          }
+          // Refunds for this charge
+          if (charge.refunds && charge.refunds.data.length > 0) {
+            for (const refund of charge.refunds.data) {
+              stripeTransactions.push({
+                id: refund.id,
+                type: 'refund',
+                amount: -refund.amount / 100,
+                currency: charge.currency.toUpperCase(),
+                date: new Date(refund.created * 1000),
+                status: refund.status,
+                description: 'استرداد اشتراك',
+                relatedId: charge.id
+              });
+              seenRefundIds.add(refund.id);
+            }
+          }
+        }
+      }
+      // Fetch all refunds (limit 100), filter to those whose charge is in user's charges and not already included
+      const allRefunds = await stripe.refunds.list({ limit: 100 });
+      for (const refund of allRefunds.data) {
+        if (!seenRefundIds.has(refund.id) && refund.charge && allChargeIds.has(refund.charge)) {
+          // Try to get the charge currency, fallback to USD
+          let currency = 'USD';
+          let chargeCreated = refund.created;
+          try {
+            const charge = allCharges.find(c => c.id === refund.charge);
+            if (charge) {
+              currency = charge.currency ? charge.currency.toUpperCase() : 'USD';
+              chargeCreated = charge.created;
+            }
+          } catch {}
+          stripeTransactions.push({
+            id: refund.id,
+            type: 'refund',
+            amount: -refund.amount / 100,
+            currency,
+            date: new Date(refund.created * 1000),
+            status: refund.status,
+            description: 'استرداد اشتراك',
+            relatedId: refund.charge || null
+          });
+        }
+      }
+    } else if (stripeCustomerId) {
+      // Fallback: use current customer ID if email is missing
+      const Stripe = (await import('stripe')).default;
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' });
+      const charges = await stripe.charges.list({ customer: stripeCustomerId, limit: 100 });
+      for (const charge of charges.data) {
+        if (charge.invoice) {
+          stripeTransactions.push({
+            id: charge.id,
+            type: 'subscription',
+            amount: charge.amount / 100,
+            currency: charge.currency.toUpperCase(),
+            date: new Date(charge.created * 1000),
+            status: charge.status,
+            description: 'دفع اشتراك مميز',
+            relatedId: charge.invoice
+          });
+        }
+        if (charge.refunds && charge.refunds.data.length > 0) {
+          for (const refund of charge.refunds.data) {
+            stripeTransactions.push({
+              id: refund.id,
+              type: 'refund',
+              amount: -refund.amount / 100,
+              currency: charge.currency.toUpperCase(),
+              date: new Date(refund.created * 1000),
+              status: refund.status,
+              description: 'استرداد اشتراك',
+              relatedId: charge.id
+            });
+            seenRefundIds.add(refund.id);
+          }
+        }
+      }
+      const allRefunds = await stripe.refunds.list({ limit: 100 });
+      const userChargeIds = new Set(charges.data.map(c => c.id));
+      for (const refund of allRefunds.data) {
+        if (!seenRefundIds.has(refund.id) && refund.charge && userChargeIds.has(refund.charge)) {
+          let currency = 'USD';
+          let chargeCreated = refund.created;
+          try {
+            const charge = charges.data.find(c => c.id === refund.charge);
+            if (charge) {
+              currency = charge.currency ? charge.currency.toUpperCase() : 'USD';
+              chargeCreated = charge.created;
+            }
+          } catch {}
+          stripeTransactions.push({
+            id: refund.id,
+            type: 'refund',
+            amount: -refund.amount / 100,
+            currency,
+            date: new Date(refund.created * 1000),
+            status: refund.status,
+            description: 'استرداد اشتراك',
+            relatedId: refund.charge || null
+          });
+        }
+      }
+    }
+
+    // 3. Merge and sort all transactions by date (desc)
+    const allTransactions = [...servicePayments, ...stripeTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const total = allTransactions.length;
+    const pages = Math.max(1, Math.ceil(total / limit));
+    const paginated = allTransactions.slice((page - 1) * limit, page * limit);
+
+    res.json({
+      success: true,
+      data: {
+        transactions: paginated,
+        pagination: {
+          page,
+          pages,
+          total,
+          limit,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error getting unified transactions:', error);
+    if (error && error.stack) {
+      console.error(error.stack);
+    }
+    res.status(500).json({ success: false, message: 'حدث خطأ أثناء جلب المعاملات المالية' });
+  }
+}; 
