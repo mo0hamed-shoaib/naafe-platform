@@ -104,6 +104,32 @@ const TransactionsPage: React.FC = () => {
     }
   };
 
+  // Move these outside the render function so they are accessible in the modal too
+  const statusMap: Record<string, string> = {
+    succeeded: 'مكتمل',
+    refunded: 'مسترد',
+    failed: 'فشل',
+    pending: 'قيد الانتظار',
+    canceled: 'ملغي',
+    inactive: 'غير نشط',
+    active: 'نشط',
+    completed: 'مكتمل',
+    escrowed: 'محتجز في الضمان',
+    partial_refund: 'استرداد جزئي',
+  };
+  const colorMap: Record<string, string> = {
+    succeeded: 'text-green-600',
+    refunded: 'text-purple-600',
+    failed: 'text-red-600',
+    pending: 'text-amber-600',
+    canceled: 'text-gray-500',
+    inactive: 'text-gray-500',
+    active: 'text-green-600',
+    completed: 'text-green-600',
+    escrowed: 'text-blue-600',
+    partial_refund: 'text-orange-500',
+  };
+
   const columns: Column<Transaction>[] = [
     {
       key: 'date',
@@ -134,28 +160,6 @@ const TransactionsPage: React.FC = () => {
       label: 'الحالة',
       sortable: true,
       render: (value) => {
-        const statusMap: Record<string, string> = {
-          succeeded: 'مكتمل',
-          refunded: 'مسترد',
-          failed: 'فشل',
-          pending: 'قيد الانتظار',
-          canceled: 'ملغي',
-          inactive: 'غير نشط',
-          active: 'نشط',
-          completed: 'مكتمل',
-          escrowed: 'محتجز في الضمان',
-        };
-        const colorMap: Record<string, string> = {
-          succeeded: 'text-green-600',
-          refunded: 'text-purple-600',
-          failed: 'text-red-600',
-          pending: 'text-amber-600',
-          canceled: 'text-gray-500',
-          inactive: 'text-gray-500',
-          active: 'text-green-600',
-          completed: 'text-green-600',
-          escrowed: 'text-blue-600',
-        };
         const v = value as string;
         return <span className={colorMap[v] || ''}>{statusMap[v] || v}</span>;
       },
@@ -287,7 +291,7 @@ const TransactionsPage: React.FC = () => {
             <div><span className="font-bold">النوع:</span> {selectedTransaction.type === 'service' ? 'خدمة' : selectedTransaction.type === 'subscription' ? 'اشتراك' : selectedTransaction.type === 'refund' ? 'استرداد' : 'أخرى'}</div>
             <div><span className="font-bold">الوصف:</span> {selectedTransaction.description}</div>
             <div><span className="font-bold">المبلغ:</span> {selectedTransaction.amount} {selectedTransaction.currency === 'EGP' ? 'جنيه' : selectedTransaction.currency.toUpperCase()}</div>
-            <div><span className="font-bold">الحالة:</span> {selectedTransaction.status}</div>
+            <div><span className="font-bold">الحالة:</span> {statusMap[selectedTransaction.status] || selectedTransaction.status}</div>
             <div><span className="font-bold">تاريخ المعاملة:</span> {new Date(selectedTransaction.date).toLocaleString('ar-EG')}</div>
             {/* Add more fields as needed */}
           </div>
