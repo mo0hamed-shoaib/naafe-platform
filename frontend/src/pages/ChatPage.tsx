@@ -12,6 +12,7 @@ import Button from '../components/ui/Button';
 import FormTextarea from '../components/ui/FormTextarea';
 import PaymentModal from '../components/ui/PaymentModal';
 import ReportProblemModal from '../components/ui/ReportProblemModal';
+import ReviewModal from '../components/ui/ReviewModal';
 import Modal from '../admin/components/UI/Modal';
 import { submitComplaint } from '../services/complaintService';
 import { Send, ArrowLeft, MessageCircle, User, CreditCard, AlertTriangle, CheckCircle, AlertCircle, Shield } from 'lucide-react';
@@ -97,6 +98,8 @@ const ChatPage: React.FC = () => {
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [serviceInProgress, setServiceInProgress] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
   const [completionLoading, setCompletionLoading] = useState(false);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [cancellationLoading, setCancellationLoading] = useState(false);
@@ -581,6 +584,7 @@ const ChatPage: React.FC = () => {
         showSuccess('تم تأكيد اكتمال الخدمة', 'تم تحرير المبلغ لمقدم الخدمة بنجاح');
         setShowCompletionModal(false);
         checkServiceStatus();
+        setShowReviewModal(true);
       } else {
         showError('خطأ في تأكيد اكتمال الخدمة', data.message || 'حدث خطأ أثناء تأكيد اكتمال الخدمة');
       }
@@ -589,6 +593,43 @@ const ChatPage: React.FC = () => {
       showError('خطأ في تأكيد اكتمال الخدمة', 'حدث خطأ أثناء تأكيد اكتمال الخدمة');
     } finally {
       setCompletionLoading(false);
+    }
+  };
+
+  const handleReviewSubmit = async (rating: number, comment: string) => {
+    setReviewLoading(true);
+    try {
+      const isSeeker = user?.id === conversation?.participants.seeker._id;
+      const role = isSeeker ? "provider" : "seeker";
+      const reviewedUser = isSeeker
+        ? conversation?.participants.provider._id
+        : conversation?.participants.seeker._id;
+
+      const response = await fetch(`/api/reviews`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          rating,
+          comment,
+          role,
+          reviewedUser,
+          jobRequest: conversation?.jobRequestId._id
+        })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        showSuccess('تم إرسال التقييم بنجاح');
+        setShowReviewModal(false);
+      } else {
+        showError('فشل إرسال التقييم', data.message || 'حدث خطأ أثناء إرسال التقييم');
+      }
+    } catch (error) {
+      showError('فشل إرسال التقييم', 'حدث خطأ أثناء إرسال التقييم');
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -1408,6 +1449,16 @@ const ChatPage: React.FC = () => {
           providerName={`${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`}
           serviceTitle={conversation.jobRequestId.title}
           loading={reportLoading}
+        />
+      )}
+      {conversation && offerId && (
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          onSubmit={handleReviewSubmit}
+          providerName={`${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`}
+          serviceTitle={conversation.jobRequestId.title}
+          loading={reviewLoading}
         />
       )}
     </PageLayout>
