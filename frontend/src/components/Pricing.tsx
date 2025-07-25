@@ -132,6 +132,9 @@ const Pricing: React.FC = () => {
   const [loading, setLoading] = useState<string | null>(null);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelStep, setCancelStep] = useState<'summary' | 'result'>('summary');
+  const [refundEstimate, setRefundEstimate] = useState<{ amount: number; type: string } | null>(null);
+  const [cancelResult, setCancelResult] = useState<{ success: boolean; message: string; refund?: { amount: number; type: string } | null } | null>(null);
   const { showSuccess, showError } = useToast();
 
   const isPremium = !!user?.isPremium;
@@ -182,7 +185,33 @@ const Pricing: React.FC = () => {
     }
   };
 
-  // Cancel subscription logic (placeholder: link to Stripe portal or show modal)
+  // Fetch refund estimate when opening the modal
+  const fetchRefundEstimate = async () => {
+    setRefundEstimate(null);
+    setCancelResult(null);
+    setCancelStep('summary');
+    setIsCancelModalOpen(true);
+    try {
+      const response = await fetch('/api/subscriptions/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ estimate: true }),
+      });
+      const data = await response.json();
+      if (data.success && data.refund) {
+        setRefundEstimate({ amount: data.refund.amount, type: data.refund.type });
+      } else {
+        setRefundEstimate(null);
+      }
+    } catch {
+      setRefundEstimate(null);
+    }
+  };
+
+  // Confirm cancelation
   const handleCancelSubscription = async () => {
     setLoading('cancel');
     try {
@@ -194,15 +223,21 @@ const Pricing: React.FC = () => {
         },
       });
       const data = await response.json();
+      setCancelResult({
+        success: !!data.success,
+        message: data.message || (data.error?.message || 'فشل إلغاء الاشتراك.'),
+        refund: data.refund || null,
+      });
+      setCancelStep('result');
       if (data.success) {
         showSuccess(data.message);
-        // Optionally, refresh user info or reload page to reflect new status
-        setTimeout(() => window.location.reload(), 1500);
+        // Do not auto-reload; wait for user to close modal
       } else {
         showError(data.error?.message || 'فشل إلغاء الاشتراك.');
       }
-      setIsCancelModalOpen(false);
-    } catch (err) {
+    } catch {
+      setCancelResult({ success: false, message: 'حدث خطأ أثناء محاولة إلغاء الاشتراك. يرجى المحاولة لاحقاً.' });
+      setCancelStep('result');
       showError('حدث خطأ أثناء محاولة إلغاء الاشتراك. يرجى المحاولة لاحقاً.');
     } finally {
       setLoading(null);
@@ -343,7 +378,7 @@ const Pricing: React.FC = () => {
                         variant="danger"
                         size="sm"
                         className="w-full mt-3 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                        onClick={() => setIsCancelModalOpen(true)}
+                        onClick={fetchRefundEstimate}
                         disabled={loading === 'cancel'}
                       >
                         إلغاء الاشتراك
@@ -521,29 +556,83 @@ const Pricing: React.FC = () => {
       </Modal>
 
       {/* Cancel Subscription Modal */}
-      <Modal isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)} title="إلغاء الاشتراك">
+      <Modal isOpen={isCancelModalOpen} onClose={() => { setIsCancelModalOpen(false); setCancelStep('summary'); }} title="إلغاء الاشتراك">
         <div className="p-6 text-center">
-          <h2 className="text-xl font-bold text-deep-teal mb-4">إلغاء الاشتراك</h2>
-          <p className="text-text-primary mb-4">
-            عند إلغاء الاشتراك، ستستمر مزاياك حتى نهاية الفترة المدفوعة الحالية. لا يتم استرداد المدفوعات للفترة الحالية. يمكنك إدارة اشتراكك واسترداد الفواتير من خلال بوابة Stripe.
-          </p>
-          <Button
-            variant="danger"
-            size="lg"
-            className="w-full focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-            onClick={handleCancelSubscription}
-            disabled={loading === 'cancel'}
-          >
-            الذهاب إلى بوابة Stripe لإلغاء الاشتراك
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            className="w-full mt-2 focus:ring-2 focus:ring-accent focus:ring-offset-2"
-            onClick={() => setIsCancelModalOpen(false)}
-          >
-            إغلاق
-          </Button>
+          {cancelStep === 'summary' && (
+            <>
+              <h2 className="text-xl font-bold text-deep-teal mb-4">تأكيد إلغاء الاشتراك</h2>
+              <div className="mb-4 text-text-primary">
+                <p className="mb-2">عند إلغاء الاشتراك، ستفقد جميع مزايا الخطة المميزة فوراً.</p>
+                <p className="mb-2">سيتم تطبيق سياسة الاسترداد التالية:</p>
+                <ul className="mb-2 text-right mx-auto max-w-md text-sm list-disc pr-6">
+                  <li>استرداد كامل خلال أول 3 أيام من الاشتراك ({refundEstimate?.amount === 49 ? '49 جنيه' : '49 جنيه'}).</li>
+                  <li>استرداد جزئي حتى 7 أيام (يتم حسابه حسب الأيام المتبقية).</li>
+                  <li>لا يوجد استرداد بعد 7 أيام من الاشتراك.</li>
+                </ul>
+                {refundEstimate && (
+                  <div className="mt-2 text-green-700 font-semibold">
+                    {refundEstimate.type === 'full' && `ستحصل على استرداد كامل (${refundEstimate.amount} جنيه).`}
+                    {refundEstimate.type === 'partial' && `ستحصل على استرداد جزئي (${refundEstimate.amount} جنيه).`}
+                    {refundEstimate.type === 'none' && 'لن تحصل على استرداد لأن فترة السماح انتهت.'}
+                  </div>
+                )}
+                {!refundEstimate && <div className="mt-2 text-gray-500 text-sm">سيتم حساب مبلغ الاسترداد عند التأكيد.</div>}
+              </div>
+              <Button
+                variant="danger"
+                size="lg"
+                className="w-full focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                onClick={handleCancelSubscription}
+                disabled={loading === 'cancel'}
+              >
+                تأكيد إلغاء الاشتراك
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full mt-2 focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                onClick={() => {
+                  setIsCancelModalOpen(false);
+                  setCancelStep('summary');
+                  if (cancelResult?.success) {
+                    window.location.reload();
+                  }
+                }}
+              >
+                إغلاق
+              </Button>
+            </>
+          )}
+          {cancelStep === 'result' && (
+            <>
+              <h2 className="text-xl font-bold text-deep-teal mb-4">نتيجة الإلغاء</h2>
+              <div className="mb-4 text-text-primary">
+                <p className="mb-2">{cancelResult?.message}</p>
+                {cancelResult?.refund && (
+                  <div className="mt-2 text-green-700 font-semibold">
+                    {cancelResult.refund.type === 'full' && `تم استرداد كامل (${cancelResult.refund.amount} جنيه).`}
+                    {cancelResult.refund.type === 'partial' && `تم استرداد جزئي (${cancelResult.refund.amount} جنيه).`}
+                  </div>
+                )}
+                {cancelResult?.success && <div className="mt-2 text-green-600">تم تعطيل مزايا الخطة المميزة فوراً.</div>}
+                {!cancelResult?.success && <div className="mt-2 text-red-600">فشل إلغاء الاشتراك. يرجى المحاولة لاحقاً.</div>}
+              </div>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full mt-2 focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                onClick={() => {
+                  setIsCancelModalOpen(false);
+                  setCancelStep('summary');
+                  if (cancelResult?.success) {
+                    window.location.reload();
+                  }
+                }}
+              >
+                إغلاق
+              </Button>
+            </>
+          )}
         </div>
       </Modal>
     </PageLayout>

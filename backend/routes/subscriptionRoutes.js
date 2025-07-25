@@ -184,6 +184,14 @@ router.post('/cancel', authenticateToken, async (req, res) => {
       // For day 7, this is about 37 EGP
       refundType = 'partial';
     }
+    // If estimate mode, just return the refund info
+    if (req.body && req.body.estimate) {
+      return res.json({
+        success: true,
+        refund: { amount: refundAmount, type: refundType },
+        daysSinceStart,
+      });
+    }
     // Cancel the subscription immediately
     await stripe.subscriptions.cancel(subscriptionId);
     // Issue refund if eligible
