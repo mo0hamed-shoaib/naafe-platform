@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -201,7 +201,7 @@ const ChatPage: React.FC = () => {
   }, [offerId, offers, accessToken, addNewOffer]);
 
   // Check if payment is completed for this conversation and if service is in progress
-  const checkServiceStatus = async () => {
+  const checkServiceStatus = useCallback(async () => {
     if (!chatId || !accessToken || !user || !offerId) return;
 
     try {
@@ -242,7 +242,7 @@ const ChatPage: React.FC = () => {
     } catch (error) {
       console.error('Error checking service status:', error);
     }
-  };
+  }, [chatId, accessToken, user, offerId, setServiceInProgress, setPaymentCompleted]);
 
   // Check service status on mount and when dependencies change
   useEffect(() => {
@@ -263,7 +263,7 @@ const ChatPage: React.FC = () => {
       // Then fetch fresh status from server
       checkServiceStatus();
     }
-  }, [offerId, chatId, accessToken, user]);
+  }, [offerId, chatId, accessToken, user, checkServiceStatus]);
 
   // Refresh service status when user returns to the page (focus event)
   useEffect(() => {
@@ -289,7 +289,7 @@ const ChatPage: React.FC = () => {
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [offerId, chatId, accessToken, user]);
+  }, [offerId, chatId, accessToken, user, checkServiceStatus]);
 
   // Check if user is returning from payment success page
   useEffect(() => {
@@ -302,7 +302,7 @@ const ChatPage: React.FC = () => {
       // Clean up URL parameter
       navigate(`/chat/${chatId}`, { replace: true });
     }
-  }, [searchParams, chatId, navigate]);
+  }, [searchParams, chatId, navigate, checkServiceStatus, showSuccess]);
 
   // Periodic payment status check (every 30 seconds) when payment is not completed
   useEffect(() => {
@@ -313,7 +313,7 @@ const ChatPage: React.FC = () => {
 
       return () => clearInterval(interval);
     }
-  }, [paymentCompleted, chatId, accessToken, user]);
+  }, [paymentCompleted, chatId, accessToken, user, checkServiceStatus]);
 
   // Fetch messages
   useEffect(() => {
