@@ -102,6 +102,7 @@ const ChatPage: React.FC = () => {
   const [cancellationLoading, setCancellationLoading] = useState(false);
   const [cancellationReason, setCancellationReason] = useState('');
   const [showNegotiationMobile, setShowNegotiationMobile] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -195,7 +196,7 @@ const ChatPage: React.FC = () => {
 
   // Check service status
   const checkServiceStatus = useCallback(async () => {
-    if (!chatId || !accessToken || !user || !offerId) return;
+    if (!chatId || !accessToken || !user || !offerId || isCancelled) return;
 
     try {
       const offerResponse = await fetch(`/api/offers/${offerId}`, {
@@ -208,6 +209,7 @@ const ChatPage: React.FC = () => {
           const offerStatus = offerData.data.status;
           setServiceInProgress(offerStatus === 'in_progress');
           setPaymentCompleted(offerStatus === 'in_progress' || offerStatus === 'completed');
+          setIsCancelled(offerStatus === 'cancelled' || offerStatus === 'cancellation_requested');
           localStorage.setItem(`service_status_${offerId}`, offerStatus);
         }
       }
@@ -227,7 +229,7 @@ const ChatPage: React.FC = () => {
     } catch (error) {
       console.error('Error checking service status:', error);
     }
-  }, [chatId, accessToken, user, offerId]);
+  }, [chatId, accessToken, user, offerId, isCancelled]);
 
   // Check service status on mount
   useEffect(() => {
@@ -238,6 +240,7 @@ const ChatPage: React.FC = () => {
       if (cachedServiceStatus) {
         setServiceInProgress(cachedServiceStatus === 'in_progress');
         setPaymentCompleted(cachedServiceStatus === 'in_progress' || cachedServiceStatus === 'completed');
+        setIsCancelled(cachedServiceStatus === 'cancelled' || cachedServiceStatus === 'cancellation_requested');
       }
       
       if (cachedPaymentStatus === 'true') {
@@ -248,50 +251,31 @@ const ChatPage: React.FC = () => {
     }
   }, [offerId, chatId, accessToken, user, checkServiceStatus]);
 
-  // Refresh service status on focus
+  // Disable focus and periodic checks after cancellation
   useEffect(() => {
-    const handleFocus = () => {
-      if (offerId) {
-        const cachedServiceStatus = localStorage.getItem(`service_status_${offerId}`);
-        const cachedPaymentStatus = localStorage.getItem(`payment_completed_${offerId}`);
-        
-        if (cachedServiceStatus) {
-          setServiceInProgress(cachedServiceStatus === 'in_progress');
-          setPaymentCompleted(cachedServiceStatus === 'in_progress' || cachedServiceStatus === 'completed');
-        }
-        
-        if (cachedPaymentStatus === 'true') {
-          setPaymentCompleted(true);
-        }
-        
-        checkServiceStatus();
-      }
-    };
+    if (isCancelled) {
+      const handleFocus = () => {};
+      window.removeEventListener('focus', handleFocus);
+      return () => {};
+    }
+  }, [isCancelled]);
 
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [offerId, chatId, accessToken, user, checkServiceStatus]);
+  useEffect(() => {
+    if (isCancelled) {
+      const interval = setInterval(() => {}, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isCancelled]);
 
   // Check payment success
   useEffect(() => {
     const fromPayment = searchParams.get('from_payment');
-    if (fromPayment === 'success') {
+    if (fromPayment === 'success' && !isCancelled) {
       checkServiceStatus();
       showSuccess('تم الدفع بنجاح', 'تم إتمام عملية الدفع بنجاح');
       navigate(`/chat/${chatId}`, { replace: true });
     }
-  }, [searchParams, chatId, navigate, checkServiceStatus, showSuccess]);
-
-  // Periodic payment status check
-  useEffect(() => {
-    if (!paymentCompleted && chatId && accessToken && user) {
-      const interval = setInterval(() => {
-        checkServiceStatus();
-      }, 30000);
-
-      return () => clearInterval(interval);
-    }
-  }, [paymentCompleted, chatId, accessToken, user, checkServiceStatus]);
+  }, [searchParams, chatId, navigate, checkServiceStatus, showSuccess, isCancelled]);
 
   // Fetch messages
   useEffect(() => {
@@ -340,7 +324,7 @@ const ChatPage: React.FC = () => {
 
     const offPaymentCompleted = on('payment:completed', (...args: unknown[]) => {
       const data = args[0] as { offerId: string };
-      if (data.offerId === offerId) {
+      if (data.offerId === offerId && !isCancelled) {
         setPaymentCompleted(true);
         setServiceInProgress(true);
         if (offerId) {
@@ -357,11 +341,26 @@ const ChatPage: React.FC = () => {
       if (data.offerId === offerId) {
         setPaymentCompleted(true);
         setServiceInProgress(false);
+        setIsCancelled(false);
         if (offerId) {
           localStorage.setItem(`payment_completed_${offerId}`, 'true');
           localStorage.setItem(`service_status_${offerId}`, 'completed');
         }
-        showSuccess('تم اكتمال الخدمة', 'تم اكتمال الخدمة وتحرير المبلغ لمقدم الخدمة');
+        showSuccess('تم اكتمال الخدمة', 'تم تحرير المبلغ لمقدم الخدمة بنجاح');
+        checkServiceStatus();
+      }
+    });
+
+    const offServiceCancelled = on('service:cancelled', (...args: unknown[]) => {
+      const data = args[0] as { offerId: string };
+      if (data.offerId === offerId) {
+        setServiceInProgress(false);
+        setPaymentCompleted(false);
+        setIsCancelled(true);
+        if (offerId) {
+          localStorage.setItem(`service_status_${offerId}`, 'cancelled');
+        }
+        showSuccess('تم إلغاء الخدمة', 'تم إلغاء الخدمة بنجاح');
         checkServiceStatus();
       }
     });
@@ -371,8 +370,9 @@ const ChatPage: React.FC = () => {
       offMessageSent?.();
       offPaymentCompleted?.();
       offServiceCompleted?.();
+      offServiceCancelled?.();
     };
-  }, [connected, on, emit, chatId, offerId, showSuccess, checkServiceStatus]);
+  }, [connected, on, emit, chatId, offerId, showSuccess, checkServiceStatus, isCancelled]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -439,7 +439,7 @@ const ChatPage: React.FC = () => {
   };
 
   const handleAcceptOffer = async () => {
-    if (!offerId || !accessToken) return;
+    if (!offerId || !accessToken || isCancelled) return;
     
     try {
       await fetchNegotiation(offerId);
@@ -520,7 +520,7 @@ const ChatPage: React.FC = () => {
   };
 
   const handlePaymentConfirm = async (amount: number) => {
-    if (!conversation || !user || !accessToken || !offerId) return;
+    if (!conversation || !user || !accessToken || !offerId || isCancelled) return;
 
     const seekerId = conversation.participants.seeker._id;
     const isSeeker = user.id === seekerId;
@@ -561,7 +561,7 @@ const ChatPage: React.FC = () => {
   };
 
   const handleCompleteService = async () => {
-    if (!offerId || !accessToken) return;
+    if (!offerId || !accessToken || isCancelled) return;
 
     setCompletionLoading(true);
     try {
@@ -575,6 +575,9 @@ const ChatPage: React.FC = () => {
 
       const data = await response.json();
       if (response.ok && data.success) {
+        setServiceInProgress(false);
+        setPaymentCompleted(true);
+        setIsCancelled(false);
         showSuccess('تم تأكيد اكتمال الخدمة', 'تم تحرير المبلغ لمقدم الخدمة بنجاح');
         setShowCompletionModal(false);
         checkServiceStatus();
@@ -590,7 +593,7 @@ const ChatPage: React.FC = () => {
   };
 
   const handleRequestCancellation = async () => {
-    if (!offerId || !accessToken) return;
+    if (!offerId || !accessToken || isCancelled) return;
 
     setCancellationLoading(true);
     try {
@@ -607,6 +610,9 @@ const ChatPage: React.FC = () => {
 
       const data = await response.json();
       if (response.ok && data.success) {
+        setServiceInProgress(false);
+        setPaymentCompleted(false);
+        setIsCancelled(true);
         showSuccess('تم طلب إلغاء الخدمة', `تم إرسال طلب الإلغاء بنجاح. نسبة الاسترداد المتوقعة: ${data.data.refundPercentage}%`);
         setShowCancellationModal(false);
         checkServiceStatus();
@@ -667,49 +673,47 @@ const ChatPage: React.FC = () => {
   const currentOffer = offers.find(o => o.id === offerId);
 
   // Status Bar Component
-  const StatusBar = () => (
-    <div className="flex flex-col gap-4 p-4">
-      {currentOffer?.status === 'cancelled' && (
-        <div className="flex items-center gap-2 text-red-600 text-sm px-3 py-2 bg-red-50 rounded-lg">
-          <AlertCircle className="w-4 h-4" />
-          تم إلغاء الخدمة
-        </div>
-      )}
-      {currentOffer?.status === 'cancellation_requested' && (
-        <div className="flex items-center gap-2 text-amber-600 text-sm px-3 py-2 bg-amber-50 rounded-lg">
-          <AlertTriangle className="w-4 h-4" />
-          تم طلب إلغاء الخدمة - بانتظار المعالجة
-        </div>
-      )}
-      {isSeeker && offerId && negotiationState[offerId] && 
-       !negotiationState[offerId]?.canAcceptOffer && 
-       !paymentCompleted &&
-       currentOffer?.status !== 'cancelled' && currentOffer?.status !== 'cancellation_requested' && (
-        <div className="text-amber-600 text-sm px-3 py-2 bg-amber-50 rounded-lg flex items-center gap-1">
-          <AlertTriangle className="w-4 h-4" />
-          {!negotiationState[offerId]?.confirmationStatus?.seeker ? 
-            'يجب عليك تأكيد شروط التفاوض' : 
-            'بانتظار تأكيد مقدم الخدمة للشروط'}
-        </div>
-      )}
-      {paymentCompleted && currentOffer?.status === 'completed' ? (
-        <div className="flex items-center gap-2 text-green-600 text-sm px-3 py-2 bg-green-50 rounded-lg">
-          <CheckCircle className="w-4 h-4" />
-          تم تحرير المبلغ وإكمال الخدمة
-        </div>
-      ) : paymentCompleted && currentOffer?.status !== 'cancelled' && currentOffer?.status !== 'cancellation_requested' && (
-        <div className="flex items-center gap-2 text-blue-600 text-sm px-3 py-2 bg-blue-50 rounded-lg">
-          <Shield className="w-4 h-4" />
-          الخدمة قيد التنفيذ
-        </div>
-      )}
-    </div>
-  );
+  const StatusBar = () => {
+    const negotiationOffer = currentOffer && negotiationState[currentOffer._id];
+    return (
+      <div className="flex flex-col gap-4 p-4">
+        {currentOffer?.status === 'cancelled' && (
+          <div className="flex items-center gap-2 text-red-600 text-sm px-3 py-2 bg-red-50 rounded-lg">
+            <AlertCircle className="w-4 h-4" />
+            تم إلغاء الخدمة
+          </div>
+        )}
+        {currentOffer?.status === 'cancellation_requested' && (
+          <div className="flex items-center gap-2 text-amber-600 text-sm px-3 py-2 bg-amber-50 rounded-lg">
+            <AlertTriangle className="w-4 h-4" />
+            تم طلب إلغاء الخدمة - بانتظار المعالجة
+          </div>
+        )}
+        {isSeeker && offerId && negotiationOffer && 
+         !negotiationOffer.canAcceptOffer && 
+         !paymentCompleted &&
+         currentOffer?.status !== 'cancelled' && currentOffer?.status !== 'cancellation_requested' && (
+          <div className="text-amber-600 text-sm px-3 py-2 bg-amber-50 rounded-lg flex items-center gap-1">
+            <AlertTriangle className="w-4 h-4" />
+            {!negotiationOffer.confirmationStatus?.seeker ? 
+              'يجب عليك تأكيد شروط التفاوض' : 
+              'بانتظار تأكيد مقدم الخدمة للشروط'}
+          </div>
+        )}
+        {paymentCompleted && currentOffer?.status === 'completed' && (
+          <div className="flex items-center gap-2 text-green-600 text-sm px-3 py-2 bg-green-50 rounded-lg">
+            <CheckCircle className="w-4 h-4" />
+            تم تحرير المبلغ وإكمال الخدمة
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Action Buttons Component
   const ActionButtons = () => (
     <div className="flex flex-col md:flex-row gap-4 p-4 flex-wrap">
-      {!(currentOffer?.status === 'cancelled' || currentOffer?.status === 'cancellation_requested') && (
+      {!(currentOffer?.status === 'cancelled' || currentOffer?.status === 'cancellation_requested' || currentOffer?.status === 'completed') && (
         <>
           {isSeeker && offerId && negotiationState[offerId]?.canAcceptOffer && !paymentCompleted && (
             <Button
@@ -733,7 +737,7 @@ const ChatPage: React.FC = () => {
               تأكيد اكتمال الخدمة
             </Button>
           )}
-          {(serviceInProgress || paymentCompleted) && (
+          {(serviceInProgress || paymentCompleted) && currentOffer?.status !== 'completed' && (
             <Button
               variant="danger"
               size="sm"
@@ -929,13 +933,13 @@ const ChatPage: React.FC = () => {
                   إغلاق
                 </Button>
               </div>
-              {!offerId && (
-                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4">
-                  <h3 className="font-bold text-amber-800 mb-2">معلومات التصحيح</h3>
-                  <p className="text-amber-700 text-sm">لم يتم العثور على معرّف العرض</p>
+              {offerId && currentOffer?.status === 'cancelled' && (
+                <div className="bg-red-50 p-4 rounded-lg border border-red-200 mb-4">
+                  <h3 className="font-bold text-red-800 mb-2">الخدمة تم إلغاؤها</h3>
+                  <p className="text-red-700 text-sm">لا يمكن عرض تفاصيل التفاوض بعد الإلغاء.</p>
                 </div>
               )}
-              {offerId && !negotiationState[offerId] && (
+              {offerId && !negotiationState[offerId] && currentOffer?.status !== 'cancelled' && (
                 <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4">
                   <h3 className="font-bold text-amber-800 mb-2">معلومات التصحيح</h3>
                   <p className="text-amber-700 text-sm">معرّف العرض: {offerId}</p>
@@ -953,7 +957,7 @@ const ChatPage: React.FC = () => {
                   </button>
                 </div>
               )}
-              {offerId && negotiationState[offerId] && user && conversation && (
+              {offerId && negotiationState[offerId] && user && conversation && currentOffer?.status !== 'cancelled' && (
                 <div className="flex flex-col gap-4 p-4">
                   <NegotiationSummary
                     negotiation={negotiationState[offerId]}
@@ -1001,7 +1005,14 @@ const ChatPage: React.FC = () => {
                         resetNegotiation(offerId);
                       }
                     }}
-                  />
+                  >
+                    {paymentCompleted && serviceInProgress && !currentOffer?.status === 'completed' && (
+                      <div className="flex items-center gap-2 text-blue-600 text-sm px-3 py-2 bg-blue-50 rounded-lg mt-4">
+                        <Shield className="w-4 h-4" />
+                        الخدمة قيد التنفيذ
+                      </div>
+                    )}
+                  </NegotiationSummary>
                   <NegotiationHistory
                     negotiationHistory={negotiationState[offerId]?.negotiationHistory}
                     userMap={{
@@ -1180,7 +1191,13 @@ const ChatPage: React.FC = () => {
                 <p className="text-amber-700 text-sm">لم يتم العثور على معرّف العرض</p>
               </div>
             )}
-            {offerId && !negotiationState[offerId] && (
+            {offerId && currentOffer?.status === 'cancelled' && (
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200 mb-4">
+                <h3 className="font-bold text-red-800 mb-2">الخدمة تم إلغاؤها</h3>
+                <p className="text-red-700 text-sm">لا يمكن عرض تفاصيل التفاوض بعد الإلغاء.</p>
+              </div>
+            )}
+            {offerId && !negotiationState[offerId] && currentOffer?.status !== 'cancelled' && (
               <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4">
                 <h3 className="font-bold text-amber-800 mb-2">معلومات التصحيح</h3>
                 <p className="text-amber-700 text-sm">معرّف العرض: {offerId}</p>
@@ -1198,7 +1215,7 @@ const ChatPage: React.FC = () => {
                 </button>
               </div>
             )}
-            {offerId && negotiationState[offerId] && user && conversation && (
+            {offerId && negotiationState[offerId] && user && conversation && currentOffer?.status !== 'cancelled' && (
               <div className="flex flex-col gap-4 p-4">
                 <NegotiationSummary
                   negotiation={negotiationState[offerId]}
@@ -1276,7 +1293,7 @@ const ChatPage: React.FC = () => {
         </div>
       </div>
 
-      {conversation && offerId && negotiationState[offerId] && (
+      {conversation && offerId && negotiationState[offerId] && !isCancelled && (
         <PaymentModal
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
