@@ -126,29 +126,24 @@ const ChatPage: React.FC = () => {
       .finally(() => setLoading(false));
   }, [chatId, accessToken]);
 
-  // Fetch negotiation offerId for this conversation (jobRequestId + providerId)
+  // Fetch negotiation offerId for this conversation
   useEffect(() => {
     const fetchOfferId = async () => {
       if (conversation && conversation.jobRequestId && conversation.participants && accessToken) {
         const jobRequestId = conversation.jobRequestId._id;
         const providerId = conversation.participants.provider._id;
         
-        console.log('Fetching offer ID for:', { jobRequestId, providerId });
-        
         try {
           const res = await fetch(`/api/offers?jobRequest=${jobRequestId}&provider=${providerId}`, {
             headers: { Authorization: `Bearer ${accessToken}` }
           });
           const data = await res.json();
-          console.log('Offers data:', data);
           
           if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-            console.log('Found offer:', data.data[0]);
             setOfferId(data.data[0]._id);
             fetchNegotiation(data.data[0]._id);
             fetchNegotiationHistory(data.data[0]._id);
           } else {
-            console.log('No offers found for this conversation');
             setOfferId(null);
           }
         } catch (error) {
@@ -159,7 +154,7 @@ const ChatPage: React.FC = () => {
     fetchOfferId();
   }, [conversation, accessToken, fetchNegotiation, fetchNegotiationHistory]);
 
-  // Fetch offer details if not present in offers array
+  // Fetch offer details if not present
   useEffect(() => {
     const fetchOfferIfMissing = async () => {
       if (offerId && !offers.find(o => o.id === offerId) && accessToken) {
@@ -169,7 +164,6 @@ const ChatPage: React.FC = () => {
           });
           const data = await res.json();
           if (data.success && data.data) {
-            // Map backend offer to frontend Offer type
             const backendOffer = data.data;
             const mappedOffer = {
               id: backendOffer._id,
@@ -192,7 +186,6 @@ const ChatPage: React.FC = () => {
             addNewOffer(mappedOffer);
           }
         } catch (error) {
-          // Optionally log error
           console.error('Error fetching offer details:', error);
         }
       }
@@ -200,12 +193,11 @@ const ChatPage: React.FC = () => {
     fetchOfferIfMissing();
   }, [offerId, offers, accessToken, addNewOffer]);
 
-  // Check if payment is completed for this conversation and if service is in progress
+  // Check service status
   const checkServiceStatus = useCallback(async () => {
     if (!chatId || !accessToken || !user || !offerId) return;
 
     try {
-      // First check offer status
       const offerResponse = await fetch(`/api/offers/${offerId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -216,13 +208,10 @@ const ChatPage: React.FC = () => {
           const offerStatus = offerData.data.status;
           setServiceInProgress(offerStatus === 'in_progress');
           setPaymentCompleted(offerStatus === 'in_progress' || offerStatus === 'completed');
-          
-          // Save to localStorage
           localStorage.setItem(`service_status_${offerId}`, offerStatus);
         }
       }
       
-      // Also check payment status
       const response = await fetch(`/api/payment/check-status/${chatId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -231,23 +220,18 @@ const ChatPage: React.FC = () => {
         const data = await response.json();
         const isCompleted = data.success && (data.data?.status === 'completed' || data.data?.status === 'escrowed');
         setPaymentCompleted(isCompleted);
-        
-        // Save to localStorage
         if (isCompleted) {
           localStorage.setItem(`payment_completed_${offerId}`, 'true');
         }
-        
-        console.log('Payment status check:', { status: data.data?.status, isCompleted });
       }
     } catch (error) {
       console.error('Error checking service status:', error);
     }
-  }, [chatId, accessToken, user, offerId, setServiceInProgress, setPaymentCompleted]);
+  }, [chatId, accessToken, user, offerId]);
 
-  // Check service status on mount and when dependencies change
+  // Check service status on mount
   useEffect(() => {
     if (offerId) {
-      // First check localStorage for cached status
       const cachedServiceStatus = localStorage.getItem(`service_status_${offerId}`);
       const cachedPaymentStatus = localStorage.getItem(`payment_completed_${offerId}`);
       
@@ -260,16 +244,14 @@ const ChatPage: React.FC = () => {
         setPaymentCompleted(true);
       }
       
-      // Then fetch fresh status from server
       checkServiceStatus();
     }
   }, [offerId, chatId, accessToken, user, checkServiceStatus]);
 
-  // Refresh service status when user returns to the page (focus event)
+  // Refresh service status on focus
   useEffect(() => {
     const handleFocus = () => {
       if (offerId) {
-        // Check localStorage first
         const cachedServiceStatus = localStorage.getItem(`service_status_${offerId}`);
         const cachedPaymentStatus = localStorage.getItem(`payment_completed_${offerId}`);
         
@@ -282,7 +264,6 @@ const ChatPage: React.FC = () => {
           setPaymentCompleted(true);
         }
         
-        // Then fetch fresh status
         checkServiceStatus();
       }
     };
@@ -291,25 +272,22 @@ const ChatPage: React.FC = () => {
     return () => window.removeEventListener('focus', handleFocus);
   }, [offerId, chatId, accessToken, user, checkServiceStatus]);
 
-  // Check if user is returning from payment success page
+  // Check payment success
   useEffect(() => {
     const fromPayment = searchParams.get('from_payment');
     if (fromPayment === 'success') {
-      // Refresh payment status immediately
       checkServiceStatus();
-      // Show success message
       showSuccess('تم الدفع بنجاح', 'تم إتمام عملية الدفع بنجاح');
-      // Clean up URL parameter
       navigate(`/chat/${chatId}`, { replace: true });
     }
   }, [searchParams, chatId, navigate, checkServiceStatus, showSuccess]);
 
-  // Periodic payment status check (every 30 seconds) when payment is not completed
+  // Periodic payment status check
   useEffect(() => {
     if (!paymentCompleted && chatId && accessToken && user) {
       const interval = setInterval(() => {
         checkServiceStatus();
-      }, 30000); // Check every 30 seconds
+      }, 30000);
 
       return () => clearInterval(interval);
     }
@@ -333,12 +311,10 @@ const ChatPage: React.FC = () => {
       .catch(() => setError('فشل تحميل الرسائل'));
   }, [chatId, accessToken, page]);
 
-  // Join conversation room when connected
+  // Join conversation room
   useEffect(() => {
     if (connected && chatId) {
       emit('join-conversation', { conversationId: chatId });
-      
-      // Mark messages as read when joining
       emit('mark-read', { conversationId: chatId });
     }
   }, [connected, chatId, emit]);
@@ -351,7 +327,6 @@ const ChatPage: React.FC = () => {
       const message = args[0] as Message;
       if (message.conversationId === chatId) {
         setMessages(prev => [...prev, message]);
-        // Mark as read if user is in the conversation
         emit('mark-read', { conversationId: chatId });
       }
     });
@@ -363,46 +338,30 @@ const ChatPage: React.FC = () => {
       }
     });
 
-    // Listen for payment completion events
     const offPaymentCompleted = on('payment:completed', (...args: unknown[]) => {
       const data = args[0] as { offerId: string };
-      console.log('Payment completed event received:', data);
       if (data.offerId === offerId) {
         setPaymentCompleted(true);
         setServiceInProgress(true);
-        
-        // Save to localStorage
         if (offerId) {
           localStorage.setItem(`payment_completed_${offerId}`, 'true');
           localStorage.setItem(`service_status_${offerId}`, 'in_progress');
         }
-        
-        // Show success message
         showSuccess('تم إيداع الضمان', 'تم إيداع الضمان بنجاح والخدمة الآن قيد التنفيذ');
-        
-        // Refresh offer status
         checkServiceStatus();
       }
     });
 
-    // Listen for service completion events
     const offServiceCompleted = on('service:completed', (...args: unknown[]) => {
       const data = args[0] as { offerId: string };
-      console.log('Service completed event received:', data);
       if (data.offerId === offerId) {
         setPaymentCompleted(true);
         setServiceInProgress(false);
-        
-        // Save to localStorage
         if (offerId) {
           localStorage.setItem(`payment_completed_${offerId}`, 'true');
           localStorage.setItem(`service_status_${offerId}`, 'completed');
         }
-        
-        // Show success message
         showSuccess('تم اكتمال الخدمة', 'تم اكتمال الخدمة وتحرير المبلغ لمقدم الخدمة');
-        
-        // Refresh offer status
         checkServiceStatus();
       }
     });
@@ -415,11 +374,6 @@ const ChatPage: React.FC = () => {
     };
   }, [connected, on, emit, chatId, offerId, showSuccess, checkServiceStatus]);
 
-  // Auto-scroll disabled
-  // useEffect(() => {
-  //   // No auto-scrolling implementation
-  // }, [messages]);
-
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !conversation || !user || sending) return;
@@ -429,7 +383,6 @@ const ChatPage: React.FC = () => {
     setNewMessage('');
 
     try {
-      // Determine receiver ID
       const receiverId = user.id === conversation.participants.seeker._id 
         ? conversation.participants.provider._id 
         : conversation.participants.seeker._id;
@@ -440,7 +393,6 @@ const ChatPage: React.FC = () => {
         content: messageContent
       };
 
-      // Send via Socket.IO
       emit('send-message', messageData);
     } catch (error) {
       console.error('Error sending message:', error);
@@ -490,41 +442,19 @@ const ChatPage: React.FC = () => {
     if (!offerId || !accessToken) return;
     
     try {
-      // First refresh the negotiation state to make sure we have the latest data
-      console.log('Refreshing negotiation state before accepting offer');
       await fetchNegotiation(offerId);
       
-      // Debug logging
-      console.log('Attempting to accept offer:', offerId);
-      console.log('Negotiation state:', negotiationState[offerId]);
-      
-      // First check if both parties have confirmed the negotiation
       if (!negotiationState[offerId]?.confirmationStatus?.seeker || !negotiationState[offerId]?.confirmationStatus?.provider) {
-        console.log('Confirmation status issue:', {
-          seekerConfirmed: negotiationState[offerId]?.confirmationStatus?.seeker,
-          providerConfirmed: negotiationState[offerId]?.confirmationStatus?.provider
-        });
         showError('تأكيد التفاوض مطلوب', 'يجب على كلا الطرفين تأكيد شروط التفاوض قبل قبول العرض');
         return;
       }
 
-      // Check if all required fields are set
       const currentTerms = negotiationState[offerId]?.currentTerms;
-      console.log('Current negotiation terms:', currentTerms);
-      
       if (!currentTerms?.price || !currentTerms?.date || !currentTerms?.time || !currentTerms?.materials || !currentTerms?.scope) {
-        console.log('Missing required fields:', {
-          price: !!currentTerms?.price,
-          date: !!currentTerms?.date,
-          time: !!currentTerms?.time,
-          materials: !!currentTerms?.materials,
-          scope: !!currentTerms?.scope
-        });
         showError('بيانات التفاوض غير مكتملة', 'يجب تحديد جميع شروط التفاوض: السعر، التاريخ، الوقت، المواد، ونطاق العمل');
         return;
       }
       
-      // First check if the offer is already accepted
       const checkResponse = await fetch(`/api/offers/${offerId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -532,19 +462,13 @@ const ChatPage: React.FC = () => {
       if (checkResponse.ok) {
         const checkData = await checkResponse.json();
         if (checkData.success && checkData.data && checkData.data.status === 'accepted') {
-          console.log('Offer is already accepted, showing payment modal directly');
-          
-          // Update local state to reflect the offer is accepted
           setPaymentCompleted(true);
-          
           showSuccess('العرض مقبول بالفعل', 'يمكنك الآن إكمال الدفع');
           setShowPaymentModal(true);
           return;
         }
       }
       
-      // Call backend to accept offer
-      console.log('Sending accept offer request to backend');
       const response = await fetch(`/api/offers/${offerId}/accept`, {
         method: 'POST',
         headers: {
@@ -554,63 +478,43 @@ const ChatPage: React.FC = () => {
       });
       
       const data = await response.json();
-      console.log('Accept offer response:', data);
-      
       if (response.ok && data.success) {
-        // Update local state to reflect the offer is now accepted
         setPaymentCompleted(true);
-        
         showSuccess('تم قبول العرض', 'تم قبول العرض بنجاح، يمكنك الآن إكمال الدفع');
-        
-        // Make sure we have the latest negotiation state and service status
         await fetchNegotiation(offerId);
         await checkServiceStatus();
-        
-        // Show payment modal
         setShowPaymentModal(true);
       } else {
-        // Handle specific error cases
         if (data.error?.code === 'AGREEMENT_INCOMPLETE') {
           showError('فشل في قبول العرض', 'يجب التأكد من اكتمال جميع شروط التفاوض وتأكيد الطرفين عليها');
-          
-          // Try to refresh the negotiation state to get the latest data
           await fetchNegotiation(offerId);
           checkServiceStatus();
         } else if (data.error?.message?.includes('status')) {
-          showError('فشل في قبول العرض', 'حالة العرض الحالية لا تسمح بالقبول. قد يكون العرض تم قبوله بالفعل أو تم تغيير حالته');
-          
-          // Check if the offer is already accepted
+          showError('فشل في قبول العرض', 'حالة العرض الحالية لا تسمح بالقبول');
           await checkServiceStatus();
-          
-          // If it's already accepted, show the payment modal
           const offerResponse = await fetch(`/api/offers/${offerId}`, {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
-          
           if (offerResponse.ok) {
             const offerData = await offerResponse.json();
             if (offerData.success && offerData.data && offerData.data.status === 'accepted') {
-              // Update local state to reflect the offer is accepted
               setPaymentCompleted(true);
-              
               showSuccess('العرض مقبول بالفعل', 'يمكنك الآن إكمال الدفع');
               setShowPaymentModal(true);
             }
           }
         } else {
-          showError('فشل في قبول العرض', data.error?.message || data.message || 'حدث خطأ أثناء محاولة قبول العرض');
+          showError('فشل في قبول العرض', data.error?.message || 'حدث خطأ أثناء محاولة قبول العرض');
         }
       }
     } catch (error) {
       console.error('Error accepting offer:', error);
       showError('فشل في قبول العرض', 'حدث خطأ أثناء محاولة قبول العرض');
-      
-      // Try to refresh the state anyway
       try {
         await fetchNegotiation(offerId);
         checkServiceStatus();
       } catch (refreshError) {
-        console.error('Error refreshing state after acceptance error:', refreshError);
+        console.error('Error refreshing state:', refreshError);
       }
     }
   };
@@ -618,17 +522,8 @@ const ChatPage: React.FC = () => {
   const handlePaymentConfirm = async (amount: number) => {
     if (!conversation || !user || !accessToken || !offerId) return;
 
-    // Debug role check
     const seekerId = conversation.participants.seeker._id;
     const isSeeker = user.id === seekerId;
-    console.log('Payment authorization check:', {
-      currentUserId: user.id,
-      seekerId: seekerId,
-      isSeeker,
-      providerId: conversation.participants.provider._id,
-      isProvider: user.id === conversation.participants.provider._id
-    });
-
     if (!isSeeker) {
       showError('خطأ في عملية الدفع', 'فقط طالب الخدمة يمكنه إنشاء الدفع');
       setShowPaymentModal(false);
@@ -637,7 +532,6 @@ const ChatPage: React.FC = () => {
 
     setPaymentLoading(true);
     try {
-      // Use new escrow payment endpoint
       const response = await fetch('/api/payment/create-escrow-payment', {
         method: 'POST',
         headers: {
@@ -654,7 +548,6 @@ const ChatPage: React.FC = () => {
       if (response.ok && data.success && data.data.url) {
         window.location.href = data.data.url;
       } else {
-        console.error('Payment error response:', data);
         showError('خطأ في عملية الدفع', data.message || 'حدث خطأ أثناء عملية الدفع');
         setShowPaymentModal(false);
       }
@@ -667,7 +560,6 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // Mark service as completed
   const handleCompleteService = async () => {
     if (!offerId || !accessToken) return;
 
@@ -697,7 +589,6 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  // Request service cancellation
   const handleRequestCancellation = async () => {
     if (!offerId || !accessToken) return;
 
@@ -755,8 +646,6 @@ const ChatPage: React.FC = () => {
     } catch (error) {
       console.error('Error submitting report:', error);
       const errorMessage = error instanceof Error ? error.message : 'حدث خطأ أثناء إرسال البلاغ';
-      
-      // Check if it's the duplicate complaint error
       if (errorMessage.includes('لديك بلاغ قيد المعالجة')) {
         showWarning('بلاغ موجود بالفعل', 'لديك بلاغ قيد المعالجة لهذا الطلب بالفعل');
       } else {
@@ -775,6 +664,108 @@ const ChatPage: React.FC = () => {
     { label: 'المحادثة', active: true }
   ];
 
+  const currentOffer = offers.find(o => o.id === offerId);
+
+  // Status Bar Component
+  const StatusBar = () => (
+    <div className="flex flex-col gap-4 p-4">
+      {currentOffer?.status === 'cancelled' && (
+        <div className="flex items-center gap-2 text-red-600 text-sm px-3 py-2 bg-red-50 rounded-lg">
+          <AlertCircle className="w-4 h-4" />
+          تم إلغاء الخدمة
+        </div>
+      )}
+      {currentOffer?.status === 'cancellation_requested' && (
+        <div className="flex items-center gap-2 text-amber-600 text-sm px-3 py-2 bg-amber-50 rounded-lg">
+          <AlertTriangle className="w-4 h-4" />
+          تم طلب إلغاء الخدمة - بانتظار المعالجة
+        </div>
+      )}
+      {isSeeker && offerId && negotiationState[offerId] && 
+       !negotiationState[offerId]?.canAcceptOffer && 
+       !paymentCompleted &&
+       currentOffer?.status !== 'cancelled' && currentOffer?.status !== 'cancellation_requested' && (
+        <div className="text-amber-600 text-sm px-3 py-2 bg-amber-50 rounded-lg flex items-center gap-1">
+          <AlertTriangle className="w-4 h-4" />
+          {!negotiationState[offerId]?.confirmationStatus?.seeker ? 
+            'يجب عليك تأكيد شروط التفاوض' : 
+            'بانتظار تأكيد مقدم الخدمة للشروط'}
+        </div>
+      )}
+      {paymentCompleted && currentOffer?.status === 'completed' ? (
+        <div className="flex items-center gap-2 text-green-600 text-sm px-3 py-2 bg-green-50 rounded-lg">
+          <CheckCircle className="w-4 h-4" />
+          تم تحرير المبلغ وإكمال الخدمة
+        </div>
+      ) : paymentCompleted && currentOffer?.status !== 'cancelled' && currentOffer?.status !== 'cancellation_requested' && (
+        <div className="flex items-center gap-2 text-blue-600 text-sm px-3 py-2 bg-blue-50 rounded-lg">
+          <Shield className="w-4 h-4" />
+          الخدمة قيد التنفيذ
+        </div>
+      )}
+    </div>
+  );
+
+  // Action Buttons Component
+  const ActionButtons = () => (
+    <div className="flex flex-col md:flex-row gap-4 p-4 flex-wrap">
+      {!(currentOffer?.status === 'cancelled' || currentOffer?.status === 'cancellation_requested') && (
+        <>
+          {isSeeker && offerId && negotiationState[offerId]?.canAcceptOffer && !paymentCompleted && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleAcceptOffer}
+              className="flex items-center gap-2 flex-1 md:flex-none"
+            >
+              <CreditCard className="w-4 h-4" />
+              قبول وبدء الدفع
+            </Button>
+          )}
+          {isSeeker && serviceInProgress && (
+            <Button
+              variant="success"
+              size="sm"
+              onClick={() => setShowCompletionModal(true)}
+              className="flex items-center gap-2 flex-1 md:flex-none"
+            >
+              <CheckCircle className="w-4 h-4" />
+              تأكيد اكتمال الخدمة
+            </Button>
+          )}
+          {(serviceInProgress || paymentCompleted) && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowCancellationModal(true)}
+              className="flex items-center gap-2 flex-1 md:flex-none"
+            >
+              <AlertCircle className="w-4 h-4" />
+              طلب إلغاء الخدمة
+            </Button>
+          )}
+        </>
+      )}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleReportIssue}
+        className="flex items-center gap-2 flex-1 md:flex-none"
+      >
+        <AlertTriangle className="w-4 h-4" />
+        الإبلاغ عن مشكلة
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => setShowNegotiationMobile(!showNegotiationMobile)}
+        className="flex items-center gap-2 flex-1 md:hidden"
+      >
+        {showNegotiationMobile ? 'إخفاء التفاوض' : 'عرض التفاوض'}
+      </Button>
+    </div>
+  );
+
   if (loading) {
     return (
       <PageLayout
@@ -782,29 +773,23 @@ const ChatPage: React.FC = () => {
         user={user}
         onLogout={() => {}}
       >
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6 h-[85vh] min-h-[600px] max-h-[1000px]">
-          {/* Main Chat Area Skeleton */}
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-4 h-full min-h-[400px] p-4 overflow-hidden">
           <div className="flex-1 flex flex-col">
             <BaseCard className="flex-1 flex flex-col h-full">
-              {/* Chat Header Skeleton */}
-              <div className="border-b border-gray-100">
-                <div className="p-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gray-200 rounded-full skeleton-pulse"></div>
-                    <div className="w-12 h-12 bg-gray-200 rounded-full skeleton-pulse"></div>
-                    <div className="flex-1 space-y-2">
-                      <div className="h-6 bg-gray-200 rounded skeleton-pulse w-3/4"></div>
-                      <div className="h-4 bg-gray-200 rounded skeleton-pulse w-1/2"></div>
-                      <div className="flex gap-4">
-                        <div className="h-3 bg-gray-200 rounded skeleton-pulse w-1/3"></div>
-                        <div className="h-3 bg-gray-200 rounded skeleton-pulse w-1/4"></div>
-                      </div>
+              <div className="border-b border-gray-100 p-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full skeleton-pulse"></div>
+                  <div className="w-12 h-12 bg-gray-200 rounded-full skeleton-pulse"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-6 bg-gray-200 rounded skeleton-pulse w-3/4"></div>
+                    <div className="h-4 bg-gray-200 rounded skeleton-pulse w-1/2"></div>
+                    <div className="flex gap-4">
+                      <div className="h-3 bg-gray-200 rounded skeleton-pulse w-1/3"></div>
+                      <div className="h-3 bg-gray-200 rounded skeleton-pulse w-1/4"></div>
                     </div>
                   </div>
                 </div>
               </div>
-              
-              {/* Messages Skeleton */}
               <div className="flex-1 p-4 space-y-4">
                 <div className="flex justify-start">
                   <div className="w-64 h-16 bg-gray-200 rounded-2xl skeleton-pulse"></div>
@@ -819,15 +804,11 @@ const ChatPage: React.FC = () => {
                   <div className="w-52 h-14 bg-gray-200 rounded-2xl skeleton-pulse"></div>
                 </div>
               </div>
-              
-              {/* Input Skeleton */}
               <div className="p-4 border-t border-gray-100">
                 <div className="h-20 bg-gray-200 rounded-xl skeleton-pulse"></div>
               </div>
             </BaseCard>
           </div>
-          
-          {/* Sidebar Skeleton */}
           <div className="hidden md:flex flex-col w-96 max-w-full h-full">
             <div className="h-full flex flex-col border-r border-gray-100 pl-6 space-y-4">
               <div className="h-64 bg-gray-200 rounded-lg skeleton-pulse"></div>
@@ -880,9 +861,6 @@ const ChatPage: React.FC = () => {
 
   const otherParticipant = getOtherParticipant();
 
-  // Helper to get offer status
-  const currentOffer = offers.find(o => o.id === offerId);
-  
   return (
     <PageLayout
       title={`محادثة مع ${otherParticipant?.name.first} ${otherParticipant?.name.last}`}
@@ -891,335 +869,139 @@ const ChatPage: React.FC = () => {
       user={user}
       onLogout={() => {}}
     >
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6 h-[85vh] min-h-[600px] max-h-[1000px] p-4">
-        {/* Main Chat Area */}
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-4 h-full min-h-[400px] p-4 overflow-hidden">
         <div className="flex-1 flex flex-col">
           <BaseCard className="flex-1 flex flex-col h-full shadow-lg border-0">
-            {/* Chat Header */}
-            <div className="border-b border-gray-100">
-              {/* Main Header Row */}
-              <div className="p-4">
-                {/* Back Button and User Info Row */}
-                <div className="flex items-center gap-3 mb-4">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate('/conversations')}
-                    className="p-2 flex-shrink-0"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </Button>
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <User className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-text-primary text-lg mb-1">
-                      {otherParticipant?.name.first} {otherParticipant?.name.last}
-                    </h3>
-                    <p className="text-sm text-text-secondary mb-2">
-                      {conversation.jobRequestId.title}
-                    </p>
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1 text-text-secondary/80">
-                        <span className="text-pink-500">📍</span>
-                        <span>
-                          {conversation.jobRequestId.location?.address || 
-                           `${conversation.jobRequestId.location?.city || ''} ${conversation.jobRequestId.location?.government || ''}`.trim() || 
-                           'غير محدد'}
-                        </span>
-                      </div>
-                      {connected ? (
-                        <span className="flex items-center gap-1 text-green-600">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse-glow"></div>
-                          <span className="font-medium">متصل</span>
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-gray-500">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                          <span>غير متصل</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
+            <div className="border-b border-gray-100 p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/conversations')}
+                  className="p-2 flex-shrink-0"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <User className="w-6 h-6 text-primary" />
                 </div>
-
-                {/* Action Buttons Row - Desktop */}
-                <div className="hidden md:flex items-center gap-3 flex-wrap">
-                  {/* Primary Actions */}
-                  <div className="flex items-center gap-2">
-                    {/* Disable all actions if cancelled or cancellation requested */}
-                    {!(currentOffer?.status === 'cancelled' || currentOffer?.status === 'cancellation_requested') && (
-                      <>
-                        {/* Show payment button for seeker when offer is accepted but payment not completed */}
-                        {isSeeker && offerId && negotiationState[offerId]?.canAcceptOffer && !paymentCompleted && (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={handleAcceptOffer}
-                            className="flex items-center gap-2"
-                          >
-                            <CreditCard className="w-4 h-4" />
-                            قبول وبدء الدفع
-                          </Button>
-                        )}
-                        {/* Show service completion button for seeker when service is in progress */}
-                        {isSeeker && serviceInProgress && (
-                          <Button
-                            variant="success"
-                            size="sm"
-                            onClick={() => setShowCompletionModal(true)}
-                            className="flex items-center gap-2"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            تأكيد اكتمال الخدمة
-                          </Button>
-                        )}
-                        {/* Show cancellation button only when payment has been made */}
-                        {(serviceInProgress || paymentCompleted) && (
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => setShowCancellationModal(true)}
-                            className="flex items-center gap-2"
-                          >
-                            <AlertCircle className="w-4 h-4" />
-                            طلب إلغاء الخدمة
-                          </Button>
-                        )}
-                      </>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-text-primary text-lg mb-1">
+                    {otherParticipant?.name.first} {otherParticipant?.name.last}
+                  </h3>
+                  <p className="text-sm text-text-secondary mb-2">
+                    {conversation.jobRequestId.title}
+                  </p>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-1 text-text-secondary/80">
+                      <span className="text-pink-500">📍</span>
+                      <span>
+                        {conversation.jobRequestId.location?.address || 
+                         `${conversation.jobRequestId.location?.city || ''} ${conversation.jobRequestId.location?.government || ''}`.trim() || 
+                         'غير محدد'}
+                      </span>
+                    </div>
+                    {connected ? (
+                      <span className="flex items-center gap-1 text-green-600">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse-glow"></div>
+                        <span className="font-medium">متصل</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-gray-500">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                        <span>غير متصل</span>
+                      </span>
                     )}
-                  </div>
-
-                  {/* Status Indicators */}
-                  <div className="flex items-center gap-2">
-                    {/* Show cancellation status badge if offer is cancelled or cancellation requested */}
-                    {currentOffer?.status === 'cancelled' && (
-                      <div className="flex items-center gap-2 text-red-600 text-sm px-3 py-1 bg-red-50 rounded-full">
-                        <AlertCircle className="w-4 h-4" />
-                        تم إلغاء الخدمة
-                      </div>
-                    )}
-                    {currentOffer?.status === 'cancellation_requested' && (
-                      <div className="flex items-center gap-2 text-amber-600 text-sm px-3 py-1 bg-amber-50 rounded-full">
-                        <AlertTriangle className="w-4 h-4" />
-                        تم طلب إلغاء الخدمة - بانتظار المعالجة
-                      </div>
-                    )}
-                    {/* Show guidance if negotiation is not confirmed by both parties */}
-                    {isSeeker && offerId && negotiationState[offerId] && 
-                     !negotiationState[offerId]?.canAcceptOffer && 
-                     !paymentCompleted &&
-                     currentOffer?.status !== 'cancelled' && currentOffer?.status !== 'cancellation_requested' && (
-                      <div className="text-amber-600 text-sm px-3 py-1 bg-amber-50 rounded-full flex items-center gap-1">
-                        <AlertTriangle className="w-4 h-4" />
-                        {!negotiationState[offerId]?.confirmationStatus?.seeker ? 
-                          'يجب عليك تأكيد شروط التفاوض' : 
-                          'بانتظار تأكيد مقدم الخدمة للشروط'}
-                      </div>
-                    )}
-                    {/* Show payment status badge */}
-                    {paymentCompleted && currentOffer?.status === 'completed' ? (
-                      <div className="flex items-center gap-2 text-green-600 text-sm px-3 py-1 bg-green-50 rounded-full">
-                        <CheckCircle className="w-4 h-4" />
-                        تم تحرير المبلغ وإكمال الخدمة
-                      </div>
-                    ) : paymentCompleted && currentOffer?.status !== 'cancelled' && currentOffer?.status !== 'cancellation_requested' && (
-                      <div className="flex items-center gap-2 text-blue-600 text-sm px-3 py-1 bg-blue-50 rounded-full">
-                        <Shield className="w-4 h-4" />
-                        الخدمة قيد التنفيذ
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Secondary Actions */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleReportIssue}
-                      className="flex items-center gap-2"
-                    >
-                      <AlertTriangle className="w-4 h-4" />
-                      الإبلاغ عن مشكلة
-                    </Button>
                   </div>
                 </div>
               </div>
-              {/* Service Details */}
-              <div className="px-4 pb-4 space-y-3">
-                {/* Mobile Action Buttons */}
-                <div className="md:hidden space-y-2">
-                  {/* Payment/Guidance Section */}
-                  {isSeeker && offerId && negotiationState[offerId]?.canAcceptOffer && !paymentCompleted && (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={handleAcceptOffer}
-                      className="flex items-center justify-center gap-2 w-full"
-                    >
-                      <CreditCard className="w-4 h-4" />
-                      قبول وبدء الدفع
-                    </Button>
-                  )}
-                  
-                  {isSeeker && offerId && negotiationState[offerId] && 
-                   !negotiationState[offerId]?.canAcceptOffer && 
-                   !paymentCompleted && (
-                    <div className="text-amber-600 text-sm py-2 px-3 bg-amber-50 rounded-lg flex items-center gap-1 justify-center">
-                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                      <span>
-                        {!negotiationState[offerId]?.confirmationStatus?.seeker ? 
-                          'يجب تأكيد الشروط' : 
-                          'بانتظار تأكيد مقدم الخدمة'}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {/* Service completion for seeker when service is in progress */}
-                  {isSeeker && serviceInProgress && (
-                    <Button
-                      variant="success"
-                      size="sm"
-                      onClick={() => setShowCompletionModal(true)}
-                      className="flex items-center justify-center gap-2 w-full"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      تأكيد اكتمال الخدمة
-                    </Button>
-                  )}
-                  
-                  {/* Payment status badge */}
-                  {paymentCompleted && currentOffer?.status === 'completed' ? (
-                    <div className="flex items-center justify-center gap-2 text-green-600 text-sm py-2 bg-green-50 rounded-lg">
-                      <CheckCircle className="w-4 h-4" />
-                      تم تحرير المبلغ وإكمال الخدمة
-                    </div>
-                  ) : paymentCompleted && (
-                    <div className="flex items-center justify-center gap-2 text-blue-600 text-sm py-2 bg-blue-50 rounded-lg">
-                      <Shield className="w-4 h-4" />
-                      الخدمة قيد التنفيذ
-                    </div>
-                  )}
-                  
-                  {/* Action buttons row */}
-                  <div className="flex gap-2">
-                    {/* Show cancellation button only when payment has been made */}
-                    {(serviceInProgress || paymentCompleted) && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => setShowCancellationModal(true)}
-                        className="flex items-center justify-center gap-2 flex-1"
-                      >
-                        <AlertCircle className="w-4 h-4" />
-                        طلب إلغاء
-                      </Button>
-                    )}
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleReportIssue}
-                      className="flex items-center justify-center gap-2 flex-1"
-                    >
-                      <AlertTriangle className="w-4 h-4" />
-                      الإبلاغ عن مشكلة
-                    </Button>
-                  </div>
-                  
-                  {/* Toggle negotiation sidebar on mobile */}
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setShowNegotiationMobile(!showNegotiationMobile)}
-                    className="flex items-center justify-center gap-2 w-full"
-                  >
-                    {showNegotiationMobile ? 'إخفاء التفاوض' : 'عرض التفاوض'}
-                  </Button>
+              <StatusBar />
+              <ActionButtons />
+            </div>
+            <div className={showNegotiationMobile ? "fixed inset-0 bg-white z-50 overflow-y-auto p-4 transition-transform duration-300 transform translate-x-0 md:hidden" : "fixed inset-0 bg-white z-50 overflow-y-auto p-4 transition-transform duration-300 transform translate-x-full md:hidden"}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-lg">تفاصيل التفاوض</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowNegotiationMobile(false)}
+                >
+                  إغلاق
+                </Button>
+              </div>
+              {!offerId && (
+                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4">
+                  <h3 className="font-bold text-amber-800 mb-2">معلومات التصحيح</h3>
+                  <p className="text-amber-700 text-sm">لم يتم العثور على معرّف العرض</p>
                 </div>
-                
-                {/* Mobile Negotiation Section */}
-                {showNegotiationMobile && (
-                  <div className="mt-4 border-t border-gray-200 pt-4 pb-16">
-                    {!offerId && (
-                      <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4">
-                        <h3 className="font-bold text-amber-800 mb-2">معلومات التصحيح</h3>
-                        <p className="text-amber-700 text-sm">لم يتم العثور على معرّف العرض</p>
-                      </div>
-                    )}
-                    {offerId && !negotiationState[offerId] && (
-                      <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4">
-                        <h3 className="font-bold text-amber-800 mb-2">معلومات التصحيح</h3>
-                        <p className="text-amber-700 text-sm">معرّف العرض: {offerId}</p>
-                        <p className="text-amber-700 text-sm">لم يتم العثور على بيانات التفاوض</p>
-                        <button 
-                          onClick={() => {
-                            if (offerId) {
-                              console.log('Manually fetching negotiation for:', offerId);
-                              fetchNegotiation(offerId);
-                              fetchNegotiationHistory(offerId);
-                            }
-                          }}
-                          className="mt-2 bg-deep-teal text-white px-3 py-1 rounded-md text-xs"
-                        >
-                          إعادة تحميل بيانات التفاوض
-                        </button>
-                      </div>
-                    )}
-                    
-                    {offerId && negotiationState[offerId] && user && conversation && (
-                      <div className="pb-4 flex flex-col space-y-4">
-                        <div className="flex-none">
-                          <NegotiationSummary
-                            negotiation={negotiationState[offerId]}
-                            isProvider={user.id === conversation.participants.provider._id}
-                            isSeeker={user.id === conversation.participants.seeker._id}
-                            jobRequest={{
-                              id: conversation.jobRequestId._id,
-                              title: conversation.jobRequestId.title,
-                              description: conversation.jobRequestId.description || '',
-                              budget: {
-                                min: conversation.jobRequestId.budget.min,
-                                max: conversation.jobRequestId.budget.max,
-                                currency: 'EGP'
-                              },
-                              location: conversation.jobRequestId.location?.address || '',
-                              postedBy: {
-                                id: conversation.participants.seeker._id,
-                                name: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
-                                isPremium: false
-                              },
-                              createdAt: conversation.jobRequestId.createdAt,
-                              preferredDate: conversation.jobRequestId.deadline,
-                              status: conversation.jobRequestId.status === 'open' ? 'open' : 
-                                    conversation.jobRequestId.status === 'assigned' || conversation.jobRequestId.status === 'in_progress' ? 'accepted' : 'closed',
-                              category: '',
-                              availability: { days: [], timeSlots: [] }
-                            }}
-                            offer={offers.find(o => o.id === offerId) as Offer}
-                            paymentCompleted={paymentCompleted}
-                            serviceCompleted={currentOffer?.status === 'completed'}
-                            onEditSave={async (terms) => {
-                              if (offerId) {
-                                await updateNegotiation(offerId, terms);
-                                await resetNegotiation(offerId);
-                              }
-                            }}
-                            onConfirm={() => {
-                              if (offerId) {
-                                confirmNegotiation(offerId);
-                                // Auto-close mobile negotiation view after confirming
-                                setTimeout(() => setShowNegotiationMobile(false), 1500);
-                              }
-                            }}
-                            onReset={() => {
-                              if (offerId) {
-                                resetNegotiation(offerId);
-                              }
-                            }}
-                          />
-                        </div>
-                                        <div className="flex-none">
+              )}
+              {offerId && !negotiationState[offerId] && (
+                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4">
+                  <h3 className="font-bold text-amber-800 mb-2">معلومات التصحيح</h3>
+                  <p className="text-amber-700 text-sm">معرّف العرض: {offerId}</p>
+                  <p className="text-amber-700 text-sm">لم يتم العثور على بيانات التفاوض</p>
+                  <button 
+                    onClick={() => {
+                      if (offerId) {
+                        fetchNegotiation(offerId);
+                        fetchNegotiationHistory(offerId);
+                      }
+                    }}
+                    className="mt-2 bg-deep-teal text-white px-3 py-1 rounded-md text-xs"
+                  >
+                    إعادة تحميل بيانات التفاوض
+                  </button>
+                </div>
+              )}
+              {offerId && negotiationState[offerId] && user && conversation && (
+                <div className="flex flex-col gap-4 p-4">
+                  <NegotiationSummary
+                    negotiation={negotiationState[offerId]}
+                    isProvider={user.id === conversation.participants.provider._id}
+                    isSeeker={user.id === conversation.participants.seeker._id}
+                    jobRequest={{
+                      id: conversation.jobRequestId._id,
+                      title: conversation.jobRequestId.title,
+                      description: conversation.jobRequestId.description || '',
+                      budget: {
+                        min: conversation.jobRequestId.budget.min,
+                        max: conversation.jobRequestId.budget.max,
+                        currency: 'EGP'
+                      },
+                      location: conversation.jobRequestId.location?.address || '',
+                      postedBy: {
+                        id: conversation.participants.seeker._id,
+                        name: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
+                        isPremium: false
+                      },
+                      createdAt: conversation.jobRequestId.createdAt,
+                      preferredDate: conversation.jobRequestId.deadline,
+                      status: conversation.jobRequestId.status === 'open' ? 'open' : 
+                        conversation.jobRequestId.status === 'assigned' || conversation.jobRequestId.status === 'in_progress' ? 'accepted' : 'closed',
+                      category: '',
+                      availability: { days: [], timeSlots: [] }
+                    }}
+                    offer={offers.find(o => o.id === offerId) as Offer}
+                    paymentCompleted={paymentCompleted}
+                    serviceCompleted={currentOffer?.status === 'completed'}
+                    onEditSave={async (terms) => {
+                      if (offerId) {
+                        await updateNegotiation(offerId, terms);
+                        await resetNegotiation(offerId);
+                      }
+                    }}
+                    onConfirm={() => {
+                      if (offerId) {
+                        confirmNegotiation(offerId);
+                        setTimeout(() => setShowNegotiationMobile(false), 1500);
+                      }
+                    }}
+                    onReset={() => {
+                      if (offerId) {
+                        resetNegotiation(offerId);
+                      }
+                    }}
+                  />
                   <NegotiationHistory
                     negotiationHistory={negotiationState[offerId]?.negotiationHistory}
                     userMap={{
@@ -1229,13 +1011,8 @@ const ChatPage: React.FC = () => {
                     isMobile={true}
                   />
                 </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-            {/* Messages Container */}
             <div
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-warm-cream/20 via-white to-warm-cream/10 chat-scrollbar"
@@ -1267,10 +1044,9 @@ const ChatPage: React.FC = () => {
                   </Button>
                 </div>
               )}
-              
               {messages.length === 0 && !loading && (
                 <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
-                  <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100 max-w-md text-center transform hover:scale-105 transition-all duration-300">
+                  <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100 max-w-md text-center">
                     <div className="bg-gradient-to-br from-primary/10 to-deep-teal/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                       <MessageCircle className="w-10 h-10 text-deep-teal" />
                     </div>
@@ -1286,7 +1062,6 @@ const ChatPage: React.FC = () => {
                   </div>
                 </div>
               )}
-              
               {messages.map((message, index) => {
                 const isOwnMessage = message.senderId === user?.id;
                 const showDate = index === 0 ||
@@ -1297,7 +1072,7 @@ const ChatPage: React.FC = () => {
                 return (
                   <div key={message._id} className={`transition-all duration-300 ${isLastMessage ? 'animate-fade-in' : ''}`}>
                     {showDate && (
-                      <div className="text-center my-6">
+                      <div className="text-center my-4">
                         <span className="inline-block bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full text-sm text-text-secondary border border-gray-200 shadow-sm font-medium">
                           {formatDate(message.timestamp)}
                         </span>
@@ -1305,7 +1080,7 @@ const ChatPage: React.FC = () => {
                     )}
                     <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-3 group`}>
                       <div
-                        className={`max-w-xs lg:max-w-md px-5 py-4 rounded-2xl shadow-sm transition-all duration-300 hover:shadow-md transform hover:scale-[1.02] message-bubble chat-message ${
+                        className={`max-w-xs lg:max-w-md px-5 py-4 rounded-2xl shadow-sm transition-all duration-300 hover:shadow-md message-bubble chat-message ${
                           isOwnMessage
                             ? 'bg-gradient-to-br from-deep-teal to-deep-teal/90 text-white rounded-br-lg'
                             : 'bg-white text-text-primary rounded-bl-lg border border-gray-100 hover:border-gray-200'
@@ -1338,7 +1113,6 @@ const ChatPage: React.FC = () => {
               })}
               <div ref={messagesEndRef} />
             </div>
-            {/* Message Input */}
             <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-100 bg-white/95 backdrop-blur-sm">
               <div className="space-y-4">
                 <div className="relative">
@@ -1397,10 +1171,9 @@ const ChatPage: React.FC = () => {
             </form>
           </BaseCard>
         </div>
-        {/* Negotiation Sidebar (desktop only) */}
         <div className="hidden md:flex flex-col w-96 max-w-full h-full sticky top-8 bg-transparent">
           <div className="h-full flex flex-col border-r border-gray-100 pl-6 overflow-y-auto overflow-x-hidden" aria-label="ملخص التفاوض والتاريخ">
-            {/* Debug information */}
+            <StatusBar />
             {!offerId && (
               <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4">
                 <h3 className="font-bold text-amber-800 mb-2">معلومات التصحيح</h3>
@@ -1415,7 +1188,6 @@ const ChatPage: React.FC = () => {
                 <button 
                   onClick={() => {
                     if (offerId) {
-                      console.log('Manually fetching negotiation for:', offerId);
                       fetchNegotiation(offerId);
                       fetchNegotiationHistory(offerId);
                     }
@@ -1426,107 +1198,84 @@ const ChatPage: React.FC = () => {
                 </button>
               </div>
             )}
-            {/* Show cancellation status badge in sidebar */}
-            {currentOffer?.status === 'cancelled' && (
-              <div className="bg-red-50 p-4 rounded-lg border border-red-200 mb-4 text-center">
-                <AlertCircle className="w-6 h-6 text-red-600 mx-auto mb-2" />
-                <div className="font-bold text-red-700">تم إلغاء الخدمة</div>
-                <div className="text-sm text-red-600">لا يمكن اتخاذ أي إجراء آخر على هذه الخدمة.</div>
-              </div>
-            )}
-            {currentOffer?.status === 'cancellation_requested' && (
-              <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 mb-4 text-center">
-                <AlertTriangle className="w-6 h-6 text-amber-600 mx-auto mb-2" />
-                <div className="font-bold text-amber-700">تم طلب إلغاء الخدمة</div>
-                <div className="text-sm text-amber-700">بانتظار معالجة طلب الإلغاء من الإدارة.</div>
-              </div>
-            )}
             {offerId && negotiationState[offerId] && user && conversation && (
-              <div className="flex flex-col space-y-4">
-                <div className="flex-none">
-                  <NegotiationSummary
-                    negotiation={negotiationState[offerId]}
-                    isProvider={user.id === conversation.participants.provider._id}
-                    isSeeker={user.id === conversation.participants.seeker._id}
-                    jobRequest={{
-                      id: conversation.jobRequestId._id,
-                      title: conversation.jobRequestId.title,
-                      description: conversation.jobRequestId.description || '',
-                      budget: {
-                        min: conversation.jobRequestId.budget.min,
-                        max: conversation.jobRequestId.budget.max,
-                        currency: 'EGP' // Default to EGP as currency
-                      },
-                      location: conversation.jobRequestId.location?.address || '',
-                      postedBy: {
-                        id: conversation.participants.seeker._id,
-                        name: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
-                        isPremium: false
-                      },
-                      createdAt: conversation.jobRequestId.createdAt,
-                      preferredDate: conversation.jobRequestId.deadline,
-                      status: conversation.jobRequestId.status === 'open' ? 'open' : 
-                        conversation.jobRequestId.status === 'assigned' || conversation.jobRequestId.status === 'in_progress' ? 'accepted' : 'closed',
-                      category: '',
-                      availability: { days: [], timeSlots: [] }
-                    }}
-                    offer={offers.find(o => o.id === offerId) as Offer}
-                    paymentCompleted={paymentCompleted}
-                    serviceCompleted={currentOffer?.status === 'completed'}
-                    onEditSave={async (terms) => {
-                      if (offerId) {
-                        await updateNegotiation(offerId, terms);
-                        try {
-                          await resetNegotiation(offerId); // Reset confirmations after edit
-                          showSuccess('تم تحديث شروط التفاوض', 'تم تحديث شروط التفاوض وإعادة تعيين التأكيدات بنجاح');
-                        } catch (error) {
-                          console.error('Error resetting confirmations after edit:', error);
-                          // Still show success for the edit, but warn about reset failure
-                          showSuccess('تم تحديث شروط التفاوض', 'تم تحديث شروط التفاوض بنجاح، لكن فشلت إعادة تعيين التأكيدات');
-                        }
+              <div className="flex flex-col gap-4 p-4">
+                <NegotiationSummary
+                  negotiation={negotiationState[offerId]}
+                  isProvider={user.id === conversation.participants.provider._id}
+                  isSeeker={user.id === conversation.participants.seeker._id}
+                  jobRequest={{
+                    id: conversation.jobRequestId._id,
+                    title: conversation.jobRequestId.title,
+                    description: conversation.jobRequestId.description || '',
+                    budget: {
+                      min: conversation.jobRequestId.budget.min,
+                      max: conversation.jobRequestId.budget.max,
+                      currency: 'EGP'
+                    },
+                    location: conversation.jobRequestId.location?.address || '',
+                    postedBy: {
+                      id: conversation.participants.seeker._id,
+                      name: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
+                      isPremium: false
+                    },
+                    createdAt: conversation.jobRequestId.createdAt,
+                    preferredDate: conversation.jobRequestId.deadline,
+                    status: conversation.jobRequestId.status === 'open' ? 'open' : 
+                      conversation.jobRequestId.status === 'assigned' || conversation.jobRequestId.status === 'in_progress' ? 'accepted' : 'closed',
+                    category: '',
+                    availability: { days: [], timeSlots: [] }
+                  }}
+                  offer={offers.find(o => o.id === offerId) as Offer}
+                  paymentCompleted={paymentCompleted}
+                  serviceCompleted={currentOffer?.status === 'completed'}
+                  onEditSave={async (terms) => {
+                    if (offerId) {
+                      await updateNegotiation(offerId, terms);
+                      try {
+                        await resetNegotiation(offerId);
+                        showSuccess('تم تحديث شروط التفاوض', 'تم تحديث شروط التفاوض وإعادة تعيين التأكيدات بنجاح');
+                      } catch (error) {
+                        console.error('Error resetting confirmations:', error);
+                        showSuccess('تم تحديث شروط التفاوض', 'تم تحديث شروط التفاوض بنجاح، لكن فشلت إعادة تعيين التأكيدات');
                       }
-                    }}
-                    onConfirm={() => {
-                      if (offerId) {
-                        confirmNegotiation(offerId);
+                    }
+                  }}
+                  onConfirm={() => {
+                    if (offerId) {
+                      confirmNegotiation(offerId);
+                    }
+                  }}
+                  onReset={async () => {
+                    if (offerId) {
+                      try {
+                        await resetNegotiation(offerId);
+                        showSuccess('تم إعادة تعيين التأكيدات', 'تم إعادة تعيين تأكيدات التفاوض بنجاح');
+                        await fetchNegotiation(offerId);
+                        checkServiceStatus();
+                      } catch (error) {
+                        console.error('Error resetting confirmations:', error);
+                        showError('فشل في إعادة تعيين التأكيدات', 'حدث خطأ أثناء محاولة إعادة تعيين تأكيدات التفاوض');
+                        await fetchNegotiation(offerId);
+                        checkServiceStatus();
                       }
-                    }}
-                    onReset={async () => {
-                      if (offerId) {
-                        try {
-                          await resetNegotiation(offerId);
-                          showSuccess('تم إعادة تعيين التأكيدات', 'تم إعادة تعيين تأكيدات التفاوض بنجاح');
-                          // Refresh the offer state to ensure we have the latest data
-                          await fetchNegotiation(offerId);
-                          checkServiceStatus();
-                        } catch (error) {
-                          console.error('Error resetting confirmations:', error);
-                          showError('فشل في إعادة تعيين التأكيدات', 'حدث خطأ أثناء محاولة إعادة تعيين تأكيدات التفاوض. قد تكون حالة العرض لا تسمح بإعادة التعيين.');
-                          // Refresh the offer state anyway to ensure we have the latest data
-                          await fetchNegotiation(offerId);
-                          checkServiceStatus();
-                        }
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex-none">
-                  <NegotiationHistory
-                    negotiationHistory={negotiationState[offerId]?.negotiationHistory}
-                    userMap={{
-                      [conversation.participants.seeker._id]: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
-                      [conversation.participants.provider._id]: `${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`
-                    }}
-                    isMobile={false}
-                  />
-                </div>
+                    }
+                  }}
+                />
+                <NegotiationHistory
+                  negotiationHistory={negotiationState[offerId]?.negotiationHistory}
+                  userMap={{
+                    [conversation.participants.seeker._id]: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
+                    [conversation.participants.provider._id]: `${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`
+                  }}
+                  isMobile={false}
+                />
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Payment Modal */}
       {conversation && offerId && negotiationState[offerId] && (
         <PaymentModal
           isOpen={showPaymentModal}
@@ -1541,7 +1290,6 @@ const ChatPage: React.FC = () => {
         />
       )}
       
-      {/* Service Completion Modal */}
       <Modal
         isOpen={showCompletionModal}
         onClose={() => setShowCompletionModal(false)}
@@ -1581,7 +1329,6 @@ const ChatPage: React.FC = () => {
         </div>
       </Modal>
       
-      {/* Cancellation Request Modal */}
       <Modal
         isOpen={showCancellationModal}
         onClose={() => setShowCancellationModal(false)}
@@ -1636,7 +1383,6 @@ const ChatPage: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Report Problem Modal */}
       {conversation && (
         <ReportProblemModal
           isOpen={showReportModal}

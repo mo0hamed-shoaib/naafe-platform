@@ -217,7 +217,7 @@ const RequestServiceForm: React.FC = () => {
         throw new Error(data.error?.message || 'Failed to post request');
       }
       setSuccess(true);
-      setTimeout(() => navigate('/search?category=' + encodeURIComponent(formData.category) + '&tab=requests'), 1500);
+      setTimeout(() => navigate('/search/service-requests'), 1500);
     } catch (err) {
       setLoading(false);
       alert(err instanceof Error ? err.message : 'Failed to post request');
