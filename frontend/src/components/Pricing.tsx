@@ -186,10 +186,23 @@ const Pricing: React.FC = () => {
   const handleCancelSubscription = async () => {
     setLoading('cancel');
     try {
-      window.open('https://billing.stripe.com/p/login/test_xxx', '_blank');
-      showSuccess('يمكنك إدارة اشتراكك من خلال بوابة Stripe.');
+      const response = await fetch('/api/subscriptions/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      const data = await response.json();
+      if (data.success) {
+        showSuccess(data.message);
+        // Optionally, refresh user info or reload page to reflect new status
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        showError(data.error?.message || 'فشل إلغاء الاشتراك.');
+      }
       setIsCancelModalOpen(false);
-    } catch {
+    } catch (err) {
       showError('حدث خطأ أثناء محاولة إلغاء الاشتراك. يرجى المحاولة لاحقاً.');
     } finally {
       setLoading(null);

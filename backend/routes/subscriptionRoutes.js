@@ -143,6 +143,89 @@ router.post('/webhook', async (req, res) => {
   }
 });
 
+/**
+ * @route   POST /api/subscriptions/cancel
+ * @desc    Cancel Stripe subscription and issue refund if eligible
+ * @access  Private
+ */
+router.post('/cancel', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const User = (await import('../models/User.js')).default;
+    const user = await User.findById(userId);
+    if (!user || !user.subscription || !user.subscription.stripeSubscriptionId) {
+      return res.status(400).json({ success: false, error: { message: 'No active subscription found.' } });
+    }
+    const subscriptionId = user.subscription.stripeSubscriptionId;
+    const customerId = user.subscription.stripeCustomerId;
+    // Fetch subscription from Stripe
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    if (!subscription) {
+      return res.status(400).json({ success: false, error: { message: 'Subscription not found in Stripe.' } });
+    }
+    // Calculate days since subscription started
+    const startTimestamp = subscription.current_period_start;
+    const nowTimestamp = Math.floor(Date.now() / 1000);
+    const daysSinceStart = Math.floor((nowTimestamp - startTimestamp) / (60 * 60 * 24)) + 1;
+    // Refund logic
+    const fullPrice = 49; // EGP
+    const daysInMonth = 30;
+    const dailyRate = fullPrice / daysInMonth;
+    let refundAmount = 0;
+    let refundType = 'none';
+    if (daysSinceStart <= 3) {
+      refundAmount = fullPrice;
+      refundType = 'full';
+    } else if (daysSinceStart <= 7) {
+      // Refund for unused days (rounded up)
+      const used = daysSinceStart;
+      const unused = daysInMonth - used;
+      refundAmount = Math.round(unused * dailyRate);
+      // For day 7, this is about 37 EGP
+      refundType = 'partial';
+    }
+    // Cancel the subscription immediately
+    await stripe.subscriptions.cancel(subscriptionId);
+    // Issue refund if eligible
+    let refundId = null;
+    let refundStatus = null;
+    let chargeId = null;
+    if (refundAmount > 0) {
+      // Find the latest invoice and charge
+      const invoices = await stripe.invoices.list({ customer: customerId, limit: 1 });
+      const invoice = invoices.data[0];
+      if (invoice && invoice.charge) {
+        chargeId = invoice.charge;
+        const refund = await stripe.refunds.create({
+          charge: chargeId,
+          amount: Math.round(refundAmount * 100), // Stripe expects amount in cents/piasters
+          reason: 'requested_by_customer',
+        });
+        refundId = refund.id;
+        refundStatus = refund.status;
+      }
+    }
+    // Update user in DB
+    user.isPremium = false;
+    user.subscription.status = 'inactive';
+    await user.save();
+    // Respond
+    return res.json({
+      success: true,
+      message: refundType === 'none'
+        ? 'تم إلغاء الاشتراك بنجاح. لا يوجد استرداد لأن فترة السماح انتهت.'
+        : refundType === 'full'
+          ? `تم إلغاء الاشتراك واسترداد كامل (${fullPrice} جنيه).`
+          : `تم إلغاء الاشتراك واسترداد جزئي (${refundAmount} جنيه).`,
+      refund: refundType !== 'none' ? { amount: refundAmount, type: refundType, refundId, refundStatus } : null,
+      daysSinceStart,
+    });
+  } catch (error) {
+    console.error('Cancel subscription error:', error);
+    res.status(500).json({ success: false, error: { message: error.message || 'حدث خطأ أثناء إلغاء الاشتراك.' } });
+  }
+});
+
 // Helper functions for webhook handlers
 async function handleSubscriptionCreated(session) {
   try {
