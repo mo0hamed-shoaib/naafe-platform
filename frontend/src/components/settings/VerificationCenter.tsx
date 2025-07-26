@@ -30,6 +30,13 @@ const VerificationCenter: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showStepper, setShowStepper] = useState(false);
+  
+  // Validation error states for each step
+  const [stepErrors, setStepErrors] = useState({
+    step0: '', // ID card errors
+    step1: '', // Selfie errors
+    step2: '', // Criminal record errors (optional)
+  });
 
   // Fetch verification status on mount
   useEffect(() => {
@@ -84,6 +91,12 @@ const VerificationCenter: React.FC = () => {
       const data = await res.json();
       if (data.success) {
         setter(data.data.url);
+        // Clear step errors when file is uploaded successfully
+        if (step === 0) {
+          setStepErrors(prev => ({ ...prev, step0: '' }));
+        } else if (step === 1) {
+          setStepErrors(prev => ({ ...prev, step1: '' }));
+        }
       } else {
         setError('فشل رفع الصورة');
       }
@@ -94,7 +107,63 @@ const VerificationCenter: React.FC = () => {
     }
   };
 
+  // Validation functions for each step
+  const validateStep0 = () => {
+    const errors = [];
+    if (!idFront) errors.push('صورة البطاقة الأمامية مطلوبة');
+    if (!idBack) errors.push('صورة البطاقة الخلفية مطلوبة');
+    
+    const errorMessage = errors.length > 0 ? errors.join(' و ') : '';
+    setStepErrors(prev => ({ ...prev, step0: errorMessage }));
+    return errorMessage === '';
+  };
+
+  const validateStep1 = () => {
+    const errorMessage = !selfie ? 'الصورة الشخصية مطلوبة' : '';
+    setStepErrors(prev => ({ ...prev, step1: errorMessage }));
+    return errorMessage === '';
+  };
+
+  const validateStep2 = () => {
+    // Criminal record is optional, so no validation needed
+    setStepErrors(prev => ({ ...prev, step2: '' }));
+    return true;
+  };
+
+  const handleNextStep = () => {
+    let isValid = false;
+    
+    switch (step) {
+      case 0:
+        isValid = validateStep0();
+        break;
+      case 1:
+        isValid = validateStep1();
+        break;
+      case 2:
+        isValid = validateStep2();
+        break;
+      default:
+        isValid = true;
+    }
+    
+    if (isValid) {
+      setStep(Math.min(steps.length - 1, step + 1));
+      // Clear errors when moving to next step
+      setStepErrors(prev => ({ ...prev, [`step${step}`]: '' }));
+    }
+  };
+
   const handleSubmit = async () => {
+    // Final validation before submit
+    const isStep0Valid = validateStep0();
+    const isStep1Valid = validateStep1();
+    
+    if (!isStep0Valid || !isStep1Valid) {
+      setError('يرجى إكمال جميع الحقول المطلوبة قبل الإرسال');
+      return;
+    }
+    
     setLoading(true);
     setError('');
     setSuccess('');
@@ -160,6 +229,11 @@ const VerificationCenter: React.FC = () => {
               />
               {idBack && <img src={idBack} alt="id back" className="mt-2 rounded-lg w-32 border" />}
             </div>
+            {stepErrors.step0 && (
+              <div className="text-red-500 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">
+                {stepErrors.step0}
+              </div>
+            )}
           </div>
         );
       case 1:
@@ -177,6 +251,11 @@ const VerificationCenter: React.FC = () => {
               />
               {selfie && <img src={selfie} alt="selfie" className="mt-2 rounded-lg w-32 border" />}
             </div>
+            {stepErrors.step1 && (
+              <div className="text-red-500 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">
+                {stepErrors.step1}
+              </div>
+            )}
           </div>
         );
       case 2:
@@ -275,7 +354,11 @@ const VerificationCenter: React.FC = () => {
             </div>
           </div>
           {status !== 'pending' && status !== 'approved' && (
-            <Button className="bg-bright-orange text-white font-semibold py-3 px-6 rounded-xl hover:bg-bright-orange/90 transform hover:scale-105 transition-all duration-300 shadow-lg" onClick={() => setShowStepper(true)}>
+            <Button className="bg-bright-orange text-white font-semibold py-3 px-6 rounded-xl hover:bg-bright-orange/90 transform hover:scale-105 transition-all duration-300 shadow-lg" onClick={() => {
+              setShowStepper(true);
+              setStep(0);
+              setStepErrors({ step0: '', step1: '', step2: '' });
+            }}>
               تحقق الآن
             </Button>
           )}
@@ -303,7 +386,7 @@ const VerificationCenter: React.FC = () => {
               <div className="flex justify-between mt-8">
                 <Button variant="secondary" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}>السابق</Button>
                 {step < steps.length - 1 && (
-                  <Button onClick={() => setStep(Math.min(steps.length - 1, step + 1))} disabled={loading}>التالي</Button>
+                  <Button onClick={handleNextStep} disabled={loading}>التالي</Button>
                 )}
               </div>
             </div>
