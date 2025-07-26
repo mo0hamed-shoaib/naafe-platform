@@ -71,6 +71,7 @@ export interface ServiceRequest {
 export interface FilterState {
   search: string;
   location: string;
+  city: string;
   priceRange: string;
   rating: string;
   category?: string;

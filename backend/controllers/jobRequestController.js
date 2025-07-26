@@ -122,6 +122,8 @@ class JobRequestController {
         status: req.query.status,
         minBudget: req.query.minBudget ? parseFloat(req.query.minBudget) : undefined,
         maxBudget: req.query.maxBudget ? parseFloat(req.query.maxBudget) : undefined,
+        location: req.query.location,
+        city: req.query.city,
         lat: req.query.lat ? parseFloat(req.query.lat) : undefined,
         lng: req.query.lng ? parseFloat(req.query.lng) : undefined,
         radius: req.query.radius ? parseInt(req.query.radius) : undefined,

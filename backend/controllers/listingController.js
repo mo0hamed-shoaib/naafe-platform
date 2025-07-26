@@ -158,13 +158,25 @@ class ListingController {
         provider,
         search,
         premiumOnly,
+        location,
+        city,
         page = 1,
         limit = 20
       } = req.query;
+      
+      console.log(`[ListingController] Query params:`, req.query);
       const query = {};
       if (category) query.category = category;
       if (status) query.status = status;
       if (provider) query.provider = provider;
+      if (location) {
+        query['location.government'] = location;
+        console.log(`[ListingController] Filtering by government: ${location}`);
+      }
+      if (city) {
+        query['location.city'] = city;
+        console.log(`[ListingController] Filtering by city: ${city}`);
+      }
       if (minPrice || maxPrice) {
         query['price.amount'] = {};
         if (minPrice) query['price.amount'].$gte = parseFloat(minPrice);
@@ -239,14 +251,19 @@ class ListingController {
         });
         return;
       }
+      
+      console.log(`[ListingController] Final query:`, JSON.stringify(query, null, 2));
+      
       // Custom logic: Reserve first 5 results for premium providers, then append free providers
       // 1. Find all matching listings, populate provider
       const allListings = await ServiceListing.find(query)
         .populate('provider', 'name avatarUrl isPremium isTopRated isVerified totalJobsCompleted providerProfile roles')
         .sort({ createdAt: -1 });
       // 2. Separate premium and free providers
+      console.log(`[ListingController] Found ${allListings.length} total listings`);
       const premiumListings = allListings.filter(l => l.provider && l.provider.isPremium);
       const freeListings = allListings.filter(l => !l.provider || !l.provider.isPremium);
+      console.log(`[ListingController] Premium: ${premiumListings.length}, Free: ${freeListings.length}`);
       // 3. Take up to 5 premium listings for the top
       const featuredPremium = premiumListings.slice(0, 5).map(l => ({ ...l.toObject(), featured: true }));
       // 4. Remaining listings (premium after 5 + all free)

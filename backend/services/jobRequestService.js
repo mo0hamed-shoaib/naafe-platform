@@ -84,6 +84,8 @@ class JobRequestService {
         status,
         minBudget,
         maxBudget,
+        location,
+        city,
         lat,
         lng,
         radius,
@@ -91,6 +93,8 @@ class JobRequestService {
         page = 1,
         limit = 20
       } = filters;
+      
+      console.log(`[JobRequestService] Filters received:`, filters);
 
       let query = {};
 
@@ -102,6 +106,16 @@ class JobRequestService {
       // Status filter
       if (status) {
         query.status = status;
+      }
+
+      // Location filters
+      if (location) {
+        query['location.government'] = location;
+        console.log(`[JobRequestService] Filtering by government: ${location}`);
+      }
+      if (city) {
+        query['location.city'] = city;
+        console.log(`[JobRequestService] Filtering by city: ${city}`);
       }
 
       // Budget filters
@@ -135,6 +149,8 @@ class JobRequestService {
 
       const skip = (page - 1) * limit;
 
+      console.log(`[JobRequestService] Final query:`, JSON.stringify(query, null, 2));
+
       const [jobRequests, totalCount] = await Promise.all([
         JobRequest.find(query)
           .populate('seeker', 'name email avatarUrl isPremium createdAt')
@@ -144,6 +160,8 @@ class JobRequestService {
           .limit(limit),
         JobRequest.countDocuments(query)
       ]);
+
+      console.log(`[JobRequestService] Found ${jobRequests.length} job requests out of ${totalCount} total`);
 
       return {
         jobRequests,

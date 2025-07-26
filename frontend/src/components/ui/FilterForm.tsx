@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 import { cn } from '../../utils/helpers';
 import Button from './Button';
 import { FilterState } from '../../types';
-import { EGYPT_GOVERNORATES, PRICE_RANGES } from '../../utils/constants';
+import { EGYPT_GOVERNORATES, EGYPT_CITIES, PRICE_RANGES } from '../../utils/constants.ts';
 import { SearchTab } from './SearchTabs';
 import { FormInput } from './';
 import UnifiedSelect from './UnifiedSelect';
@@ -36,6 +36,7 @@ const FilterForm = ({
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
   const handleInputChange = (field: keyof FilterState, value: string | boolean | { days: string[]; timeSlots: string[] }) => {
+    console.log('handleInputChange called:', field, value);
     onFiltersChange({ ...filters, [field]: value });
   };
 
@@ -123,15 +124,39 @@ const FilterForm = ({
             </label>
             <UnifiedSelect
               value={filters.location}
-              onChange={val => handleInputChange('location', val)}
+              onChange={val => {
+                console.log('Governorate selected:', val);
+                // Update both location and clear city in a single call
+                onFiltersChange({ ...filters, location: val, city: '' });
+              }}
               options={[
                 { value: '', label: 'جميع المحافظات' },
-                ...EGYPT_GOVERNORATES.map((gov) => ({ value: gov.id, label: gov.name }))
+                ...EGYPT_GOVERNORATES.map((gov) => ({ value: gov.name, label: gov.name }))
               ]}
               placeholder="اختر المحافظة"
               size="md"
               isSearchable
               searchPlaceholder="ابحث عن محافظة..."
+            />
+          </div>
+
+          {/* City Filter */}
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-3">
+              المدينة
+            </label>
+            <UnifiedSelect
+              value={filters.city}
+              onChange={val => handleInputChange('city', val)}
+              options={[
+                { value: '', label: 'جميع المدن' },
+                ...(EGYPT_CITIES[EGYPT_GOVERNORATES.find(g => g.name === filters.location)?.id || ''] || []).map((city) => ({ value: city, label: city }))
+              ]}
+              placeholder="اختر المدينة"
+              size="md"
+              isSearchable
+              searchPlaceholder="ابحث عن مدينة..."
+              disabled={!filters.location}
             />
           </div>
 
@@ -146,7 +171,7 @@ const FilterForm = ({
               options={[
                 { value: '', label: 'جميع الأسعار' },
                 ...Object.entries(PRICE_RANGES).map(([key, range]) => ({
-                  value: key.toLowerCase(),
+                  value: key,
                   label: range.label
                 }))
               ]}
@@ -176,20 +201,22 @@ const FilterForm = ({
             </div>
           )}
 
-          {/* Premium Filter */}
-          <div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-primary"
-                checked={filters.premiumOnly || false}
-                onChange={(e) => handleInputChange('premiumOnly', e.target.checked ? 'true' : '')}
-              />
-              <span className="text-sm font-medium text-text-primary">
-                عرض المستخدمين المميزين فقط
-              </span>
-            </label>
-          </div>
+          {/* Premium Filter - Only for Services */}
+          {activeTab === 'services' && (
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary"
+                  checked={filters.premiumOnly || false}
+                  onChange={(e) => handleInputChange('premiumOnly', e.target.checked)}
+                />
+                <span className="text-sm font-medium text-text-primary">
+                  عرض المستخدمين المميزين فقط
+                </span>
+              </label>
+            </div>
+          )}
 
           {activeTab === 'services' && (
             <>
@@ -316,10 +343,13 @@ const FilterForm = ({
           
           <UnifiedSelect
             value={filters.location}
-            onChange={val => handleInputChange('location', val)}
+            onChange={val => {
+              // Update both location and clear city in a single call
+              onFiltersChange({ ...filters, location: val, city: '' });
+            }}
             options={[
               { value: '', label: 'جميع المحافظات' },
-              ...EGYPT_GOVERNORATES.map((gov) => ({ value: gov.id, label: gov.name }))
+              ...EGYPT_GOVERNORATES.map((gov) => ({ value: gov.name, label: gov.name }))
             ]}
             placeholder="اختر المحافظة"
             size="md"
@@ -328,12 +358,26 @@ const FilterForm = ({
           />
           
           <UnifiedSelect
+            value={filters.city}
+            onChange={val => handleInputChange('city', val)}
+            options={[
+              { value: '', label: 'جميع المدن' },
+              ...(EGYPT_CITIES[EGYPT_GOVERNORATES.find(g => g.name === filters.location)?.id || ''] || []).map((city) => ({ value: city, label: city }))
+            ]}
+            placeholder="اختر المدينة"
+            size="md"
+            isSearchable
+            searchPlaceholder="ابحث عن مدينة..."
+            disabled={!filters.location}
+          />
+          
+          <UnifiedSelect
             value={filters.priceRange}
             onChange={val => handleInputChange('priceRange', val)}
             options={[
               { value: '', label: 'جميع الأسعار' },
               ...Object.entries(PRICE_RANGES).map(([key, range]) => ({
-                value: key.toLowerCase(),
+                value: key,
                 label: range.label
               }))
             ]}

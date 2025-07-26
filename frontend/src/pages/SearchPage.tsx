@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PageLayout from '../components/layout/PageLayout';
 import FilterForm from '../components/ui/FilterForm';
@@ -18,7 +18,26 @@ const fetchListings = async (filters: FilterState) => {
   if (filters.category) params.set('category', filters.category);
   if (filters.search) params.set('search', filters.search);
   if (filters.premiumOnly) params.set('premiumOnly', 'true');
-  // Add more filters as needed (location, price, etc.)
+  if (filters.location) params.set('location', filters.location);
+  if (filters.city) params.set('city', filters.city);
+  
+  // Convert priceRange to minPrice and maxPrice
+  if (filters.priceRange) {
+    const priceRanges = {
+      'VERY_LOW': { min: 0, max: 100 },
+      'LOW': { min: 100, max: 300 },
+      'MEDIUM': { min: 300, max: 500 },
+      'HIGH': { min: 500, max: 1000 },
+      'VERY_HIGH': { min: 1000, max: null }
+    };
+    
+    const range = priceRanges[filters.priceRange as keyof typeof priceRanges];
+    if (range) {
+      if (range.min !== null) params.set('minPrice', range.min.toString());
+      if (range.max !== null) params.set('maxPrice', range.max.toString());
+    }
+  }
+  
   const res = await fetch(`/api/listings/listings?${params.toString()}`);
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message || 'فشل تحميل الخدمات');
@@ -29,7 +48,26 @@ const fetchRequests = async (filters: FilterState) => {
   const params = new URLSearchParams();
   if (filters.category) params.set('category', filters.category);
   if (filters.search) params.set('search', filters.search);
-  // Add more filters as needed (location, price, etc.)
+  if (filters.location) params.set('location', filters.location);
+  if (filters.city) params.set('city', filters.city);
+  
+  // Convert priceRange to minPrice and maxPrice for requests
+  if (filters.priceRange) {
+    const priceRanges = {
+      'VERY_LOW': { min: 0, max: 100 },
+      'LOW': { min: 100, max: 300 },
+      'MEDIUM': { min: 300, max: 500 },
+      'HIGH': { min: 500, max: 1000 },
+      'VERY_HIGH': { min: 1000, max: null }
+    };
+    
+    const range = priceRanges[filters.priceRange as keyof typeof priceRanges];
+    if (range) {
+      if (range.min !== null) params.set('minBudget', range.min.toString());
+      if (range.max !== null) params.set('maxBudget', range.max.toString());
+    }
+  }
+  
   const res = await fetch(`/api/requests?${params.toString()}`);
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message || 'فشل تحميل الطلبات');
@@ -66,12 +104,13 @@ const SearchPage = () => {
 
   const [searchType, setSearchType] = useState<SearchType>(getSearchTypeFromUrl());
   const [filters, setFilters] = useState<FilterState>(getFiltersFromUrl());
+  
   const { data: listings = [], isLoading: listingsLoading, error: listingsError } = useQuery({
-    queryKey: ['listings', filters],
+    queryKey: ['listings', filters.search, filters.category, filters.premiumOnly, filters.location, filters.priceRange, filters.rating],
     queryFn: () => fetchListings(filters),
   });
   const { data: requests = [], isLoading: requestsLoading, error: requestsError } = useQuery({
-    queryKey: ['requests', filters],
+    queryKey: ['requests', filters.search, filters.category, filters.location, filters.city, filters.priceRange],
     queryFn: () => fetchRequests(filters),
   });
   const [providerOfferRequestIds, setProviderOfferRequestIds] = useState<string[]>([]);
@@ -97,94 +136,80 @@ const SearchPage = () => {
     setSearchType(getSearchTypeFromUrl());
   }, [location.pathname]);
 
-  // Change mappedProviders to be async and use Promise.all
-  const [resolvedProviders, setResolvedProviders] = useState<any[]>([]);
-  useEffect(() => {
-    const fetchProvidersWithStats = async () => {
-      const providers = await Promise.all((listings as unknown[]).map(async (listing: unknown) => {
-        const l = listing as Record<string, unknown>;
-        let providerName = 'مزود خدمة غير معروف';
-        let memberSince = '';
-        let address = '';
-        let budgetMin = 0;
-        let budgetMax = 0;
-        let providerId = '';
-        let provider: Record<string, unknown> = {};
-        if (l.provider && typeof l.provider === 'object' && 'name' in l.provider) {
-          provider = l.provider as Record<string, unknown>;
-          providerId = provider._id as string || '';
-          if (provider.name && typeof provider.name === 'object' && provider.name !== null) {
-            const nameObj = provider.name as { first?: string; last?: string };
-            providerName = `${nameObj.first || ''} ${nameObj.last || ''}`.trim() || providerName;
-          } else if (typeof provider.name === 'string') {
-            providerName = provider.name;
-          }
-          if ('createdAt' in provider && typeof provider.createdAt === 'string') {
-            memberSince = provider.createdAt;
-          }
-        }
-        if (l.location && typeof l.location === 'object') {
-          const loc = l.location as Record<string, unknown>;
-          const gov = loc.government as string || '';
-          const city = loc.city as string || '';
-          address = [gov, city].filter(Boolean).join('، ');
-        }
-        if (!address) address = 'غير محدد';
-        if (l.budget && typeof l.budget === 'object') {
-          budgetMin = (l.budget as Record<string, unknown>).min as number || 0;
-          budgetMax = (l.budget as Record<string, unknown>).max as number || 0;
-        }
-        // Fetch provider stats
-        let providerStats: any = {};
-        if (providerId) {
-          try {
-            const statsRes = await fetch(`/api/users/${providerId}/stats`, {
-              headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {},
-            });
-            const statsData = await statsRes.json();
-            providerStats = statsData.data?.stats || {};
-          } catch {}
-        }
-        const upgradeStatus = provider && 'providerUpgradeStatus' in provider 
-          ? provider.providerUpgradeStatus as string 
-          : 'none';
-        const validUpgradeStatus = ['none', 'pending', 'accepted', 'rejected'].includes(upgradeStatus) 
-          ? upgradeStatus as 'none' | 'pending' | 'accepted' | 'rejected' 
-          : 'none';
-        return {
-          id: l._id as string, // Use the listing's unique ID instead of provider ID
-          providerId: providerId || '', // Keep provider ID for reference
-          name: providerName,
-          rating: providerStats.averageRating || 0,
-          reviewCount: providerStats.totalReviews || 0,
-          completedJobs: providerStats.totalJobsCompleted || 0,
-          completionRate: providerStats.completionRate || 0,
-          skills: (provider.providerProfile && Array.isArray((provider.providerProfile as { skills?: string[] }).skills)) ? (provider.providerProfile as { skills?: string[] }).skills! : [],
-          workingDays: (provider.providerProfile && Array.isArray((provider.providerProfile as { workingDays?: string[] }).workingDays)) ? (provider.providerProfile as { workingDays?: string[] }).workingDays! : (l.workingDays as string[] || []),
-          startTime: (provider.providerProfile && (provider.providerProfile as { startTime?: string }).startTime) ? (provider.providerProfile as { startTime?: string }).startTime! : (l.startTime as string || ''),
-          endTime: (provider.providerProfile && (provider.providerProfile as { endTime?: string }).endTime) ? (provider.providerProfile as { endTime?: string }).endTime! : (l.endTime as string || ''),
-          category: l.category as string,
-          description: l.description as string,
-          title: l.title as string,
-          location: address,
-          budgetMin,
-          budgetMax,
-          memberSince,
-          startingPrice: budgetMin,
-          imageUrl: provider && 'avatarUrl' in provider ? provider.avatarUrl as string : '',
-          isPremium: provider && 'isPremium' in provider ? provider.isPremium as boolean : false,
-          isTopRated: provider && 'isTopRated' in provider ? provider.isTopRated as boolean : false,
-          isIdentityVerified: provider && 'isVerified' in provider ? provider.isVerified as boolean : false,
-          isVerified: provider && 'isVerified' in provider ? provider.isVerified as boolean : false,
-          providerUpgradeStatus: validUpgradeStatus,
-          availability: l.availability as { days: string[]; timeSlots: string[] } || { days: [], timeSlots: [] },
-        };
-      }));
-      setResolvedProviders(await Promise.all(providers));
+  // Simplified provider processing without heavy async operations
+  const resolvedProviders = (listings as unknown[]).map((listing: unknown) => {
+    const l = listing as Record<string, unknown>;
+    let providerName = 'مزود خدمة غير معروف';
+    let memberSince = '';
+    let address = '';
+    let budgetMin = 0;
+    let budgetMax = 0;
+    let providerId = '';
+    let provider: Record<string, unknown> = {};
+    
+    if (l.provider && typeof l.provider === 'object' && 'name' in l.provider) {
+      provider = l.provider as Record<string, unknown>;
+      providerId = provider._id as string || '';
+      if (provider.name && typeof provider.name === 'object' && provider.name !== null) {
+        const nameObj = provider.name as { first?: string; last?: string };
+        providerName = `${nameObj.first || ''} ${nameObj.last || ''}`.trim() || providerName;
+      } else if (typeof provider.name === 'string') {
+        providerName = provider.name;
+      }
+      if ('createdAt' in provider && typeof provider.createdAt === 'string') {
+        memberSince = provider.createdAt;
+      }
+    }
+    
+    if (l.location && typeof l.location === 'object') {
+      const loc = l.location as Record<string, unknown>;
+      const gov = loc.government as string || '';
+      const city = loc.city as string || '';
+      address = [gov, city].filter(Boolean).join('، ');
+    }
+    if (!address) address = 'غير محدد';
+    
+    if (l.budget && typeof l.budget === 'object') {
+      budgetMin = (l.budget as Record<string, unknown>).min as number || 0;
+      budgetMax = (l.budget as Record<string, unknown>).max as number || 0;
+    }
+    
+    const upgradeStatus = provider && 'providerUpgradeStatus' in provider 
+      ? provider.providerUpgradeStatus as string 
+      : 'none';
+    const validUpgradeStatus = ['none', 'pending', 'accepted', 'rejected'].includes(upgradeStatus) 
+      ? upgradeStatus as 'none' | 'pending' | 'accepted' | 'rejected' 
+      : 'none';
+    
+    return {
+      id: l._id as string,
+      providerId: providerId || '',
+      name: providerName,
+      rating: 0, // Default rating, can be enhanced later
+      reviewCount: 0, // Default review count
+      completedJobs: 0, // Default completed jobs
+      completionRate: 0, // Default completion rate
+      skills: (provider.providerProfile && Array.isArray((provider.providerProfile as { skills?: string[] }).skills)) ? (provider.providerProfile as { skills?: string[] }).skills! : [],
+      workingDays: (provider.providerProfile && Array.isArray((provider.providerProfile as { workingDays?: string[] }).workingDays)) ? (provider.providerProfile as { workingDays?: string[] }).workingDays! : (l.workingDays as string[] || []),
+      startTime: (provider.providerProfile && (provider.providerProfile as { startTime?: string }).startTime) ? (provider.providerProfile as { startTime?: string }).startTime! : (l.startTime as string || ''),
+      endTime: (provider.providerProfile && (provider.providerProfile as { endTime?: string }).endTime) ? (provider.providerProfile as { endTime?: string }).endTime! : (l.endTime as string || ''),
+      category: l.category as string,
+      description: l.description as string,
+      title: l.title as string,
+      location: address,
+      budgetMin,
+      budgetMax,
+      memberSince,
+      startingPrice: budgetMin,
+      imageUrl: provider && 'avatarUrl' in provider ? provider.avatarUrl as string : '',
+      isPremium: provider && 'isPremium' in provider ? provider.isPremium as boolean : false,
+      isTopRated: provider && 'isTopRated' in provider ? provider.isTopRated as boolean : false,
+      isIdentityVerified: provider && 'isVerified' in provider ? provider.isVerified as boolean : false,
+      isVerified: provider && 'isVerified' in provider ? provider.isVerified as boolean : false,
+      providerUpgradeStatus: validUpgradeStatus,
+      availability: l.availability as { days: string[]; timeSlots: string[] } || { days: [], timeSlots: [] },
     };
-    fetchProvidersWithStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings, accessToken]);
+  });
 
   const mappedRequests = (requests as unknown[]).map((req) => {
     const r = req as Record<string, unknown>;
@@ -217,10 +242,8 @@ const SearchPage = () => {
     };
   });
 
-  // Update URL when filters change
-  useEffect(() => {
-    updateFiltersInUrl(filters);
-  }, [filters, updateFiltersInUrl]);
+  // Remove automatic URL updates to prevent infinite loops
+  // URL will be updated manually when filters change
 
   useEffect(() => {
     const fetchProviderOffers = async () => {
@@ -273,17 +296,21 @@ const SearchPage = () => {
     setFilters(prev => ({ ...prev, search: query }));
   };
 
-  const handleFiltersChange = (newFilters: FilterState) => {
+  const handleFiltersChange = useCallback((newFilters: FilterState) => {
     setFilters(newFilters);
-  };
+  }, []);
 
   const handleClearFilters = () => {
     setFilters({
       search: '',
       location: '',
+      city: '',
       priceRange: '',
       rating: '',
-      category: ''
+      category: '',
+      premiumOnly: false,
+      workingDays: [],
+      availability: { days: [], timeSlots: [] }
     });
   };
 
