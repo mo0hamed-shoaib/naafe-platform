@@ -331,8 +331,39 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
       const data = await res.json();
       if (data.success) {
         setNotifications(prev => prev.map(n => n._id === notificationId ? { ...n, isRead: true } : n));
+        
         if (relatedChatId) {
-          navigate(`/chat/${relatedChatId}`);
+          // Check if this is a direct conversation (no jobRequestId)
+          try {
+            const conversationRes = await fetch(`/api/chat/conversations/${relatedChatId}`, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            const conversationData = await conversationRes.json();
+            
+            if (conversationData.success && conversationData.data.conversation) {
+              const conversation = conversationData.data.conversation;
+              
+              // If this is a direct conversation (no jobRequestId), navigate to direct chat
+              if (!conversation.jobRequestId) {
+                // Determine the other user's ID
+                const otherUserId = user?.id === conversation.participants.seeker._id 
+                  ? conversation.participants.provider._id 
+                  : conversation.participants.seeker._id;
+                
+                navigate(`/chat/new?userId=${otherUserId}`);
+              } else {
+                // This is a job request conversation, navigate normally
+                navigate(`/chat/${relatedChatId}`);
+              }
+            } else {
+              // Fallback to normal navigation if conversation fetch fails
+              navigate(`/chat/${relatedChatId}`);
+            }
+          } catch (error) {
+            console.error('Error fetching conversation details:', error);
+            // Fallback to normal navigation
+            navigate(`/chat/${relatedChatId}`);
+          }
         }
       }
     } catch (err) {

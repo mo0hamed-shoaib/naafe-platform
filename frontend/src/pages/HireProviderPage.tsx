@@ -9,7 +9,12 @@ import Button from '../components/ui/Button';
 import FormInput from '../components/ui/FormInput';
 import FormTextarea from '../components/ui/FormTextarea';
 import UnifiedSelect from '../components/ui/UnifiedSelect';
-import { CheckCircle } from 'lucide-react';
+import { AIAssistant, PricingGuidance } from '../components/ui';
+import { EGYPT_GOVERNORATES, EGYPT_CITIES } from '../utils/constants';
+import { TimePicker, ConfigProvider } from 'antd';
+import dayjs from 'dayjs';
+import arEG from 'antd/locale/ar_EG';
+import { Upload, X, ImageIcon } from 'lucide-react';
 
 interface Provider {
   _id: string;
@@ -33,29 +38,29 @@ interface Provider {
   };
 }
 
-interface Category {
-  _id: string;
-  name: string;
-  description?: string;
+interface HireRequestFormData {
+  serviceTitle: string;
+  category: string;
+  serviceDescription: string;
+  minBudget: string;
+  maxBudget: string;
+  government: string;
+  city: string;
+  street: string;
+  apartmentNumber: string;
+  additionalInformation: string;
+  preferredDateTime: string;
+  deliveryTimeDays: string;
+  tags: string;
+  images: string[]; // Array of image URLs
 }
 
-interface FormData {
-  title: string;
-  description: string;
-  category: string;
-  budget: {
-    min: string;
-    max: string;
-  };
-  deadline: string;
-  location: {
-    government: string;
-    city: string;
-    address: string;
-  };
-  urgency: 'low' | 'medium' | 'high';
-  requirements: string[];
-  preferredContactMethod: 'chat' | 'phone' | 'email';
+interface AddressFields {
+  government: string;
+  city: string;
+  street: string;
+  apartmentNumber: string;
+  additionalInformation: string;
 }
 
 const HireProviderPage: React.FC = () => {
@@ -64,24 +69,42 @@ const HireProviderPage: React.FC = () => {
   const { user, accessToken } = useAuth();
   
   const [provider, setProvider] = useState<Provider | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   
-  const [formData, setFormData] = useState<FormData>({
-    title: '',
-    description: '',
+  const [formData, setFormData] = useState<HireRequestFormData>({
+    serviceTitle: '',
     category: '',
-    budget: { min: '', max: '' },
-    deadline: '',
-    location: { government: '', city: '', address: '' },
-    urgency: 'medium',
-    requirements: [],
-    preferredContactMethod: 'chat'
+    serviceDescription: '',
+    minBudget: '',
+    maxBudget: '',
+    government: '',
+    city: '',
+    street: '',
+    apartmentNumber: '',
+    additionalInformation: '',
+    preferredDateTime: '',
+    deliveryTimeDays: '',
+    tags: '',
+    images: []
   });
 
-  const [newRequirement, setNewRequirement] = useState('');
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [profileAddress, setProfileAddress] = useState<AddressFields | null>(null);
+  const [selectedGovernorate, setSelectedGovernorate] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [customCity, setCustomCity] = useState('');
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [imageUploadProgress, setImageUploadProgress] = useState<{[key: string]: boolean}>({});
+
+  // Update city list when governorate changes
+  const cityOptions = selectedGovernorate
+    ? [...(EGYPT_CITIES[selectedGovernorate] || []), 'أخرى']
+    : [];
 
   useEffect(() => {
     if (!user) {
@@ -98,32 +121,44 @@ const HireProviderPage: React.FC = () => {
         
         // Fetch provider
         const providerRes = await fetch(`/api/users/${providerId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         const providerData = await providerRes.json();
         if (providerData.success) {
           setProvider(providerData.data.user);
+        } else {
+          throw new Error(providerData.error?.message || 'فشل تحميل بيانات مقدم الخدمة');
         }
         
         // Fetch categories
         const categoriesRes = await fetch('/api/categories');
         const categoriesData = await categoriesRes.json();
-        if (categoriesData.success) {
-          setCategories(categoriesData.data.categories);
+        if (categoriesData.success && Array.isArray(categoriesData.data.categories)) {
+          setCategories(categoriesData.data.categories.map((cat: { name: string }) => cat.name));
+        } else {
+          setCategoriesError('فشل تحميل الفئات');
+        }
+        
+        // Fetch user's saved address
+        const profileRes = await fetch('/api/users/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const profileData = await profileRes.json();
+        if (profileData.success && profileData.data.user.profile?.location) {
+          setProfileAddress(profileData.data.user.profile.location);
         }
         
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('فشل في تحميل البيانات');
+        setError(err instanceof Error ? err.message : 'فشل تحميل البيانات');
       } finally {
         setLoading(false);
+        setCategoriesLoading(false);
       }
     };
 
     fetchData();
-  }, [providerId, user, accessToken, navigate]);
+  }, [providerId, accessToken, user, navigate]);
 
   const getProviderName = (provider: Provider): string => {
     if (typeof provider.name === 'string') return provider.name;
@@ -131,126 +166,194 @@ const HireProviderPage: React.FC = () => {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...(prev[parent as keyof FormData] as Record<string, string>),
-          [child]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
-    }
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleAddRequirement = () => {
-    if (newRequirement.trim() && !formData.requirements.includes(newRequirement.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        requirements: [...prev.requirements, newRequirement.trim()]
-      }));
-      setNewRequirement('');
-    }
+  const handleAISuggestion = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleRemoveRequirement = (index: number) => {
+  const handlePricingApply = (min: number, max: number) => {
     setFormData(prev => ({
       ...prev,
-      requirements: prev.requirements.filter((_, i) => i !== index)
+      minBudget: min.toString(),
+      maxBudget: max.toString()
+    }));
+  };
+
+  const handleAutofillAddress = () => {
+    if (profileAddress) {
+      const govId = EGYPT_GOVERNORATES.find(g => g.name === profileAddress.government)?.id || '';
+      setSelectedGovernorate(govId);
+      setSelectedCity(profileAddress.city || '');
+      setCustomCity(profileAddress.city && !EGYPT_CITIES[govId]?.includes(profileAddress.city) ? profileAddress.city : '');
+      setFormData(prev => ({
+        ...prev,
+        government: profileAddress.government || '',
+        city: profileAddress.city || '',
+        street: profileAddress.street || '',
+        apartmentNumber: profileAddress.apartmentNumber || '',
+        additionalInformation: profileAddress.additionalInformation || ''
+      }));
+    }
+  };
+
+  // Image upload handler
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImages(true);
+    const newImages: string[] = [];
+    const maxFiles = 5;
+    const maxFileSize = 5 * 1024 * 1024; // 5MB
+
+    for (let i = 0; i < Math.min(files.length, maxFiles - formData.images.length); i++) {
+      const file = files[i];
+      
+      // Validate file size
+      if (file.size > maxFileSize) {
+        alert(`الملف ${file.name} أكبر من 5 ميجابايت`);
+        continue;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert(`الملف ${file.name} ليس صورة صالحة`);
+        continue;
+      }
+
+      setImageUploadProgress(prev => ({ ...prev, [file.name]: true }));
+
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const res = await fetch('/api/upload/image', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken || localStorage.getItem('accessToken')}`
+          },
+          body: formData
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          newImages.push(data.data.url);
+        } else {
+          alert(`فشل رفع الصورة ${file.name}: ${data.error?.message || 'خطأ غير معروف'}`);
+        }
+      } catch (error) {
+        console.error('Image upload error:', error);
+        alert(`فشل رفع الصورة ${file.name}`);
+      } finally {
+        setImageUploadProgress(prev => ({ ...prev, [file.name]: false }));
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      images: [...prev.images, ...newImages]
+    }));
+    setUploadingImages(false);
+  };
+
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
     }));
   };
 
   const validateForm = (): boolean => {
-    if (!formData.title.trim()) {
-      setError('يرجى إدخال عنوان المشروع');
-      return false;
-    }
-    if (!formData.description.trim()) {
-      setError('يرجى إدخال وصف المشروع');
+    if (!formData.serviceTitle.trim()) {
+      setError('عنوان الخدمة مطلوب');
       return false;
     }
     if (!formData.category) {
-      setError('يرجى اختيار فئة الخدمة');
+      setError('الفئة مطلوبة');
       return false;
     }
-    if (!formData.budget.min || !formData.budget.max) {
-      setError('يرجى إدخال الميزانية المطلوبة');
+    if (!formData.serviceDescription.trim()) {
+      setError('وصف الخدمة مطلوب');
       return false;
     }
-    if (parseInt(formData.budget.min) > parseInt(formData.budget.max)) {
-      setError('الحد الأدنى للميزانية لا يمكن أن يكون أكبر من الحد الأقصى');
+    if (!formData.minBudget || !formData.maxBudget) {
+      setError('الميزانية مطلوبة');
       return false;
     }
-    if (!formData.deadline) {
-      setError('يرجى تحديد الموعد النهائي');
+    if (Number(formData.minBudget) > Number(formData.maxBudget)) {
+      setError('الحد الأدنى للميزانية يجب أن يكون أقل من الحد الأقصى');
       return false;
     }
-    const deadlineDate = new Date(formData.deadline);
-    if (deadlineDate <= new Date()) {
-      setError('الموعد النهائي يجب أن يكون في المستقبل');
+    if (!formData.government || !formData.city) {
+      setError('الموقع مطلوب');
       return false;
     }
-    
-    setError(null);
+    if (!formData.preferredDateTime) {
+      setError('التاريخ والوقت المفضل مطلوب');
+      return false;
+    }
+    if (!formData.deliveryTimeDays) {
+      setError('مدة التنفيذ مطلوبة');
+      return false;
+    }
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setError(null);
+    setSuccess(false);
+
     if (!validateForm()) return;
-    
+
     setSubmitting(true);
-    
     try {
-      const token = accessToken || localStorage.getItem('accessToken') || '';
-      
-      const jobRequestData = {
-        title: formData.title,
-        description: formData.description,
+      const payload = {
+        title: formData.serviceTitle,
+        description: formData.serviceDescription,
         category: formData.category,
         budget: {
-          min: parseInt(formData.budget.min),
-          max: parseInt(formData.budget.max),
-          currency: 'EGP'
+          min: Number(formData.minBudget),
+          max: Number(formData.maxBudget),
+          currency: 'EGP',
         },
-        deadline: formData.deadline,
         location: {
-          address: formData.location.address,
-          government: formData.location.government,
-          city: formData.location.city
+          government: formData.government,
+          city: formData.city,
+          street: formData.street,
+          apartmentNumber: formData.apartmentNumber,
+          additionalInformation: formData.additionalInformation,
         },
-        urgency: formData.urgency,
-        requiredSkills: formData.requirements,
-        preferredContactMethod: formData.preferredContactMethod,
-        preferredProvider: providerId, // Add this field to indicate this is a direct hire
-        directHire: true // Flag to indicate this is a direct hire request
+        preferredDateTime: formData.preferredDateTime,
+        deliveryTimeDays: Number(formData.deliveryTimeDays),
+        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        images: formData.images,
+        targetProviderId: providerId // Add target provider ID
       };
 
-      const response = await fetch('/api/requests', {
+      const res = await fetch('/api/requests', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${accessToken || localStorage.getItem('accessToken')}`,
         },
-        body: JSON.stringify(jobRequestData)
+        body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error?.message || 'فشل في إنشاء طلب التوظيف');
+      const data = await res.json();
+      if (data.success) {
+        setSuccess(true);
+        setTimeout(() => {
+          navigate(`/requests/${data.data.jobRequest._id}`);
+        }, 1500);
+      } else {
+        setError(data.error?.message || 'فشل إرسال طلب التوظيف');
       }
-
-      // Redirect to the created job request
-      navigate(`/request/${data.data._id}`, {
-        state: { message: 'تم إنشاء طلب التوظيف بنجاح! سيتم إشعار مقدم الخدمة.' }
-      });
-      
     } catch (err) {
-      console.error('Error submitting hire request:', err);
-      setError(err instanceof Error ? err.message : 'حدث خطأ أثناء إنشاء الطلب');
+      console.error('Submit error:', err);
+      setError('حدث خطأ أثناء إرسال الطلب');
     } finally {
       setSubmitting(false);
     }
@@ -268,7 +371,7 @@ const HireProviderPage: React.FC = () => {
     );
   }
 
-  if (!provider) {
+  if (error && !provider) {
     return (
       <div className="min-h-screen bg-warm-cream">
         <Header />
@@ -276,34 +379,14 @@ const HireProviderPage: React.FC = () => {
           <BackButton to={`/provider/${providerId}`} className="mb-4" />
           <BaseCard className="text-center p-8">
             <h2 className="text-xl font-bold text-red-600 mb-2">خطأ</h2>
-            <p className="text-text-secondary mb-4">لم يتم العثور على مقدم الخدمة</p>
-            <Button onClick={() => navigate('/search/providers')}>العودة للبحث</Button>
+            <p className="text-text-secondary mb-4">{error}</p>
+            <Button onClick={() => navigate(`/provider/${providerId}`)}>العودة لصفحة مقدم الخدمة</Button>
           </BaseCard>
         </div>
         <Footer />
       </div>
     );
   }
-
-  const governorates = [
-    'القاهرة', 'الجيزة', 'الإسكندرية', 'الدقهلية', 'الشرقية', 'القليوبية',
-    'كفر الشيخ', 'الغربية', 'المنوفية', 'البحيرة', 'الإسماعيلية',
-    'بورسعيد', 'السويس', 'المنيا', 'بني سويف', 'الفيوم', 'أسيوط',
-    'سوهاج', 'قنا', 'الأقصر', 'أسوان', 'البحر الأحمر', 'الوادي الجديد',
-    'مطروح', 'شمال سيناء', 'جنوب سيناء'
-  ];
-
-  const urgencyOptions = [
-    { value: 'low', label: 'عادي' },
-    { value: 'medium', label: 'متوسط الأولوية' },
-    { value: 'high', label: 'عاجل' }
-  ];
-
-  const contactOptions = [
-    { value: 'chat', label: 'الدردشة في التطبيق' },
-    { value: 'phone', label: 'المكالمات الهاتفية' },
-    { value: 'email', label: 'البريد الإلكتروني' }
-  ];
 
   return (
     <div className="min-h-screen bg-warm-cream">
@@ -312,232 +395,369 @@ const HireProviderPage: React.FC = () => {
         <div className="container mx-auto px-4 py-8">
           <BackButton to={`/provider/${providerId}`} className="mb-6" />
           
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-deep-teal mb-4">توظيف مباشر</h1>
-            <p className="text-text-secondary text-lg">
-              إنشاء مشروع مخصص لـ <span className="font-semibold text-deep-teal">{getProviderName(provider)}</span>
-            </p>
-          </div>
-
-          {/* Provider Info Card */}
-          <BaseCard className="mb-8">
-            <div className="flex items-center gap-4 p-4">
+          {/* Provider Info Header */}
+          <BaseCard className="mb-8 bg-gradient-to-r from-deep-teal/5 to-soft-teal/5">
+            <div className="flex items-center gap-4">
               <img
-                src={provider.avatarUrl || '/default-avatar.png'}
-                alt={getProviderName(provider)}
-                className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                src={provider?.avatarUrl || '/default-avatar.png'}
+                alt={getProviderName(provider!)}
+                className="w-16 h-16 rounded-full object-cover border-2 border-deep-teal"
               />
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-deep-teal">{getProviderName(provider)}</h3>
-                {provider.profile?.bio && (
-                  <p className="text-text-secondary text-sm mt-1">{provider.profile.bio}</p>
-                )}
-                <div className="flex items-center gap-4 mt-2 text-sm text-text-secondary">
-                  {provider.isVerified && (
-                    <div className="flex items-center gap-1 text-green-600">
-                      <CheckCircle className="w-4 h-4" />
-                      <span>موثق</span>
-                    </div>
-                  )}
-                  {provider.providerProfile && (
-                    <span>{provider.providerProfile.totalJobsCompleted} مهمة مكتملة</span>
-                  )}
-                </div>
+              <div>
+                <h2 className="text-xl font-bold text-deep-teal">
+                  توظيف {getProviderName(provider!)}
+                </h2>
+                <p className="text-text-secondary">
+                  إرسال طلب خدمة مباشر لمقدم الخدمة
+                </p>
               </div>
             </div>
           </BaseCard>
 
-          {/* Form */}
-          <BaseCard className="p-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Project Details */}
-              <div>
-                <h2 className="text-xl font-bold text-deep-teal mb-4">تفاصيل المشروع</h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <FormInput
-                    label="عنوان المشروع"
-                    placeholder="مثل: تصميم موقع إلكتروني للشركة"
-                    value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    required
-                  />
-                  
-                  <UnifiedSelect
-                    label="فئة الخدمة"
-                    value={formData.category}
-                    onChange={(value) => handleInputChange('category', value)}
-                    options={categories.map(cat => ({ value: cat.name, label: cat.name }))}
-                    placeholder="اختر فئة الخدمة"
-                    required
-                  />
-                </div>
-
-                <FormTextarea
-                  label="وصف المشروع"
-                  placeholder="اشرح تفاصيل المشروع والمهام المطلوبة..."
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  rows={4}
-                  required
-                />
-              </div>
-
-              {/* Budget */}
-              <div>
-                <h3 className="text-lg font-semibold text-deep-teal mb-3">الميزانية</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormInput
-                    label="الحد الأدنى (جنيه)"
-                    type="number"
-                    placeholder="100"
-                    value={formData.budget.min}
-                    onChange={(e) => handleInputChange('budget.min', e.target.value)}
-                    min="1"
-                    required
-                  />
-                  <FormInput
-                    label="الحد الأقصى (جنيه)"
-                    type="number"
-                    placeholder="500"
-                    value={formData.budget.max}
-                    onChange={(e) => handleInputChange('budget.max', e.target.value)}
-                    min="1"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Timeline & Priority */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormInput
-                  label="الموعد النهائي"
-                  type="date"
-                  value={formData.deadline}
-                  onChange={(e) => handleInputChange('deadline', e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  required
-                />
-                
-                <UnifiedSelect
-                  label="أولوية المشروع"
-                  value={formData.urgency}
-                  onChange={(value) => handleInputChange('urgency', value)}
-                  options={urgencyOptions}
-                  placeholder="اختر الأولوية"
-                />
-              </div>
-
-              {/* Location */}
-              <div>
-                <h3 className="text-lg font-semibold text-deep-teal mb-3">الموقع</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <UnifiedSelect
-                    label="المحافظة"
-                    value={formData.location.government}
-                    onChange={(value) => handleInputChange('location.government', value)}
-                    options={governorates.map(gov => ({ value: gov, label: gov }))}
-                    placeholder="اختر المحافظة"
-                  />
-                  
-                  <FormInput
-                    label="المدينة"
-                    placeholder="مثل: مدينة نصر، المعادي..."
-                    value={formData.location.city}
-                    onChange={(e) => handleInputChange('location.city', e.target.value)}
-                  />
-                </div>
-                
-                <FormInput
-                  label="العنوان التفصيلي (اختياري)"
-                  placeholder="الشارع، رقم المبنى..."
-                  value={formData.location.address}
-                  onChange={(e) => handleInputChange('location.address', e.target.value)}
-                  className="mt-4"
-                />
-              </div>
-
-              {/* Requirements */}
-              <div>
-                <h3 className="text-lg font-semibold text-deep-teal mb-3">المتطلبات الخاصة</h3>
-                
-                <div className="flex gap-2 mb-3">
-                  <FormInput
-                    placeholder="أضف متطلب جديد..."
-                    value={newRequirement}
-                    onChange={(e) => setNewRequirement(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddRequirement())}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleAddRequirement}
-                    disabled={!newRequirement.trim()}
-                  >
-                    إضافة
-                  </Button>
-                </div>
-                
-                {formData.requirements.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {formData.requirements.map((req, index) => (
-                      <span
-                        key={index}
-                        className="bg-soft-teal/20 text-deep-teal px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                      >
-                        {req}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveRequirement(index)}
-                          className="text-deep-teal hover:text-red-600 font-bold text-lg leading-none"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Contact Preference */}
-              <UnifiedSelect
-                label="طريقة التواصل المفضلة"
-                value={formData.preferredContactMethod}
-                onChange={(value) => handleInputChange('preferredContactMethod', value)}
-                options={contactOptions}
-                placeholder="اختر طريقة التواصل"
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* AI Assistant & Pricing Guidance */}
+            <div className="lg:col-span-1 space-y-6">
+              <AIAssistant
+                formType="hire"
+                category={formData.category}
+                location={formData.government}
+                userBudget={formData.minBudget && formData.maxBudget ? {
+                  min: Number(formData.minBudget),
+                  max: Number(formData.maxBudget)
+                } : null}
+                onSuggestion={handleAISuggestion}
+                className="mb-4"
+                rating={user?.providerProfile?.rating}
               />
+              <PricingGuidance
+                formType="hire"
+                category={formData.category}
+                location={formData.government}
+                userBudget={formData.minBudget && formData.maxBudget ? {
+                  min: Number(formData.minBudget),
+                  max: Number(formData.maxBudget)
+                } : null}
+                onPricingApply={handlePricingApply}
+                skills={provider?.skills || []}
+                rating={provider?.providerProfile?.rating}
+              />
+            </div>
 
-              {/* Error Display */}
-              {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-800">
-                  {error}
-                </div>
-              )}
+            {/* Main Form Section */}
+            <div className="lg:col-span-2">
+              <BaseCard className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 md:p-10 border border-gray-200">
+                <h1 className="text-3xl font-extrabold text-[#0e1b18] text-center mb-8">طلب توظيف مباشر</h1>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="serviceTitle">عنوان الخدمة</label>
+                      <FormInput
+                        type="text"
+                        id="serviceTitle"
+                        name="serviceTitle"
+                        value={formData.serviceTitle}
+                        onChange={(e) => handleInputChange('serviceTitle', e.target.value)}
+                        placeholder="عنوان الخدمة المطلوبة"
+                        required
+                        size="md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="category">الفئة</label>
+                      <UnifiedSelect
+                        value={formData.category}
+                        onChange={val => setFormData(prev => ({ ...prev, category: val }))}
+                        options={categories.map((cat: string) => ({ value: cat, label: cat }))}
+                        placeholder="اختر الفئة"
+                        required
+                        disabled={categoriesLoading}
+                        size="md"
+                      />
+                      {categoriesError && <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">{categoriesError}</div>}
+                    </div>
+                  </div>
 
-              {/* Submit */}
-              <div className="flex gap-4 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate(`/provider/${providerId}`)}
-                  className="flex-1"
-                >
-                  إلغاء
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={submitting}
-                  className="flex-1"
-                >
-                  {submitting ? 'جاري الإرسال...' : 'إرسال طلب التوظيف'}
-                </Button>
-              </div>
-            </form>
-          </BaseCard>
+                  {/* Service Description Field */}
+                  <div>
+                    <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="serviceDescription">وصف الخدمة</label>
+                    <FormTextarea
+                      id="serviceDescription"
+                      name="serviceDescription"
+                      value={formData.serviceDescription}
+                      onChange={(e) => handleInputChange('serviceDescription', e.target.value)}
+                      placeholder="اكتب وصفاً مفصلاً للخدمة المطلوبة..."
+                      required
+                      size="md"
+                    />
+                  </div>
+
+                  {/* Location Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">المحافظة</label>
+                      <UnifiedSelect
+                        value={selectedGovernorate}
+                        onChange={val => {
+                          setSelectedGovernorate(val);
+                          setSelectedCity('');
+                          setCustomCity('');
+                          setFormData(prev => ({ ...prev, government: EGYPT_GOVERNORATES.find(g => g.id === val)?.name || '' }));
+                        }}
+                        options={EGYPT_GOVERNORATES.map(g => ({ value: g.id, label: g.name }))}
+                        placeholder="اختر المحافظة"
+                        isSearchable
+                        searchPlaceholder="ابحث عن محافظة..."
+                        required
+                        size="md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">المدينة</label>
+                      <UnifiedSelect
+                        value={selectedCity}
+                        onChange={val => {
+                          setSelectedCity(val);
+                          setCustomCity('');
+                          setFormData(prev => ({ ...prev, city: val === 'أخرى' ? '' : val }));
+                        }}
+                        options={cityOptions.map(city => ({ value: city, label: city }))}
+                        placeholder="اختر المدينة"
+                        isSearchable
+                        searchPlaceholder="ابحث عن مدينة..."
+                        required
+                        size="md"
+                        disabled={!selectedGovernorate}
+                      />
+                      {selectedCity === 'أخرى' && (
+                        <FormInput
+                          type="text"
+                          value={customCity}
+                          onChange={e => {
+                            setCustomCity(e.target.value);
+                            setFormData(prev => ({ ...prev, city: e.target.value }));
+                          }}
+                          placeholder="أدخل اسم المدينة"
+                          size="md"
+                          className="mt-2"
+                          required
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Use Saved Address Button */}
+                  {profileAddress && (
+                    <div className="mb-4 flex items-center gap-4">
+                      <button
+                        type="button"
+                        className="bg-bright-orange text-white font-semibold py-2 px-6 rounded-xl hover:bg-bright-orange/90 transition-all duration-300 shadow"
+                        onClick={handleAutofillAddress}
+                      >
+                        استخدم العنوان المحفوظ
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Detailed Address Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="street">الشارع</label>
+                      <FormInput
+                        type="text"
+                        id="street"
+                        name="street"
+                        value={formData.street}
+                        onChange={(e) => handleInputChange('street', e.target.value)}
+                        placeholder="اسم الشارع"
+                        size="md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="apartmentNumber">رقم الشقة/المكتب</label>
+                      <FormInput
+                        type="text"
+                        id="apartmentNumber"
+                        name="apartmentNumber"
+                        value={formData.apartmentNumber}
+                        onChange={(e) => handleInputChange('apartmentNumber', e.target.value)}
+                        placeholder="رقم الشقة أو المكتب"
+                        size="md"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="additionalInformation">معلومات إضافية</label>
+                    <FormTextarea
+                      id="additionalInformation"
+                      name="additionalInformation"
+                      value={formData.additionalInformation}
+                      onChange={(e) => handleInputChange('additionalInformation', e.target.value)}
+                      placeholder="معلومات إضافية عن الموقع (مثال: قرب من مترو، مبنى معين، إلخ)"
+                      size="md"
+                    />
+                  </div>
+
+                  {/* Budget Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="minBudget">يبدأ من (جنيه)</label>
+                      <FormInput
+                        type="number"
+                        id="minBudget"
+                        name="minBudget"
+                        value={formData.minBudget}
+                        onChange={(e) => handleInputChange('minBudget', e.target.value)}
+                        placeholder="مثال: 100"
+                        min="0"
+                        required
+                        size="md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="maxBudget">إلى (جنيه)</label>
+                      <FormInput
+                        type="number"
+                        id="maxBudget"
+                        name="maxBudget"
+                        value={formData.maxBudget}
+                        onChange={(e) => handleInputChange('maxBudget', e.target.value)}
+                        placeholder="مثال: 500"
+                        min="0"
+                        required
+                        size="md"
+                      />
+                    </div>
+                  </div>
+
+                                     {/* Preferred Date & Time */}
+                   <div>
+                     <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="preferredDateTime">التاريخ والوقت المفضل</label>
+                     <ConfigProvider locale={arEG}>
+                       <input
+                         id="preferredDateTime"
+                         type="datetime-local"
+                         value={formData.preferredDateTime}
+                         onChange={(e) => handleInputChange('preferredDateTime', e.target.value)}
+                         className="w-full bg-white border-2 border-gray-300 rounded-lg py-2 pr-3 pl-3 focus:ring-2 focus:ring-accent focus:border-accent text-right text-black"
+                         required
+                         aria-label="التاريخ والوقت المفضل"
+                       />
+                     </ConfigProvider>
+                   </div>
+
+                  {/* Delivery Time */}
+                  <div>
+                    <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="deliveryTimeDays">مدة التنفيذ (أيام)</label>
+                    <FormInput
+                      type="number"
+                      id="deliveryTimeDays"
+                      name="deliveryTimeDays"
+                      value={formData.deliveryTimeDays}
+                      onChange={(e) => handleInputChange('deliveryTimeDays', e.target.value)}
+                      placeholder="مثال: 3"
+                      min="1"
+                      required
+                      size="md"
+                    />
+                  </div>
+
+                  {/* Tags */}
+                  <div>
+                    <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="tags">الوسوم (افصل بينها بفاصلة)</label>
+                    <FormInput
+                      type="text"
+                      id="tags"
+                      name="tags"
+                      value={formData.tags}
+                      onChange={(e) => handleInputChange('tags', e.target.value)}
+                      placeholder="مثال: تنظيف, سباكة, كهرباء"
+                      size="md"
+                    />
+                  </div>
+
+                  {/* Image Upload Section */}
+                  <div>
+                    <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">
+                      صور توضيحية للخدمة (اختياري)
+                    </label>
+                    <div className="border-2 border-dashed border-deep-teal/30 rounded-lg p-6 text-center hover:border-deep-teal/50 transition-colors">
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImages || formData.images.length >= 5}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <label htmlFor="image-upload" className="cursor-pointer">
+                        <Upload className="w-8 h-8 text-deep-teal mx-auto mb-2" />
+                        <p className="text-deep-teal font-medium mb-1">
+                          {uploadingImages ? 'جاري رفع الصور...' : 'اضغط لرفع الصور'}
+                        </p>
+                        <p className="text-text-secondary text-sm">
+                          يمكنك رفع حتى 5 صور (JPG, PNG) - الحد الأقصى 5 ميجابايت لكل صورة
+                        </p>
+                      </label>
+                    </div>
+
+                    {/* Uploaded Images Preview */}
+                    {formData.images.length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="text-sm font-semibold text-deep-teal mb-3">الصور المرفوعة:</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                          {formData.images.map((imageUrl, index) => (
+                            <div key={index} className="relative group">
+                              <img
+                                src={imageUrl}
+                                alt={`صورة ${index + 1}`}
+                                className="w-full h-24 object-cover rounded-lg border border-deep-teal/20"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="حذف الصورة"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upload Progress */}
+                    {Object.keys(imageUploadProgress).length > 0 && (
+                      <div className="mt-3">
+                        {Object.entries(imageUploadProgress).map(([fileName, isUploading]) => (
+                          <div key={fileName} className="flex items-center gap-2 text-sm text-deep-teal">
+                            <ImageIcon className="w-4 h-4" />
+                            <span>{fileName}</span>
+                            {isUploading && <span>جاري الرفع...</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {error && <div className="text-red-600 text-sm text-right bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>}
+                  {success && <div className="text-green-600 text-sm text-right bg-green-50 p-3 rounded-lg border border-green-200">تم إرسال طلب التوظيف بنجاح!</div>}
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    loading={submitting}
+                    className="rounded-xl"
+                  >
+                    إرسال طلب التوظيف
+                  </Button>
+                </form>
+              </BaseCard>
+            </div>
+          </div>
         </div>
       </main>
       <Footer />

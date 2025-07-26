@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import PageLayout from '../components/layout/PageLayout';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import BaseCard from '../components/ui/BaseCard';
 import Button from '../components/ui/Button';
@@ -24,6 +24,13 @@ const fetchWithAuth = async (url: string, token: string) => {
 const TABS = [
   { key: 'offered', label: 'الخدمات' },
   { key: 'requested', label: 'الخدمات المطلوبة' },
+  { key: 'reviews', label: 'التقييمات والمراجعات' },
+  { key: 'portfolio', label: 'الأعمال/المعرض' },
+];
+
+const PROVIDER_TABS = [
+  { key: 'offered', label: 'الخدمات' },
+  { key: 'hire-requests', label: 'طلبات التوظيف' },
   { key: 'reviews', label: 'التقييمات والمراجعات' },
   { key: 'portfolio', label: 'الأعمال/المعرض' },
 ];
@@ -138,6 +145,7 @@ interface Stats {
 
 const ProfilePage: React.FC = () => {
   const { user: authUser, accessToken } = useAuth();
+  const navigate = useNavigate();
   const { id } = useParams();
   const isSelf = !id || (authUser && (id === authUser?.id));
   const [loading, setLoading] = useState(true);
@@ -766,7 +774,7 @@ const ProfilePage: React.FC = () => {
         )}
         <div className="w-full mt-8">
           <div className="flex gap-2 md:gap-4 border-b border-[#E5E7EB] mb-4 rtl flex-row-reverse" role="tablist">
-            {TABS.map(tab => (
+            {(profile?.roles?.includes('provider') ? PROVIDER_TABS : TABS).map(tab => (
               <button
                     key={tab.key}
                 className={`px-4 py-2 font-semibold rounded-t-lg focus:outline-none transition-colors duration-200 ${activeTab === tab.key ? 'bg-[#FDF8F0] text-[#2D5D4F] border-b-2 border-[#2D5D4F]' : 'text-[#50958A] bg-transparent'}`}
@@ -939,6 +947,24 @@ const ProfilePage: React.FC = () => {
                 ) : (
                   <div className="text-[#50958A] text-center w-full py-8">لا توجد تقييمات أو مراجعات بعد.</div>
                 )}
+              </div>
+            )}
+            {/* طلبات التوظيف (hire requests) - for providers only */}
+            {activeTab === 'hire-requests' && profile?.roles?.includes('provider') && (
+              <div id="tab-panel-hire-requests" role="tabpanel" aria-labelledby="hire-requests">
+                <div className="text-center py-8">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-deep-teal mb-2">طلبات التوظيف المباشر</h3>
+                    <p className="text-text-secondary">إدارة طلبات التوظيف المباشر التي تلقيتها</p>
+                  </div>
+                  <Button
+                    variant="primary"
+                    onClick={() => navigate('/provider/hire-requests')}
+                    className="bg-deep-teal hover:bg-deep-teal/90"
+                  >
+                    عرض طلبات التوظيف
+                  </Button>
+                </div>
               </div>
             )}
             {/* الأعمال/المعرض (portfolio) */}

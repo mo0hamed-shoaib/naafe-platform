@@ -15,7 +15,7 @@ import ReportProblemModal from '../components/ui/ReportProblemModal';
 import ReviewModal from '../components/ui/ReviewModal';
 import Modal from '../admin/components/UI/Modal';
 import { submitComplaint } from '../services/complaintService';
-import { Send, ArrowLeft, MessageCircle, User, CreditCard, AlertTriangle, CheckCircle, AlertCircle, Shield } from 'lucide-react';
+import { Send, ArrowLeft, MessageCircle, User, CreditCard, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface Message {
   _id: string;
@@ -30,7 +30,7 @@ interface Message {
 
 interface Conversation {
   _id: string;
-  jobRequestId: {
+  jobRequestId?: {
     _id: string;
     title: string;
     description: string;
@@ -616,7 +616,7 @@ const ChatPage: React.FC = () => {
           comment,
           role,
           reviewedUser,
-          jobRequest: conversation?.jobRequestId._id
+          jobRequest: conversation?.jobRequestId?._id
         })
       });
       const data = await response.json();
@@ -677,22 +677,23 @@ const ChatPage: React.FC = () => {
     
     setReportLoading(true);
     try {
+      const isSeeker = user?.id === conversation?.participants.seeker._id;
       const reportedUserId = isSeeker 
         ? conversation.participants.provider._id 
         : conversation.participants.seeker._id;
 
       await submitComplaint({
         reportedUserId,
-        jobRequestId: conversation.jobRequestId._id,
+        jobRequestId: conversation.jobRequestId?._id || '',
         problemType,
         description
       }, accessToken);
 
       setShowReportModal(false);
       showSuccess('تم إرسال البلاغ بنجاح', 'سيتم مراجعة البلاغ من قبل الإدارة قريباً');
-    } catch (error) {
-      console.error('Error submitting report:', error);
-      const errorMessage = error instanceof Error ? error.message : 'حدث خطأ أثناء إرسال البلاغ';
+    } catch (err) {
+      console.error('Error submitting report:', err);
+      const errorMessage = err instanceof Error ? err.message : 'حدث خطأ أثناء إرسال البلاغ';
       if (errorMessage.includes('لديك بلاغ قيد المعالجة')) {
         showWarning('بلاغ موجود بالفعل', 'لديك بلاغ قيد المعالجة لهذا الطلب بالفعل');
       } else {
@@ -715,7 +716,7 @@ const ChatPage: React.FC = () => {
 
   // Status Bar Component
   const StatusBar = () => {
-    const negotiationOffer = currentOffer && negotiationState[currentOffer._id];
+    const negotiationOffer = currentOffer && negotiationState[currentOffer.id];
     return (
       <div className="flex flex-col gap-4 p-4">
         {currentOffer?.status === 'cancelled' && (
@@ -909,7 +910,7 @@ const ChatPage: React.FC = () => {
   return (
     <PageLayout
       title={`محادثة مع ${otherParticipant?.name.first} ${otherParticipant?.name.last}`}
-      subtitle={conversation.jobRequestId.title}
+      subtitle={conversation.jobRequestId?.title || 'محادثة غير مرتبطة بطلب خدمة'}
       breadcrumbItems={breadcrumbItems}
       user={user}
       onLogout={() => {}}
@@ -935,14 +936,14 @@ const ChatPage: React.FC = () => {
                     {otherParticipant?.name.first} {otherParticipant?.name.last}
                   </h3>
                   <p className="text-sm text-text-secondary mb-2">
-                    {conversation.jobRequestId.title}
+                    {conversation.jobRequestId?.title || 'محادثة غير مرتبطة بطلب خدمة'}
                   </p>
                   <div className="flex items-center gap-4 text-sm">
                     <div className="flex items-center gap-1 text-text-secondary/80">
                       <span className="text-pink-500">📍</span>
                       <span>
-                        {conversation.jobRequestId.location?.address || 
-                         `${conversation.jobRequestId.location?.city || ''} ${conversation.jobRequestId.location?.government || ''}`.trim() || 
+                        {conversation.jobRequestId?.location?.address || 
+                         `${conversation.jobRequestId?.location?.city || ''} ${conversation.jobRequestId?.location?.government || ''}`.trim() || 
                          'غير محدد'}
                       </span>
                     </div>
@@ -1005,24 +1006,24 @@ const ChatPage: React.FC = () => {
                     isProvider={user.id === conversation.participants.provider._id}
                     isSeeker={user.id === conversation.participants.seeker._id}
                     jobRequest={{
-                      id: conversation.jobRequestId._id,
-                      title: conversation.jobRequestId.title,
-                      description: conversation.jobRequestId.description || '',
+                      id: conversation.jobRequestId?._id || '',
+                      title: conversation.jobRequestId?.title || '',
+                      description: conversation.jobRequestId?.description || '',
                       budget: {
-                        min: conversation.jobRequestId.budget.min,
-                        max: conversation.jobRequestId.budget.max,
+                        min: conversation.jobRequestId?.budget?.min || 0,
+                        max: conversation.jobRequestId?.budget?.max || 0,
                         currency: 'EGP'
                       },
-                      location: conversation.jobRequestId.location?.address || '',
+                      location: conversation.jobRequestId?.location?.address || '',
                       postedBy: {
                         id: conversation.participants.seeker._id,
                         name: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
                         isPremium: false
                       },
-                      createdAt: conversation.jobRequestId.createdAt,
-                      preferredDate: conversation.jobRequestId.deadline,
-                      status: conversation.jobRequestId.status === 'open' ? 'open' : 
-                        conversation.jobRequestId.status === 'assigned' || conversation.jobRequestId.status === 'in_progress' ? 'accepted' : 'closed',
+                      createdAt: conversation.jobRequestId?.createdAt || '',
+                      preferredDate: conversation.jobRequestId?.deadline || '',
+                      status: conversation.jobRequestId?.status === 'open' ? 'open' : 
+                        conversation.jobRequestId?.status === 'assigned' || conversation.jobRequestId?.status === 'in_progress' ? 'accepted' : 'closed',
                       category: '',
                       availability: { days: [], timeSlots: [] }
                     }}
@@ -1046,14 +1047,7 @@ const ChatPage: React.FC = () => {
                         resetNegotiation(offerId);
                       }
                     }}
-                  >
-                    {paymentCompleted && serviceInProgress && !currentOffer?.status === 'completed' && (
-                      <div className="flex items-center gap-2 text-blue-600 text-sm px-3 py-2 bg-blue-50 rounded-lg mt-4">
-                        <Shield className="w-4 h-4" />
-                        الخدمة قيد التنفيذ
-                      </div>
-                    )}
-                  </NegotiationSummary>
+                  />
                   <NegotiationHistory
                     negotiationHistory={negotiationState[offerId]?.negotiationHistory}
                     userMap={{
@@ -1263,24 +1257,24 @@ const ChatPage: React.FC = () => {
                   isProvider={user.id === conversation.participants.provider._id}
                   isSeeker={user.id === conversation.participants.seeker._id}
                   jobRequest={{
-                    id: conversation.jobRequestId._id,
-                    title: conversation.jobRequestId.title,
-                    description: conversation.jobRequestId.description || '',
+                    id: conversation.jobRequestId?._id || '',
+                    title: conversation.jobRequestId?.title || '',
+                    description: conversation.jobRequestId?.description || '',
                     budget: {
-                      min: conversation.jobRequestId.budget.min,
-                      max: conversation.jobRequestId.budget.max,
+                      min: conversation.jobRequestId?.budget?.min || 0,
+                      max: conversation.jobRequestId?.budget?.max || 0,
                       currency: 'EGP'
                     },
-                    location: conversation.jobRequestId.location?.address || '',
+                    location: conversation.jobRequestId?.location?.address || '',
                     postedBy: {
                       id: conversation.participants.seeker._id,
                       name: `${conversation.participants.seeker.name.first} ${conversation.participants.seeker.name.last}`,
                       isPremium: false
                     },
-                    createdAt: conversation.jobRequestId.createdAt,
-                    preferredDate: conversation.jobRequestId.deadline,
-                    status: conversation.jobRequestId.status === 'open' ? 'open' : 
-                      conversation.jobRequestId.status === 'assigned' || conversation.jobRequestId.status === 'in_progress' ? 'accepted' : 'closed',
+                    createdAt: conversation.jobRequestId?.createdAt || '',
+                    preferredDate: conversation.jobRequestId?.deadline || '',
+                    status: conversation.jobRequestId?.status === 'open' ? 'open' : 
+                      conversation.jobRequestId?.status === 'assigned' || conversation.jobRequestId?.status === 'in_progress' ? 'accepted' : 'closed',
                     category: '',
                     availability: { days: [], timeSlots: [] }
                   }}
@@ -1339,7 +1333,7 @@ const ChatPage: React.FC = () => {
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
           onConfirm={handlePaymentConfirm}
-          serviceTitle={conversation.jobRequestId.title}
+          serviceTitle={conversation.jobRequestId?.title || 'محادثة غير مرتبطة بطلب خدمة'}
           providerName={`${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`}
           negotiatedPrice={negotiationState[offerId]?.currentTerms?.price}
           scheduledDate={negotiationState[offerId]?.currentTerms?.date}
@@ -1447,7 +1441,7 @@ const ChatPage: React.FC = () => {
           onClose={() => setShowReportModal(false)}
           onSubmit={handleReportSubmit}
           providerName={`${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`}
-          serviceTitle={conversation.jobRequestId.title}
+          serviceTitle={conversation.jobRequestId?.title || 'محادثة غير مرتبطة بطلب خدمة'}
           loading={reportLoading}
         />
       )}
@@ -1457,7 +1451,7 @@ const ChatPage: React.FC = () => {
           onClose={() => setShowReviewModal(false)}
           onSubmit={handleReviewSubmit}
           providerName={`${conversation.participants.provider.name.first} ${conversation.participants.provider.name.last}`}
-          serviceTitle={conversation.jobRequestId.title}
+          serviceTitle={conversation.jobRequestId?.title || 'محادثة غير مرتبطة بطلب خدمة'}
           loading={reviewLoading}
         />
       )}

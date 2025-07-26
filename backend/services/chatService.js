@@ -282,6 +282,99 @@ class ChatService {
       throw error;
     }
   }
+
+  /**
+   * Get or create direct conversation between two users
+   */
+  async getOrCreateDirectConversation(userId, targetUserId) {
+    try {
+      // Check if direct conversation already exists
+      let conversation = await Conversation.findOne({
+        $or: [
+          {
+            'participants.seeker': userId,
+            'participants.provider': targetUserId,
+            jobRequestId: { $exists: false }
+          },
+          {
+            'participants.seeker': targetUserId,
+            'participants.provider': userId,
+            jobRequestId: { $exists: false }
+          }
+        ]
+      });
+
+      if (!conversation) {
+        // Create new direct conversation
+        conversation = new Conversation({
+          participants: {
+            seeker: userId,
+            provider: targetUserId
+          },
+          isActive: true
+        });
+        await conversation.save();
+        logger.info(`Created new direct conversation between ${userId} and ${targetUserId}`);
+      }
+
+      // Populate user details
+      await conversation.populate('participants.seeker', 'name email avatarUrl');
+      await conversation.populate('participants.provider', 'name email avatarUrl');
+      await conversation.populate('lastMessage.senderId', 'name');
+
+      return { conversation };
+    } catch (error) {
+      logger.error('Error in getOrCreateDirectConversation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create direct conversation between two users
+   */
+  async createDirectConversation(userId, targetUserId) {
+    try {
+      // Check if direct conversation already exists
+      const existingConversation = await Conversation.findOne({
+        $or: [
+          {
+            'participants.seeker': userId,
+            'participants.provider': targetUserId,
+            jobRequestId: { $exists: false }
+          },
+          {
+            'participants.seeker': targetUserId,
+            'participants.provider': userId,
+            jobRequestId: { $exists: false }
+          }
+        ]
+      });
+
+      if (existingConversation) {
+        return { conversation: existingConversation };
+      }
+
+      // Create new direct conversation
+      const conversation = new Conversation({
+        participants: {
+          seeker: userId,
+          provider: targetUserId
+        },
+        isActive: true
+      });
+      await conversation.save();
+
+      // Populate user details
+      await conversation.populate('participants.seeker', 'name email avatarUrl');
+      await conversation.populate('participants.provider', 'name email avatarUrl');
+
+      logger.info(`Created new direct conversation between ${userId} and ${targetUserId}`);
+      return { conversation };
+    } catch (error) {
+      logger.error('Error in createDirectConversation:', error);
+      throw error;
+    }
+  }
 }
 
 export default new ChatService(); 

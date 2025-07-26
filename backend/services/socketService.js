@@ -200,11 +200,9 @@ class SocketService {
 
     socket.emit('message-sent', messageData);
 
-    // Emit to receiver if online
-    const receiverSocketId = this.connectedUsers.get(receiverId);
-    if (receiverSocketId) {
-      this.io.to(receiverSocketId).emit('receive-message', messageData);
-    }
+    // Emit to conversation room for real-time delivery (excluding sender)
+    // The sender will receive the message via message-sent event above
+    socket.to(`conversation:${conversationId}`).emit('receive-message', messageData);
 
     logger.info(`Message sent via socket: ${message._id} from ${senderId} to ${receiverId}`);
   }

@@ -5,7 +5,7 @@ const conversationSchema = new Schema({
   jobRequestId: {
     type: Schema.Types.ObjectId,
     ref: 'JobRequest',
-    required: true
+    required: false // Make jobRequestId optional for direct chats
   },
   participants: {
     seeker: {

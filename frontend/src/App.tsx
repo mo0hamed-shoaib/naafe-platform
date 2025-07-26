@@ -36,7 +36,9 @@ import AdManagementPage from './pages/AdManagementPage';
 import AdminIdentityVerifications from './admin/pages/AdminIdentityVerifications';
 import ProviderDetailsPage from './pages/ProviderDetailsPage';
 import HireProviderPage from './pages/HireProviderPage';
+import ProviderHireRequestsPage from './pages/ProviderHireRequestsPage';
 import TransactionsPage from './pages/TransactionsPage';
+import NewChatPage from './pages/NewChatPage';
 
 const App = () => {
   return (
@@ -59,6 +61,11 @@ const App = () => {
               <Route path="/hire-provider/:id" element={
                 <ProtectedRoute>
                   <HireProviderPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/provider/hire-requests" element={
+                <ProtectedRoute>
+                  <ProviderHireRequestsPage />
                 </ProtectedRoute>
               } />
               <Route path="/login" element={<LoginPage />} />
@@ -110,6 +117,11 @@ const App = () => {
               <Route path="/chat/:chatId" element={
                 <ProtectedRoute>
                   <ChatPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/chat/new" element={
+                <ProtectedRoute>
+                  <NewChatPage />
                 </ProtectedRoute>
               } />
               <Route path="/payment/success" element={
