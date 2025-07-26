@@ -106,23 +106,23 @@ class AuthService {
       // Find user by email
       const user = await User.findOne({ email: email.toLowerCase() });
       if (!user) {
-        throw new Error('Invalid email or password');
+        throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
       }
 
       // Check if user is blocked
       if (user.isBlocked) {
-        throw new Error('Account is blocked. Please contact support.');
+        throw new Error('الحساب محظور. يرجى التواصل مع الدعم الفني.');
       }
 
       // Check if user is active
       if (!user.isActive) {
-        throw new Error('Account is deactivated. Please contact support.');
+        throw new Error('الحساب معطل. يرجى التواصل مع الدعم الفني.');
       }
 
       // Verify password
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        throw new Error('Invalid email or password');
+        throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
       }
 
       // Update last login
@@ -189,7 +189,7 @@ class AuthService {
     try {
       return jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
-      throw new Error('Invalid or expired token');
+      throw new Error('الرمز المميز غير صالح أو منتهي الصلاحية');
     }
   }
 
@@ -202,7 +202,7 @@ class AuthService {
     try {
       return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
     } catch (error) {
-      throw new Error('Invalid or expired refresh token');
+      throw new Error('رمز التحديث غير صالح أو منتهي الصلاحية');
     }
   }
 
@@ -218,7 +218,7 @@ class AuthService {
       // Find user
       const user = await User.findById(decoded.userId);
       if (!user || user.isBlocked || !user.isActive) {
-        throw new Error('User not found or account is blocked');
+        throw new Error('المستخدم غير موجود أو الحساب محظور');
       }
 
       // Generate new access token
@@ -244,15 +244,15 @@ class AuthService {
       // Find user
       const user = await User.findById(decoded.userId);
       if (!user) {
-        throw new Error('User not found');
+        throw new Error('المستخدم غير موجود');
       }
 
       if (user.isBlocked) {
-        throw new Error('Account is blocked');
+        throw new Error('الحساب محظور');
       }
 
       if (!user.isActive) {
-        throw new Error('Account is deactivated');
+        throw new Error('الحساب معطل');
       }
 
       // Return user data without password

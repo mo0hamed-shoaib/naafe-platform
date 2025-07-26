@@ -14,7 +14,7 @@ export const authenticateToken = async (req, res, next) => {
         success: false,
         error: {
           code: 'UNAUTHORIZED',
-          message: 'Access token is required'
+          message: 'الرمز المميز مطلوب'
         },
         timestamp: new Date().toISOString()
       });
@@ -30,7 +30,7 @@ export const authenticateToken = async (req, res, next) => {
       success: false,
       error: {
         code: 'UNAUTHORIZED',
-        message: error.message || 'Invalid or expired token'
+        message: error.message || 'الرمز المميز غير صالح أو منتهي الصلاحية'
       },
       timestamp: new Date().toISOString()
     });
@@ -48,7 +48,7 @@ export const requireRole = (roles) => {
         success: false,
         error: {
           code: 'UNAUTHORIZED',
-          message: 'Authentication required'
+          message: 'المصادقة مطلوبة'
         },
         timestamp: new Date().toISOString()
       });
@@ -60,7 +60,7 @@ export const requireRole = (roles) => {
         success: false,
         error: {
           code: 'FORBIDDEN',
-          message: 'Access denied'
+          message: 'الوصول مرفوض'
         },
         timestamp: new Date().toISOString()
       });

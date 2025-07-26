@@ -8,7 +8,7 @@ export const handleValidationErrors = (req, res, next) => {
       success: false,
       error: {
         code: 'VALIDATION_ERROR',
-        message: 'Validation failed',
+        message: 'فشل في التحقق من صحة البيانات',
         details: errors.array().map(error => ({
           field: error.path,
           message: error.msg,
@@ -25,38 +25,38 @@ export const handleValidationErrors = (req, res, next) => {
 export const validateRegister = [
   body('email')
     .isEmail()
-    .withMessage('Please enter a valid email address')
+    .withMessage('يرجى إدخال عنوان بريد إلكتروني صحيح')
     .normalizeEmail(),
   
   body('password')
     .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters long')
+    .withMessage('كلمة المرور يجب أن تكون 8 أحرف على الأقل')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+    .withMessage('كلمة المرور يجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص واحد على الأقل'),
   
   body('name.first')
     .isLength({ min: 2, max: 50 })
-    .withMessage('First name must be between 2 and 50 characters')
+    .withMessage('الاسم الأول يجب أن يكون بين 2 و 50 حرف')
     .matches(/^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z]+$/)
-    .withMessage('First name must contain only letters (no numbers or special characters)')
+    .withMessage('الاسم الأول يجب أن يحتوي على أحرف فقط (بدون أرقام أو رموز خاصة)')
     .trim()
     .escape(),
   
   body('name.last')
     .isLength({ min: 2, max: 50 })
-    .withMessage('Last name must be between 2 and 50 characters')
+    .withMessage('الاسم الأخير يجب أن يكون بين 2 و 50 حرف')
     .matches(/^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z]+$/)
-    .withMessage('Last name must contain only letters (no numbers or special characters)')
+    .withMessage('الاسم الأخير يجب أن يحتوي على أحرف فقط (بدون أرقام أو رموز خاصة)')
     .trim()
     .escape(),
   
   body('phone')
     .matches(/^(\+20|0)?1[0125][0-9]{8}$/)
-    .withMessage('Please enter a valid Egyptian phone number'),
+    .withMessage('يرجى إدخال رقم هاتف مصري صحيح'),
   
   body('role')
     .isIn(['seeker', 'provider', 'admin'])
-    .withMessage('Role must be either "seeker", "provider", or "admin"'),
+    .withMessage('الدور يجب أن يكون "seeker" أو "provider" أو "admin"'),
   
   handleValidationErrors
 ];
@@ -65,12 +65,12 @@ export const validateRegister = [
 export const validateLogin = [
   body('email')
     .isEmail()
-    .withMessage('Please enter a valid email address')
+    .withMessage('يرجى إدخال عنوان بريد إلكتروني صحيح')
     .normalizeEmail(),
   
   body('password')
     .notEmpty()
-    .withMessage('Password is required'),
+    .withMessage('كلمة المرور مطلوبة'),
   
   handleValidationErrors
 ];
@@ -80,7 +80,7 @@ export const validateCheckAvailability = [
   body('email')
     .optional()
     .isEmail()
-    .withMessage('Please enter a valid email address')
+    .withMessage('يرجى إدخال عنوان بريد إلكتروني صحيح')
     .normalizeEmail(),
   
   body('phone')
@@ -89,7 +89,7 @@ export const validateCheckAvailability = [
       if (value && value.trim()) {
         const phoneRegex = /^(\+20|0)?1[0125][0-9]{8}$/;
         if (!phoneRegex.test(value)) {
-          throw new Error('Please enter a valid Egyptian phone number');
+          throw new Error('يرجى إدخال رقم هاتف مصري صحيح');
         }
       }
       return true;
@@ -98,7 +98,7 @@ export const validateCheckAvailability = [
   body()
     .custom((value) => {
       if (!value.email && !value.phone) {
-        throw new Error('At least one of email or phone must be provided');
+        throw new Error('يجب توفير البريد الإلكتروني أو رقم الهاتف على الأقل');
       }
       return true;
     }),
@@ -110,7 +110,7 @@ export const validateCheckAvailability = [
 export const validateRefreshToken = [
   body('refreshToken')
     .notEmpty()
-    .withMessage('Refresh token is required'),
+    .withMessage('رمز التحديث مطلوب'),
   
   handleValidationErrors
 ]; 

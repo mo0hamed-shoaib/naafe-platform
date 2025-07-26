@@ -128,9 +128,9 @@ class AuthController {
       });
     } catch (error) {
       // Handle authentication errors
-      if (error.message.includes('Invalid email or password') || 
-          error.message.includes('Account is blocked') ||
-          error.message.includes('Account is deactivated')) {
+      if (error.message.includes('البريد الإلكتروني أو كلمة المرور غير صحيحة') || 
+          error.message.includes('الحساب محظور') ||
+          error.message.includes('الحساب معطل')) {
         return res.status(401).json({
           success: false,
           error: {
@@ -204,8 +204,8 @@ class AuthController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      if (error.message.includes('Invalid or expired refresh token') ||
-          error.message.includes('User not found or account is blocked')) {
+      if (error.message.includes('رمز التحديث غير صالح أو منتهي الصلاحية') ||
+          error.message.includes('المستخدم غير موجود أو الحساب محظور')) {
         return res.status(401).json({
           success: false,
           error: {
