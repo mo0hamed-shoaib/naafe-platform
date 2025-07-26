@@ -7,6 +7,8 @@ import { useFilters } from '../hooks/useFilters';
 import { useAuth } from '../contexts/AuthContext';
 import { ComponentType } from 'react';
 import FeaturedProviders from './FeaturedProviders';
+import AdPlacement from './ui/AdPlacement';
+import React from 'react';
 
 interface Category {
   _id: string;
@@ -90,6 +92,11 @@ const ServiceCategoriesPage = () => {
       user={user}
       onLogout={logout}
     >
+      {/* Top Banner Ad */}
+      <div className="mb-6">
+        <AdPlacement location="categories" type="top" />
+      </div>
+      
       <FeaturedProviders />
       <FilterForm
         filters={filters}
@@ -130,13 +137,22 @@ const ServiceCategoriesPage = () => {
             </div>
           </div>
         ) : categories.length > 0 ? (
-          categories.map((category) => (
-            <CategoryCard
-              key={category._id || category.id || category.name}
-              category={category}
-              onClick={() => handleCategoryClick(category)}
-            />
-          ))
+          <>
+            {categories.map((category, index) => (
+              <React.Fragment key={category._id || category.id || category.name}>
+                <CategoryCard
+                  category={category}
+                  onClick={() => handleCategoryClick(category)}
+                />
+                {/* Interstitial Ad every 4 categories */}
+                {(index + 1) % 4 === 0 && index < categories.length - 1 && (
+                  <div className="col-span-full my-6">
+                    <AdPlacement location="categories" type="interstitial" />
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+          </>
         ) : (
           <div className="col-span-full">
             <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
@@ -144,6 +160,11 @@ const ServiceCategoriesPage = () => {
             </div>
           </div>
         )}
+      </div>
+      
+      {/* Bottom Banner Ad */}
+      <div className="mt-8">
+        <AdPlacement location="categories" type="bottom" />
       </div>
     </PageLayout>
   );

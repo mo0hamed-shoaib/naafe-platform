@@ -24,4 +24,9 @@ export { default as PaymentModal } from './PaymentModal';
 export { default as ReviewModal } from './ReviewModal';
 
 // Report Components
-export { default as ReportProblemModal } from './ReportProblemModal'; 
+export { default as ReportProblemModal } from './ReportProblemModal';
+
+// Ad Components
+export { default as AdBanner } from './AdBanner';
+export { default as AdCarousel } from './AdCarousel';
+export { default as AdPlacement } from './AdPlacement'; 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PageLayout from '../components/layout/PageLayout';
 import FilterForm from '../components/ui/FilterForm';
@@ -11,6 +11,7 @@ import { FilterState } from '../types';
 import { useUrlParams } from '../hooks/useUrlParams';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, Users, FileText, ArrowLeft, CheckCircle } from 'lucide-react';
+import AdPlacement from '../components/ui/AdPlacement';
 
 const fetchListings = async (filters: FilterState) => {
   const params = new URLSearchParams();
@@ -464,6 +465,11 @@ const SearchPage = () => {
         </div>
         
         <div className="w-full lg:w-3/4">
+          {/* Top Banner Ad */}
+          <div className="mb-6">
+            <AdPlacement location="search" type="top" />
+          </div>
+          
           {/* Targeted Leads for Premium Providers */}
           {searchType === 'service-requests' && isProvider && isPremium && (
             <section className="mb-8">
@@ -547,16 +553,25 @@ const SearchPage = () => {
             ) : listingsError ? (
               <div className="text-center py-12 text-red-600">{listingsError.message}</div>
             ) : providersWithFeatured.length > 0 ? (
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {providersWithFeatured.map((provider) => (
-                  <ServiceCard
-                    key={provider.id}
-                    provider={provider}
-                    onViewDetails={handleViewProviderDetails}
-                    featured={provider.featured}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  {providersWithFeatured.map((provider, index) => (
+                    <React.Fragment key={provider.id}>
+                      <ServiceCard
+                        provider={provider}
+                        onViewDetails={handleViewProviderDetails}
+                        featured={provider.featured}
+                      />
+                      {/* Interstitial Ad every 6 providers */}
+                      {(index + 1) % 6 === 0 && index < providersWithFeatured.length - 1 && (
+                        <div className="col-span-full my-6">
+                          <AdPlacement location="search" type="interstitial" />
+                        </div>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </>
             ) : (
               renderEmptyState()
             )
@@ -566,21 +581,34 @@ const SearchPage = () => {
             ) : requestsError ? (
               <div className="text-center py-12 text-red-600">{requestsError.message}</div>
             ) : mappedRequests.length > 0 ? (
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {mappedRequests.map((request) => (
-                  <ServiceRequestCard
-                    key={request.id}
-                    request={request}
-                    onInterested={handleInterestedInRequest}
-                    onViewDetails={handleViewRequestDetails}
-                    alreadyApplied={providerOfferRequestIds.includes(request.id)}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  {mappedRequests.map((request, index) => (
+                    <React.Fragment key={request.id}>
+                      <ServiceRequestCard
+                        request={request}
+                        onInterested={handleInterestedInRequest}
+                        onViewDetails={handleViewRequestDetails}
+                        alreadyApplied={providerOfferRequestIds.includes(request.id)}
+                      />
+                      {/* Interstitial Ad every 6 requests */}
+                      {(index + 1) % 6 === 0 && index < mappedRequests.length - 1 && (
+                        <div className="col-span-full my-6">
+                          <AdPlacement location="search" type="interstitial" />
+                        </div>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </>
             ) : (
               renderEmptyState()
             )
           )}
+          {/* Bottom Banner Ad */}
+          <div className="mt-8">
+            <AdPlacement location="search" type="bottom" />
+          </div>
         </div>
       </div>
     </PageLayout>

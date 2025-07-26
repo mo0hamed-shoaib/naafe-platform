@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { User, Settings, HelpCircle, LogOut, ChevronDown, CreditCard } from 'lucide-react';
+import { User, Settings, HelpCircle, LogOut, ChevronDown, CreditCard, Megaphone } from 'lucide-react';
 import { User as UserType } from '../../types';
 import { cn } from '../../utils/helpers';
 
@@ -90,6 +90,13 @@ const UserDropdown = ({ user, onLogout, className = '' }: UserDropdownProps) => 
       icon: CreditCard,
       label: 'معاملاتي',
       href: '/transactions',
+      onClick: () => setIsOpen(false)
+    },
+    // Ad Management menu item
+    {
+      icon: Megaphone,
+      label: 'إدارة الإعلانات',
+      href: '/ads',
       onClick: () => setIsOpen(false)
     },
     {

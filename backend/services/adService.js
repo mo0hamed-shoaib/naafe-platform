@@ -150,12 +150,12 @@ class AdService {
 
       // Add type filter
       if (filters.type) {
-        query.type = filters.type;
+        query['placement.type'] = filters.type;
       }
 
       // Add location targeting
       if (filters.location) {
-        query['targeting.locations'] = { $in: [filters.location] };
+        query['placement.location'] = filters.location;
       }
 
       // Add category targeting
@@ -163,10 +163,13 @@ class AdService {
         query['targeting.categories'] = { $in: [filters.category] };
       }
 
+      // Add limit
+      const limit = filters.limit ? parseInt(filters.limit) : 10;
+
       const ads = await Ad.find(query)
         .populate('advertiserId', 'name avatarUrl')
         .sort({ createdAt: -1 })
-        .limit(10);
+        .limit(limit);
 
       return ads;
     } catch (error) {
@@ -321,6 +324,127 @@ class AdService {
       console.log(`Ad ${adId} payment completed and activated`);
     } catch (error) {
       console.error('Error handling ad payment completion:', error);
+    }
+  }
+
+  /**
+   * Calculate refund amount for ad cancellation
+   */
+  calculateRefundAmount(ad, cancellationDate) {
+    const now = new Date(cancellationDate);
+    const startDate = new Date(ad.startDate);
+    const endDate = new Date(ad.endDate);
+    const totalAmount = ad.budget.total;
+    
+    // Calculate days since ad started
+    const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+    const totalDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+    
+    let refundAmount = 0;
+    let refundType = 'none';
+    
+    switch (ad.duration) {
+      case 'daily':
+        // Full refund before live, none after
+        if (daysSinceStart < 0) {
+          refundAmount = totalAmount;
+          refundType = 'full';
+        }
+        break;
+        
+      case 'weekly':
+        // Full refund within 24h, 75% within 3 days, none after
+        if (daysSinceStart <= 1) {
+          refundAmount = totalAmount;
+          refundType = 'full';
+        } else if (daysSinceStart <= 3) {
+          refundAmount = Math.round(totalAmount * 0.75);
+          refundType = 'partial';
+        }
+        break;
+        
+      case 'monthly':
+        // Full refund within 3 days, 75% within 7 days, prorated after
+        if (daysSinceStart <= 3) {
+          refundAmount = totalAmount;
+          refundType = 'full';
+        } else if (daysSinceStart <= 7) {
+          refundAmount = Math.round(totalAmount * 0.75);
+          refundType = 'partial';
+        } else if (daysSinceStart <= 15) {
+          // Prorated refund for remaining days
+          const remainingDays = totalDays - daysSinceStart;
+          const dailyRate = totalAmount / totalDays;
+          refundAmount = Math.round(remainingDays * dailyRate);
+          refundType = 'prorated';
+        }
+        break;
+    }
+    
+    return { refundAmount, refundType, daysSinceStart };
+  }
+
+  /**
+   * Cancel ad and process refund
+   */
+  async cancelAd(adId, userId) {
+    try {
+      const ad = await Ad.findById(adId);
+      if (!ad) {
+        throw new Error('Ad not found');
+      }
+
+      // Check authorization
+      if (ad.advertiserId.toString() !== userId.toString()) {
+        throw new Error('Unauthorized');
+      }
+
+      // Calculate refund
+      const { refundAmount, refundType, daysSinceStart } = this.calculateRefundAmount(ad, new Date());
+
+      // Update ad status
+      ad.status = 'cancelled';
+      await ad.save();
+
+      // Process refund if eligible
+      let refundResult = null;
+      if (refundAmount > 0 && ad.stripePaymentIntentId) {
+        try {
+          const refund = await stripe.refunds.create({
+            payment_intent: ad.stripePaymentIntentId,
+            amount: Math.round(refundAmount * 100), // Convert to cents
+            metadata: {
+              adId: adId.toString(),
+              userId: userId.toString(),
+              refundType,
+              daysSinceStart: daysSinceStart.toString()
+            }
+          });
+          
+          refundResult = {
+            refundId: refund.id,
+            amount: refundAmount,
+            type: refundType,
+            status: refund.status
+          };
+        } catch (refundError) {
+          console.error('Error processing refund:', refundError);
+          throw new Error('Failed to process refund');
+        }
+      }
+
+      return {
+        success: true,
+        ad: ad,
+        refund: refundResult,
+        message: refundType === 'none' 
+          ? 'تم إلغاء الإعلان. لا يوجد استرداد لأن فترة السماح انتهت.'
+          : refundType === 'full'
+            ? `تم إلغاء الإعلان واسترداد كامل (${refundAmount} جنيه).`
+            : `تم إلغاء الإعلان واسترداد جزئي (${refundAmount} جنيه).`
+      };
+    } catch (error) {
+      throw error;
     }
   }
 }

@@ -575,6 +575,25 @@ export const getUnifiedTransactions = async (req, res) => {
       relatedId: p.jobRequestId || p.offerId || null
     })) : [];
 
+    // 2. Fetch ad purchases
+    const Ad = (await import('../models/Ad.js')).default;
+    const adPayments = await Ad.find({ advertiserId: userId }).sort({ createdAt: -1 });
+    const adTransactions = adPayments.map(ad => ({
+      id: ad._id,
+      type: 'ad',
+      amount: ad.budget.total,
+      currency: ad.budget.currency || 'EGP',
+      date: ad.createdAt,
+      status: ad.status,
+      description: `إعلان: ${ad.title}`,
+      relatedId: ad._id,
+      adData: {
+        title: ad.title,
+        placement: ad.placement,
+        duration: ad.duration
+      }
+    }));
+
     // 2. Fetch Stripe charges and refunds for subscriptions
     let stripeTransactions = [];
     const seenRefundIds = new Set();
@@ -709,7 +728,7 @@ export const getUnifiedTransactions = async (req, res) => {
     }
 
     // 3. Merge and sort all transactions by date (desc)
-    const allTransactions = [...servicePayments, ...stripeTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const allTransactions = [...servicePayments, ...adTransactions, ...stripeTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     // Pagination
     const page = parseInt(req.query.page) || 1;

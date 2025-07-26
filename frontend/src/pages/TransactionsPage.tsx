@@ -20,13 +20,21 @@ import UnifiedSelect from '../components/ui/UnifiedSelect';
 // Update Transaction type for unified API
 interface Transaction {
   id: string;
-  type: 'service' | 'subscription' | 'refund' | string;
+  type: 'service' | 'subscription' | 'refund' | 'ad' | string;
   amount: number;
   currency: string;
   date: string;
   status: string;
   description: string;
   relatedId?: string;
+  adData?: {
+    title: string;
+    placement: {
+      location: string;
+      type: string;
+    };
+    duration: string;
+  };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any; // For SortableTable compatibility
 }
@@ -100,6 +108,7 @@ const TransactionsPage: React.FC = () => {
       case 'service': return <span className="text-blue-600" title="دفع خدمة">🛠️</span>;
       case 'subscription': return <span className="text-yellow-600" title="اشتراك">⭐</span>;
       case 'refund': return <span className="text-green-600" title="استرداد">↩️</span>;
+      case 'ad': return <span className="text-green-600" title="إعلان">📢</span>;
       default: return <span>💸</span>;
     }
   };
@@ -141,7 +150,7 @@ const TransactionsPage: React.FC = () => {
       key: 'type',
       label: 'النوع',
       sortable: false,
-      render: (value, item) => <span className="flex items-center gap-1">{typeIcon(item.type)} {item.type === 'service' ? 'خدمة' : item.type === 'subscription' ? 'اشتراك' : item.type === 'refund' ? 'استرداد' : 'أخرى'}</span>,
+      render: (value, item) => <span className="flex items-center gap-1">{typeIcon(item.type)} {item.type === 'service' ? 'خدمة' : item.type === 'subscription' ? 'اشتراك' : item.type === 'refund' ? 'استرداد' : item.type === 'ad' ? 'إعلان' : 'أخرى'}</span>,
     },
     {
       key: 'description',

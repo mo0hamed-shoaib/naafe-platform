@@ -49,6 +49,22 @@ const adSchema = new mongoose.Schema({
     enum: ['pending', 'active', 'paused', 'completed', 'rejected'],
     default: 'pending'
   },
+  placement: {
+    id: {
+      type: String,
+      required: true
+    },
+    location: {
+      type: String,
+      required: true,
+      enum: ['homepage', 'categories', 'search']
+    },
+    type: {
+      type: String,
+      required: true,
+      enum: ['top', 'bottom', 'sidebar', 'interstitial']
+    }
+  },
   targeting: {
     locations: [{
       type: String,
