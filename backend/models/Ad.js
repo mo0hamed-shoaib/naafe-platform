@@ -6,11 +6,6 @@ const adSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  type: {
-    type: String,
-    enum: ['featured', 'sidebar', 'banner'],
-    required: true
-  },
   title: {
     type: String,
     required: true,
@@ -46,7 +41,7 @@ const adSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'active', 'paused', 'completed', 'rejected'],
+    enum: ['pending', 'active', 'paused', 'completed', 'rejected', 'cancelled'],
     default: 'pending'
   },
   placement: {

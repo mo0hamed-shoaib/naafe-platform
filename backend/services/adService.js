@@ -30,8 +30,8 @@ class AdService {
           throw new Error('Invalid duration');
       }
 
-      // Get pricing based on type and duration
-      const pricing = this.getPricing(adData.type, adData.duration);
+      // Get pricing based on placement type and duration
+      const pricing = this.getPricing(adData.placement.type, adData.duration);
       
       const ad = new Ad({
         ...adData,
@@ -57,9 +57,10 @@ class AdService {
    */
   getPricing(type, duration) {
     const pricing = {
-      featured: { daily: 25, weekly: 150, monthly: 500 },
-      sidebar: { daily: 15, weekly: 90, monthly: 300 },
-      banner: { daily: 35, weekly: 200, monthly: 750 }
+      top: { daily: 35, weekly: 200, monthly: 750 },
+      side: { daily: 25, weekly: 150, monthly: 500 },
+      bottom: { daily: 15, weekly: 90, monthly: 300 },
+      interstitial: { daily: 25, weekly: 150, monthly: 500 } // Same as side
     };
     
     return pricing[type]?.[duration] || 0;
@@ -80,18 +81,13 @@ class AdService {
         throw new Error('Unauthorized');
       }
 
-      // Convert amount to cents (same pattern as paymentController)
-      const amountInCents = Math.round(ad.budget.total * 100);
-      
-      // Ensure minimum amount for Stripe (50 cents = $0.50)
-      const minimumAmountInCents = 50;
-      const finalAmountInCents = Math.max(amountInCents, minimumAmountInCents);
+      // Convert amount to piastres (EGP * 100)
+      const amountInPiastres = Math.round(ad.budget.total * 100);
 
       console.log('Ad checkout amount calculation:', {
         originalAmount: ad.budget.total,
-        amountInCents,
-        minimumAmountInCents,
-        finalAmountInCents
+        amountInPiastres,
+        currency: 'EGP'
       });
 
       const session = await stripe.checkout.sessions.create({
@@ -99,12 +95,12 @@ class AdService {
         line_items: [
           {
             price_data: {
-              currency: 'usd',
+              currency: 'egp',
               product_data: {
-                name: `إعلان ${ad.type === 'featured' ? 'مميز' : ad.type === 'sidebar' ? 'جانبي' : 'بانر'}`,
+                name: `إعلان ${ad.placement.type === 'top' ? 'علوي' : ad.placement.type === 'bottom' ? 'سفلي' : 'داخلي'}`,
                 description: ad.description,
               },
-              unit_amount: finalAmountInCents,
+              unit_amount: amountInPiastres,
             },
             quantity: 1,
           },
@@ -115,11 +111,11 @@ class AdService {
         metadata: {
           adId: adId.toString(),
           userId: userId.toString(),
-          type: ad.type,
+          placementType: ad.placement.type,
+          placementLocation: ad.placement.location,
           duration: ad.duration,
-          originalCurrency: 'EGP',
           originalAmount: ad.budget.total.toString(),
-          convertedAmount: finalAmountInCents.toString()
+          amountInPiastres: amountInPiastres.toString()
         },
         customer_email: ad.advertiserId.email,
       });
@@ -412,7 +408,7 @@ class AdService {
         try {
           const refund = await stripe.refunds.create({
             payment_intent: ad.stripePaymentIntentId,
-            amount: Math.round(refundAmount * 100), // Convert to cents
+            amount: Math.round(refundAmount * 100), // Convert to piastres (EGP * 100)
             metadata: {
               adId: adId.toString(),
               userId: userId.toString(),

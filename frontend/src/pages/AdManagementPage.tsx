@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import PageLayout from '../components/layout/PageLayout';
 import Button from '../components/ui/Button';
 import BaseCard from '../components/ui/BaseCard';
+import Modal from '../admin/components/UI/Modal';
 import { 
   Eye, 
   MousePointer, 
@@ -15,7 +16,8 @@ import {
   XCircle,
   Clock,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 
@@ -46,12 +48,30 @@ interface Ad {
   createdAt: string;
 }
 
+interface RefundEstimate {
+  amount: number;
+  type: 'full' | 'partial' | 'none';
+}
+
+interface CancelResult {
+  success: boolean;
+  message: string;
+  refund?: RefundEstimate;
+}
+
 const AdManagementPage: React.FC = () => {
   const { user, accessToken } = useAuth();
   const { showToast } = useToast();
   const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancellingAd, setCancellingAd] = useState<string | null>(null);
+  
+  // Modal state
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelStep, setCancelStep] = useState<'summary' | 'result'>('summary');
+  const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
+  const [refundEstimate, setRefundEstimate] = useState<RefundEstimate | null>(null);
+  const [cancelResult, setCancelResult] = useState<CancelResult | null>(null);
 
   useEffect(() => {
     fetchUserAds();
@@ -60,7 +80,7 @@ const AdManagementPage: React.FC = () => {
   const fetchUserAds = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/ads/user', {
+      const response = await fetch('/api/ads/my-ads', {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
         },
@@ -80,14 +100,41 @@ const AdManagementPage: React.FC = () => {
     }
   };
 
-  const handleCancelAd = async (adId: string) => {
-    if (!confirm('هل أنت متأكد من إلغاء هذا الإعلان؟')) {
-      return;
-    }
-
+  // Fetch refund estimate when opening the modal
+  const fetchRefundEstimate = async (ad: Ad) => {
+    setRefundEstimate(null);
+    setCancelResult(null);
+    setCancelStep('summary');
+    setSelectedAd(ad);
+    setIsCancelModalOpen(true);
+    
     try {
-      setCancellingAd(adId);
-      const response = await fetch(`/api/ads/${adId}/cancel`, {
+      const response = await fetch(`/api/ads/${ad._id}/refund-estimate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      if (data.success && data.refund) {
+        setRefundEstimate({ amount: data.refund.amount, type: data.refund.type });
+      } else {
+        setRefundEstimate(null);
+      }
+    } catch (error) {
+      console.error('Error fetching refund estimate:', error);
+      setRefundEstimate(null);
+    }
+  };
+
+  // Confirm cancellation
+  const handleCancelAd = async () => {
+    if (!selectedAd) return;
+    
+    setCancellingAd(selectedAd._id);
+    try {
+      const response = await fetch(`/api/ads/${selectedAd._id}/cancel`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -96,18 +143,38 @@ const AdManagementPage: React.FC = () => {
       });
 
       const data = await response.json();
+      setCancelResult({
+        success: !!data.success,
+        message: data.message || (data.error?.message || 'فشل إلغاء الإعلان.'),
+        refund: data.refund || null,
+      });
+      setCancelStep('result');
+      
       if (data.success) {
-        showToast('success', 'تم إلغاء الإعلان بنجاح');
+        showToast('success', data.message || 'تم إلغاء الإعلان بنجاح');
         fetchUserAds(); // Refresh the list
       } else {
         showToast('error', data.error?.message || 'فشل في إلغاء الإعلان');
       }
     } catch (error) {
       console.error('Error cancelling ad:', error);
+      setCancelResult({ 
+        success: false, 
+        message: 'حدث خطأ أثناء محاولة إلغاء الإعلان. يرجى المحاولة لاحقاً.' 
+      });
+      setCancelStep('result');
       showToast('error', 'فشل في إلغاء الإعلان');
     } finally {
       setCancellingAd(null);
     }
+  };
+
+  const handleCloseCancelModal = () => {
+    setIsCancelModalOpen(false);
+    setCancelStep('summary');
+    setSelectedAd(null);
+    setRefundEstimate(null);
+    setCancelResult(null);
   };
 
   const getStatusInfo = (status: string) => {
@@ -129,8 +196,7 @@ const AdManagementPage: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ar-EG', {
-      year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
     });
   };
@@ -141,6 +207,26 @@ const AdManagementPage: React.FC = () => {
     const diffTime = end.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, diffDays);
+  };
+
+  const getPlacementArabicName = (location: string, type: string) => {
+    const locationMap: { [key: string]: string } = {
+      'homepage': 'الصفحة الرئيسية',
+      'categories': 'صفحة الفئات',
+      'search': 'صفحة البحث'
+    };
+    
+    const typeMap: { [key: string]: string } = {
+      'top': 'علوي',
+      'bottom': 'سفلي',
+      'interstitial': 'داخلي',
+      'sidebar': 'جانبي'
+    };
+    
+    const arabicLocation = locationMap[location] || location;
+    const arabicType = typeMap[type] || type;
+    
+    return `${arabicLocation} - ${arabicType}`;
   };
 
   const breadcrumbItems = [
@@ -252,16 +338,16 @@ const AdManagementPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-base">
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4 text-deep-teal" />
                           <span className="text-text-secondary">
-                            {ad.placement.location} - {ad.placement.type}
+                            {getPlacementArabicName(ad.placement.location, ad.placement.type)}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-deep-teal" />
-                          <span className="text-text-secondary">
+                          <span className="text-text-secondary text-sm">
                             {formatDate(ad.startDate)} - {formatDate(ad.endDate)}
                           </span>
                         </div>
@@ -286,29 +372,29 @@ const AdManagementPage: React.FC = () => {
                         <div className="text-center">
                           <div className="flex items-center justify-center gap-1 mb-1">
                             <Eye className="w-4 h-4 text-deep-teal" />
-                            <span className="font-bold text-deep-teal">
+                            <span className="font-bold text-deep-teal text-base">
                               {ad.performance.impressions.toLocaleString()}
                             </span>
                           </div>
-                          <span className="text-xs text-text-secondary">مشاهدات</span>
+                          <span className="text-sm text-text-secondary">مشاهدات</span>
                         </div>
                         <div className="text-center">
                           <div className="flex items-center justify-center gap-1 mb-1">
                             <MousePointer className="w-4 h-4 text-accent" />
-                            <span className="font-bold text-accent">
+                            <span className="font-bold text-accent text-base">
                               {ad.performance.clicks.toLocaleString()}
                             </span>
                           </div>
-                          <span className="text-xs text-text-secondary">نقرات</span>
+                          <span className="text-sm text-text-secondary">نقرات</span>
                         </div>
                         <div className="text-center">
                           <div className="flex items-center justify-center gap-1 mb-1">
                             <TrendingUp className="w-4 h-4 text-green-600" />
-                            <span className="font-bold text-green-600">
+                            <span className="font-bold text-green-600 text-base">
                               {ad.performance.ctr.toFixed(2)}%
                             </span>
                           </div>
-                          <span className="text-xs text-text-secondary">معدل النقر</span>
+                          <span className="text-sm text-text-secondary">معدل النقر</span>
                         </div>
                       </div>
                     </div>
@@ -319,16 +405,18 @@ const AdManagementPage: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleCancelAd(ad._id)}
+                          onClick={() => fetchRefundEstimate(ad)}
                           disabled={cancellingAd === ad._id}
                           className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
                         >
                           {cancellingAd === ad._id ? (
                             <RefreshCw className="w-4 h-4 animate-spin" />
                           ) : (
-                            <Trash2 className="w-4 h-4" />
+                            <div className="flex items-center gap-1">
+                              <Trash2 className="w-4 h-4" />
+                              إلغاء الإعلان
+                            </div>
                           )}
-                          إلغاء الإعلان
                         </Button>
                       )}
                       
@@ -359,6 +447,140 @@ const AdManagementPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Cancellation Modal */}
+      <Modal isOpen={isCancelModalOpen} onClose={handleCloseCancelModal} title="إلغاء الإعلان">
+        <div className="p-6 text-center">
+          {cancelStep === 'summary' && selectedAd && (
+            <>
+              <h2 className="text-xl font-bold text-deep-teal mb-4">تأكيد إلغاء الإعلان</h2>
+              <div className="mb-4 text-text-primary">
+                <div className="bg-gray-50 rounded-lg p-4 mb-4 text-right">
+                  <h3 className="font-semibold mb-2">{selectedAd.title}</h3>
+                  <p className="text-sm text-text-secondary">{selectedAd.description}</p>
+                  <div className="flex items-center gap-2 mt-2 text-sm">
+                    <MapPin className="w-4 h-4 text-deep-teal" />
+                    <span>{getPlacementArabicName(selectedAd.placement.location, selectedAd.placement.type)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 text-sm">
+                    <Clock className="w-4 h-4 text-accent" />
+                    <span className="text-accent font-medium">
+                      {selectedAd.duration === 'daily' && 'إعلان يومي'}
+                      {selectedAd.duration === 'weekly' && 'إعلان أسبوعي'}
+                      {selectedAd.duration === 'monthly' && 'إعلان شهري'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 text-sm">
+                    <DollarSign className="w-4 h-4 text-deep-teal" />
+                    <span className="text-deep-teal font-medium">
+                      {selectedAd.budget.total} جنيه
+                      {selectedAd.placement.type === 'top' && (
+                        selectedAd.duration === 'daily' ? ' (علوي يومي)' :
+                        selectedAd.duration === 'weekly' ? ' (علوي أسبوعي)' :
+                        ' (علوي شهري)'
+                      )}
+                      {selectedAd.placement.type === 'bottom' && (
+                        selectedAd.duration === 'daily' ? ' (سفلي يومي)' :
+                        selectedAd.duration === 'weekly' ? ' (سفلي أسبوعي)' :
+                        ' (سفلي شهري)'
+                      )}
+                      {selectedAd.placement.type === 'interstitial' && (
+                        selectedAd.duration === 'daily' ? ' (داخلي يومي)' :
+                        selectedAd.duration === 'weekly' ? ' (داخلي أسبوعي)' :
+                        ' (داخلي شهري)'
+                      )}
+                    </span>
+                  </div>
+                </div>
+                <p className="mb-2">عند إلغاء الإعلان، سيتم إيقافه فوراً ولن يظهر مرة أخرى.</p>
+                <p className="mb-2">سيتم تطبيق سياسة الاسترداد التالية:</p>
+                <ul className="mb-2 text-right mx-auto max-w-md text-sm list-disc pr-6">
+                  {selectedAd.duration === 'daily' && (
+                    <>
+                      <li>استرداد كامل قبل بداية الإعلان</li>
+                      <li>لا يوجد استرداد بعد بداية الإعلان</li>
+                    </>
+                  )}
+                  {selectedAd.duration === 'weekly' && (
+                    <>
+                      <li>استرداد كامل خلال أول 24 ساعة من بداية الإعلان</li>
+                      <li>استرداد 75% خلال أول 3 أيام</li>
+                      <li>لا يوجد استرداد بعد 3 أيام من بداية الإعلان</li>
+                    </>
+                  )}
+                  {selectedAd.duration === 'monthly' && (
+                    <>
+                      <li>استرداد كامل خلال أول 3 أيام من بداية الإعلان</li>
+                      <li>استرداد 75% خلال أول 7 أيام</li>
+                      <li>استرداد نسبي بعد 7 أيام وحتى 15 يوم</li>
+                      <li>لا يوجد استرداد بعد 15 يوم من بداية الإعلان</li>
+                    </>
+                  )}
+                </ul>
+                {refundEstimate && (
+                  <div className="mt-2 text-green-700 font-semibold">
+                    {refundEstimate.type === 'full' && `ستحصل على استرداد كامل (${refundEstimate.amount} جنيه).`}
+                    {refundEstimate.type === 'partial' && `ستحصل على استرداد جزئي (${refundEstimate.amount} جنيه).`}
+                    {refundEstimate.type === 'none' && 'لن تحصل على استرداد لأن فترة السماح انتهت.'}
+                  </div>
+                )}
+                {!refundEstimate && <div className="mt-2 text-gray-500 text-sm">سيتم حساب مبلغ الاسترداد عند التأكيد.</div>}
+              </div>
+              <Button
+                variant="danger"
+                size="lg"
+                className="w-full focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                onClick={handleCancelAd}
+                disabled={cancellingAd === selectedAd._id}
+              >
+                {cancellingAd === selectedAd._id ? 'جاري الإلغاء...' : 'تأكيد إلغاء الإعلان'}
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full mt-2 focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                onClick={handleCloseCancelModal}
+              >
+                إغلاق
+              </Button>
+            </>
+          )}
+          {cancelStep === 'result' && (
+            <>
+              <h2 className="text-xl font-bold text-deep-teal mb-4">نتيجة الإلغاء</h2>
+              <div className="mb-4 text-text-primary">
+                <p className="mb-2">{cancelResult?.message}</p>
+                {cancelResult?.refund && (
+                  <div className="mt-2 text-green-700 font-semibold">
+                    {cancelResult.refund.type === 'full' && `تم استرداد كامل (${cancelResult.refund.amount} جنيه).`}
+                    {cancelResult.refund.type === 'partial' && `تم استرداد جزئي (${cancelResult.refund.amount} جنيه).`}
+                  </div>
+                )}
+                {cancelResult?.success && (
+                  <div className="mt-2 text-green-600 flex items-center justify-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    تم إيقاف الإعلان فوراً
+                  </div>
+                )}
+                {!cancelResult?.success && (
+                  <div className="mt-2 text-red-600 flex items-center justify-center gap-2">
+                    <AlertCircle className="w-5 h-5" />
+                    فشل إلغاء الإعلان. يرجى المحاولة لاحقاً.
+                  </div>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full mt-2 focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                onClick={handleCloseCancelModal}
+              >
+                إغلاق
+              </Button>
+            </>
+          )}
+        </div>
+      </Modal>
     </PageLayout>
   );
 };

@@ -36,10 +36,6 @@ const AdBanner: React.FC<AdBannerProps> = ({
   onClick
 }) => {
   const handleClick = async () => {
-    // Debug: Log the target URL
-    console.log('Ad click - targetUrl:', ad.targetUrl);
-    console.log('Ad data:', ad);
-
     // Track click
     if (onClick) {
       onClick(ad._id);
@@ -59,11 +55,9 @@ const AdBanner: React.FC<AdBannerProps> = ({
 
     // Open target URL - ensure it's a valid URL
     const targetUrl = ad.targetUrl || 'https://example.com';
-    console.log('Opening URL:', targetUrl);
     
     // Ensure URL has protocol
     const finalUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
-    console.log('Final URL:', finalUrl);
     
     window.open(finalUrl, '_blank', 'noopener,noreferrer');
   };
