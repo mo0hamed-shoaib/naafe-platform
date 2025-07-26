@@ -411,6 +411,35 @@ class UserController {
   }
 
   /**
+   * Delete current user account
+   * DELETE /api/users/me
+   */
+  async deleteCurrentUser(req, res) {
+    try {
+      const userId = req.user._id;
+      
+      const result = await userService.deleteCurrentUser(userId);
+      
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Account deleted successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Delete account error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Internal server error'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
    * Get user's public listings/services
    * GET /api/users/:id/listings
    */

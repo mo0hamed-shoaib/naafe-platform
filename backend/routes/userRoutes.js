@@ -75,6 +75,13 @@ router.get('/me/availability', authenticateToken, userController.getAvailability
 router.patch('/me/availability', authenticateToken, userController.updateAvailability);
 
 /**
+ * @route   DELETE /api/users/me
+ * @desc    Delete current user account
+ * @access  Private
+ */
+router.delete('/me', authenticateToken, userController.deleteCurrentUser);
+
+/**
  * @route   GET /api/users/:id
  * @desc    Get public user profile by ID
  * @access  Public (with optional auth)

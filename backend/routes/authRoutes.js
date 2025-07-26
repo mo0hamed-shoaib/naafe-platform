@@ -1,6 +1,6 @@
 import express from 'express';
 import authController from '../controllers/authController.js';
-import { validateRegister, validateLogin, validateRefreshToken, validateCheckAvailability, validateForgotPassword, validateResetPassword } from '../validation/authValidation.js';
+import { validateRegister, validateLogin, validateRefreshToken, validateCheckAvailability, validateForgotPassword, validateResetPassword, validateChangePassword } from '../validation/authValidation.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
@@ -53,5 +53,12 @@ router.post('/forgot-password', validateForgotPassword, authController.forgotPas
  * @access  Public
  */
 router.post('/reset-password', validateResetPassword, authController.resetPassword);
+
+/**
+ * @route   POST /api/auth/change-password
+ * @desc    Change current password
+ * @access  Private
+ */
+router.post('/change-password', authenticateToken, validateChangePassword, authController.changePassword);
 
 export default router;

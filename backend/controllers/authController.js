@@ -313,6 +313,48 @@ class AuthController {
       });
     }
   }
+
+  /**
+   * Change current password
+   * POST /api/auth/change-password
+   */
+  async changePassword(req, res) {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const userId = req.user._id;
+      const result = await authService.changePassword(userId, currentPassword, newPassword);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Password changed successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      // Handle incorrect current password error
+      if (error.message.includes('كلمة المرور الحالية غير صحيحة')) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'BAD_REQUEST',
+            message: error.message
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Handle other errors
+      console.error('Password change error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Internal server error'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
 }
 
 export default new AuthController(); 

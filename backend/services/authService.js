@@ -364,6 +364,52 @@ class AuthService {
       throw error;
     }
   }
+
+  /**
+   * Change current password
+   * @param {string} userId - User ID
+   * @param {string} currentPassword - Current password
+   * @param {string} newPassword - New password
+   * @returns {Object} Success message
+   */
+  async changePassword(userId, currentPassword, newPassword) {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error('المستخدم غير موجود');
+      }
+
+      // Check if account is blocked
+      if (user.isBlocked) {
+        throw new Error('الحساب محظور');
+      }
+
+      // Check if account is inactive
+      if (!user.isActive) {
+        throw new Error('الحساب معطل');
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        throw new Error('كلمة المرور الحالية غير صحيحة');
+      }
+
+      // Hash new password
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+      // Update user password
+      user.password = hashedPassword;
+      await user.save();
+
+      console.log(`✅ Password changed successfully for ${user.email}`);
+
+      return { message: 'تم تغيير كلمة المرور بنجاح' };
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export default new AuthService(); 

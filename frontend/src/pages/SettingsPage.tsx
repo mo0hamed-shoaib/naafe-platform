@@ -11,10 +11,10 @@ import Button from '../components/ui/Button';
 import SettingsSection from '../components/settings/SettingsSection';
 import SettingsCard from '../components/settings/SettingsCard';
 import SettingsNavigation from '../components/settings/SettingsNavigation';
-import { checkAvailability, debounce } from '../utils/validation';
+import { checkAvailability, debounce, validatePassword, validatePasswordConfirmation } from '../utils/validation';
 
 const SettingsPage: React.FC = () => {
-  const { user, accessToken } = useAuth();
+  const { user, accessToken, logout } = useAuth();
   const [activeSection, setActiveSection] = useState('account');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -121,6 +121,22 @@ const SettingsPage: React.FC = () => {
     checking?: boolean;
   } | null>(null);
 
+  // Account management states
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordErrors, setPasswordErrors] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
   // Check if there are any validation errors
   const hasValidationErrors = () => {
     // Check for empty required fields
@@ -130,6 +146,152 @@ const SettingsPage: React.FC = () => {
     const hasValidationErrors = !!(bioError || nameError || phoneError || (phoneAvailabilityStatus && !phoneAvailabilityStatus.available));
     
     return hasEmptyFields || hasValidationErrors;
+  };
+
+  // Password change handlers
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error when user starts typing
+    setPasswordErrors(prev => ({ ...prev, [name]: '' }));
+    
+    // Real-time validation for new password
+    if (name === 'newPassword') {
+      const validation = validatePassword(value);
+      if (!validation.isValid) {
+        setPasswordErrors(prev => ({ ...prev, newPassword: validation.message }));
+      }
+      
+      // Check if new password is the same as current password
+      if (passwordData.currentPassword.trim() && value.trim() && 
+          passwordData.currentPassword.trim() === value.trim()) {
+        setPasswordErrors(prev => ({ 
+          ...prev, 
+          newPassword: 'كلمة المرور الجديدة يجب أن تكون مختلفة عن كلمة المرور الحالية' 
+        }));
+      }
+    }
+    
+    // Real-time validation for confirm password
+    if (name === 'confirmPassword') {
+      const validation = validatePasswordConfirmation(passwordData.newPassword, value);
+      if (!validation.isValid) {
+        setPasswordErrors(prev => ({ ...prev, confirmPassword: validation.message }));
+      }
+    }
+  };
+
+  const validatePasswordForm = () => {
+    const errors = { currentPassword: '', newPassword: '', confirmPassword: '' };
+    let hasErrors = false;
+
+    // Validate current password
+    if (!passwordData.currentPassword.trim()) {
+      errors.currentPassword = 'كلمة المرور الحالية مطلوبة';
+      hasErrors = true;
+    }
+
+    // Validate new password using comprehensive validation
+    const newPasswordValidation = validatePassword(passwordData.newPassword);
+    if (!newPasswordValidation.isValid) {
+      errors.newPassword = newPasswordValidation.message;
+      hasErrors = true;
+    }
+
+    // Check if new password is the same as current password
+    if (passwordData.currentPassword.trim() && passwordData.newPassword.trim() && 
+        passwordData.currentPassword.trim() === passwordData.newPassword.trim()) {
+      errors.newPassword = 'كلمة المرور الجديدة يجب أن تكون مختلفة عن كلمة المرور الحالية';
+      hasErrors = true;
+    }
+
+    // Validate password confirmation
+    const confirmPasswordValidation = validatePasswordConfirmation(passwordData.newPassword, passwordData.confirmPassword);
+    if (!confirmPasswordValidation.isValid) {
+      errors.confirmPassword = confirmPasswordValidation.message;
+      hasErrors = true;
+    }
+
+    setPasswordErrors(errors);
+    return !hasErrors;
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validatePasswordForm()) {
+      return;
+    }
+
+    setChangingPassword(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccess('تم تغيير كلمة المرور بنجاح');
+        setShowPasswordModal(false);
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setPasswordErrors({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        
+        // Logout the user after successful password change for security
+        setTimeout(() => {
+          logout();
+        }, 1500); // Give user time to see the success message
+      } else {
+        setError(data.error?.message || 'فشل تغيير كلمة المرور');
+      }
+    } catch (error) {
+      setError('حدث خطأ أثناء تغيير كلمة المرور');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/users/me', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccess('تم حذف الحساب بنجاح');
+        setShowDeleteModal(false);
+        // Redirect to logout or home page
+        window.location.href = '/';
+      } else {
+        setError(data.error?.message || 'فشل حذف الحساب');
+      }
+    } catch (error) {
+      setError('حدث خطأ أثناء حذف الحساب');
+    } finally {
+      setDeletingAccount(false);
+    }
   };
 
   // Debounced phone availability check
@@ -642,6 +804,7 @@ const SettingsPage: React.FC = () => {
               variant="outline"
               size="sm"
               className="text-deep-teal border-deep-teal hover:bg-deep-teal hover:text-white"
+              onClick={() => setShowPasswordModal(true)}
             >
               تغيير
             </Button>
@@ -660,13 +823,127 @@ const SettingsPage: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              className="text-deep-teal border-deep-teal hover:bg-deep-teal hover:text-white"
+              className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
+              onClick={() => setShowDeleteModal(true)}
             >
               حذف
             </Button>
           </div>
         </div>
       </SettingsCard>
+
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative" dir="rtl">
+            <button 
+              className="absolute left-4 top-4 text-gray-400 hover:text-red-500 text-2xl" 
+              onClick={() => setShowPasswordModal(false)}
+            >
+              ×
+            </button>
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <Key className="text-deep-teal" size={20} />
+                <span className="font-bold text-deep-teal">تغيير كلمة المرور</span>
+              </div>
+            </div>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <FormInput
+                type="password"
+                name="currentPassword"
+                label="كلمة المرور الحالية"
+                placeholder="أدخل كلمة المرور الحالية"
+                value={passwordData.currentPassword}
+                onChange={handlePasswordChange}
+                error={passwordErrors.currentPassword}
+                className="w-full"
+              />
+              <FormInput
+                type="password"
+                name="newPassword"
+                label="كلمة المرور الجديدة"
+                placeholder="أدخل كلمة المرور الجديدة"
+                value={passwordData.newPassword}
+                onChange={handlePasswordChange}
+                error={passwordErrors.newPassword}
+                className="w-full"
+              />
+              <FormInput
+                type="password"
+                name="confirmPassword"
+                label="تأكيد كلمة المرور الجديدة"
+                placeholder="أعد إدخال كلمة المرور الجديدة"
+                value={passwordData.confirmPassword}
+                onChange={handlePasswordChange}
+                error={passwordErrors.confirmPassword}
+                className="w-full"
+              />
+              <div className="flex gap-2 mt-6">
+                <Button
+                  type="submit"
+                  disabled={changingPassword}
+                  className="bg-deep-teal text-white flex-1"
+                >
+                  {changingPassword ? 'جاري التغيير...' : 'تغيير كلمة المرور'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="flex-1"
+                >
+                  إلغاء
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative" dir="rtl">
+            <button 
+              className="absolute left-4 top-4 text-gray-400 hover:text-red-500 text-2xl" 
+              onClick={() => setShowDeleteModal(false)}
+            >
+              ×
+            </button>
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <Trash2 className="text-red-600" size={20} />
+                <span className="font-bold text-red-600">حذف الحساب</span>
+              </div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+                <p className="text-red-800 text-sm">
+                  <strong>تحذير:</strong> حذف الحساب إجراء نهائي لا يمكن التراجع عنه. 
+                  سيتم حذف جميع بياناتك وبيانات الخدمات المرتبطة بحسابك نهائياً.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleDeleteAccount}
+                  disabled={deletingAccount}
+                  className="bg-red-600 text-white hover:bg-red-700 flex-1"
+                >
+                  {deletingAccount ? 'جاري الحذف...' : 'تأكيد الحذف'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1"
+                >
+                  إلغاء
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </SettingsSection>
   );
 

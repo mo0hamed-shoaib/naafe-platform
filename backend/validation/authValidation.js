@@ -138,4 +138,19 @@ export const validateResetPassword = [
     .withMessage('كلمة المرور يجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص واحد على الأقل'),
   
   handleValidationErrors
+];
+
+// Change password validation
+export const validateChangePassword = [
+  body('currentPassword')
+    .notEmpty()
+    .withMessage('كلمة المرور الحالية مطلوبة'),
+  
+  body('newPassword')
+    .isLength({ min: 8 })
+    .withMessage('كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .withMessage('كلمة المرور الجديدة يجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص واحد على الأقل'),
+  
+  handleValidationErrors
 ]; 
