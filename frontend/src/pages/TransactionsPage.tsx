@@ -120,11 +120,14 @@ const TransactionsPage: React.FC = () => {
     failed: 'فشل',
     pending: 'قيد الانتظار',
     canceled: 'ملغي',
+    cancelled: 'ملغي',
     inactive: 'غير نشط',
     active: 'نشط',
     completed: 'مكتمل',
     escrowed: 'محتجز في الضمان',
     partial_refund: 'استرداد جزئي',
+    paused: 'متوقف مؤقتاً',
+    rejected: 'مرفوض',
   };
   const colorMap: Record<string, string> = {
     succeeded: 'text-green-600',
@@ -132,11 +135,14 @@ const TransactionsPage: React.FC = () => {
     failed: 'text-red-600',
     pending: 'text-amber-600',
     canceled: 'text-gray-500',
+    cancelled: 'text-gray-500',
     inactive: 'text-gray-500',
     active: 'text-green-600',
     completed: 'text-green-600',
     escrowed: 'text-blue-600',
     partial_refund: 'text-orange-500',
+    paused: 'text-orange-500',
+    rejected: 'text-red-600',
   };
 
   const columns: Column<Transaction>[] = [
@@ -170,7 +176,7 @@ const TransactionsPage: React.FC = () => {
       sortable: true,
       render: (value) => {
         const v = value as string;
-        return <span className={colorMap[v] || ''}>{statusMap[v] || v}</span>;
+        return <span className={`font-bold ${colorMap[v] || ''}`}>{statusMap[v] || v}</span>;
       },
     },
   ];
@@ -211,10 +217,13 @@ const TransactionsPage: React.FC = () => {
                 { value: 'failed', label: 'فشل' },
                 { value: 'pending', label: 'قيد الانتظار' },
                 { value: 'canceled', label: 'ملغي' },
+                { value: 'cancelled', label: 'ملغي' },
                 { value: 'inactive', label: 'غير نشط' },
                 { value: 'active', label: 'نشط' },
                 { value: 'completed', label: 'مكتمل' },
                 { value: 'escrowed', label: 'محتجز في الضمان' },
+                { value: 'paused', label: 'متوقف مؤقتاً' },
+                { value: 'rejected', label: 'مرفوض' },
               ]}
               placeholder="اختر الحالة"
               size="md"
@@ -228,6 +237,7 @@ const TransactionsPage: React.FC = () => {
                 { value: 'service', label: 'خدمة' },
                 { value: 'subscription', label: 'اشتراك' },
                 { value: 'refund', label: 'استرداد' },
+                { value: 'ad', label: 'إعلان' },
               ]}
               placeholder="اختر النوع"
               size="md"

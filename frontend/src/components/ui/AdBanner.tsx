@@ -174,14 +174,14 @@ const AdBanner: React.FC<AdBannerProps> = ({
               <div className="absolute bottom-0 left-0 right-0 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <h3 className="font-bold text-white text-sm mb-1">{ad.title}</h3>
-                    <p className="text-white/90 text-xs line-clamp-1">{ad.description}</p>
+                    <h3 className="font-bold text-white text-2xl mb-1">{ad.title}</h3>
+                    <p className="text-white/90 text-2xl line-clamp-1">{ad.description}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs bg-white/20 text-white px-2 py-1 rounded">
+                    <span className="text-2xl bg-white/20 text-white px-2 py-1 rounded">
                       إعلان
                     </span>
-                    <ExternalLink className="w-4 h-4 text-white" />
+                    <ExternalLink className="w-7 h-7 text-white" />
                   </div>
                 </div>
               </div>

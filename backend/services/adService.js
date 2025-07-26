@@ -325,6 +325,11 @@ class AdService {
 
   /**
    * Calculate refund amount for ad cancellation
+   * 
+   * Refund Policies:
+   * - Daily: No refund (ads start immediately)
+   * - Weekly: Full refund within 24h, 75% within 3 days, none after
+   * - Monthly: Full refund within 3 days, 75% within 7 days, prorated after
    */
   calculateRefundAmount(ad, cancellationDate) {
     const now = new Date(cancellationDate);
@@ -341,11 +346,9 @@ class AdService {
     
     switch (ad.duration) {
       case 'daily':
-        // Full refund before live, none after
-        if (daysSinceStart < 0) {
-          refundAmount = totalAmount;
-          refundType = 'full';
-        }
+        // No refund for daily ads since they start immediately
+        refundAmount = 0;
+        refundType = 'none';
         break;
         
       case 'weekly':

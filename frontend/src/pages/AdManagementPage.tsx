@@ -497,8 +497,8 @@ const AdManagementPage: React.FC = () => {
                 <ul className="mb-2 text-right mx-auto max-w-md text-sm list-disc pr-6">
                   {selectedAd.duration === 'daily' && (
                     <>
-                      <li>استرداد كامل قبل بداية الإعلان</li>
-                      <li>لا يوجد استرداد بعد بداية الإعلان</li>
+                      <li>لا يوجد استرداد للإعلانات اليومية</li>
+                      <li>الإعلان يبدأ فوراً عند الشراء</li>
                     </>
                   )}
                   {selectedAd.duration === 'weekly' && (
