@@ -52,11 +52,6 @@ const NewChatPage: React.FC = () => {
   const { showSuccess, showError } = useToast();
   const { connected, on, emit } = useSocket(accessToken || undefined);
   
-  // Debug socket connection status
-  useEffect(() => {
-    console.log('Socket connection status:', connected);
-  }, [connected]);
-  
   const targetUserId = searchParams.get('userId');
   const [targetUser, setTargetUser] = useState<User | null>(null);
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -128,44 +123,31 @@ const NewChatPage: React.FC = () => {
   // Socket event listeners for real-time messaging
   useEffect(() => {
     if (!connected) {
-      console.log('Socket not connected, skipping event listeners');
       return;
     }
 
-    console.log('Setting up socket event listeners');
-
     const offReceiveMessage = on('receive-message', (...args: unknown[]) => {
       const message = args[0] as Message;
-      console.log('Received message via socket:', message);
-      console.log('Current conversation ID:', conversation?._id);
-      console.log('Message conversation ID:', message.conversationId);
-      console.log('IDs match?', conversation?._id === message.conversationId);
       
       // Only process messages if conversation is loaded and matches, or if no conversation is set yet
       if (!conversation) {
-        console.log('Conversation not loaded yet, storing message for later');
         // Store message temporarily until conversation is loaded
         setMessages(prev => {
           const messageExists = prev.some(m => m._id === message._id);
           if (messageExists) {
-            console.log('Message already exists, skipping:', message._id);
             return prev;
           }
           return [...prev, message];
         });
       } else if (message.conversationId === conversation._id) {
-        console.log('Adding message to state:', message);
         setMessages(prev => {
           // Check if message already exists to prevent duplication
           const messageExists = prev.some(m => m._id === message._id);
           if (messageExists) {
-            console.log('Message already exists, skipping:', message._id);
             return prev;
           }
           return [...prev, message];
         });
-      } else {
-        console.log('Message not for current conversation:', message.conversationId, 'vs', conversation._id);
       }
     });
 
@@ -174,74 +156,46 @@ const NewChatPage: React.FC = () => {
 
     const offMessageSent = on('message-sent', (...args: unknown[]) => {
       const message = args[0] as Message;
-      console.log('Message sent confirmation via socket:', message);
-      console.log('Current conversation ID:', conversation?._id);
-      console.log('Message conversation ID:', message.conversationId);
-      console.log('IDs match?', conversation?._id === message.conversationId);
       
       // Only process messages if conversation is loaded and matches, or if no conversation is set yet
       if (!conversation) {
-        console.log('Conversation not loaded yet, storing message for later');
         // Store message temporarily until conversation is loaded
         setMessages(prev => {
           const messageExists = prev.some(m => m._id === message._id);
           if (messageExists) {
-            console.log('Message already exists, skipping:', message._id);
             return prev;
           }
           return [...prev, message];
         });
       } else if (message.conversationId === conversation._id) {
-        console.log('Adding sent message to state:', message);
         setMessages(prev => {
           // Check if message already exists to prevent duplication
           const messageExists = prev.some(m => m._id === message._id);
           if (messageExists) {
-            console.log('Message already exists, skipping:', message._id);
             return prev;
           }
           return [...prev, message];
         });
-      } else {
-        console.log('Sent message not for current conversation:', message.conversationId, 'vs', conversation._id);
       }
     });
 
     return () => {
-      console.log('Cleaning up socket event listeners');
       offReceiveMessage?.();
       offMessageSent?.();
     };
-  }, [connected, on, conversation]); // Removed user?.id dependency back
-
-  // Debug conversation changes
-  useEffect(() => {
-    console.log('Conversation changed:', conversation);
-    console.log('Conversation ID:', conversation?._id);
-    console.log('Socket connected:', connected);
-  }, [conversation, connected]);
-
-  // Debug messages state
-  useEffect(() => {
-    console.log('Messages updated:', messages.length, 'messages');
-    console.log('Latest message:', messages[messages.length - 1]);
-  }, [messages]);
+  }, [connected, on, conversation]);
 
   // Join conversation room when conversation is available
   useEffect(() => {
     if (connected && conversation?._id) {
-      console.log('Joining conversation room:', conversation._id);
       emit('join-conversation', { conversationId: conversation._id });
       emit('mark-read', { conversationId: conversation._id });
-    } else {
-      console.log('Cannot join conversation room:', { connected, conversationId: conversation?._id });
     }
   }, [connected, conversation, emit]);
 
   // Re-join conversation room when conversation changes (for newly created conversations)
   useEffect(() => {
     if (connected && conversation?._id) {
-      console.log('Re-joining conversation room after conversation change:', conversation._id);
       emit('join-conversation', { conversationId: conversation._id });
       emit('mark-read', { conversationId: conversation._id });
     }
@@ -250,7 +204,6 @@ const NewChatPage: React.FC = () => {
   // Join conversation room immediately when conversation is created
   useEffect(() => {
     if (connected && conversation?._id) {
-      console.log('Joining conversation room immediately:', conversation._id);
       emit('join-conversation', { conversationId: conversation._id });
       emit('mark-read', { conversationId: conversation._id });
     }
@@ -319,11 +272,9 @@ const NewChatPage: React.FC = () => {
       const token = accessToken || localStorage.getItem('accessToken') || '';
       
       let conversationId = conversation?._id;
-      console.log('Initial conversation ID:', conversationId);
       
       // Create conversation if it doesn't exist
       if (!conversationId) {
-        console.log('Creating new conversation for target user:', targetUserId);
         const convRes = await fetch('/api/chat/direct', {
           method: 'POST',
           headers: {
@@ -335,23 +286,14 @@ const NewChatPage: React.FC = () => {
         const convData = await convRes.json();
         if (convData.success) {
           conversationId = convData.data.conversation._id;
-          console.log('New conversation created with ID:', conversationId);
           setConversation(convData.data.conversation);
         } else {
           throw new Error(convData.error?.message || 'فشل إنشاء المحادثة');
         }
       }
 
-      console.log('Final conversation ID for sending:', conversationId);
-      console.log('Socket connected:', connected);
-
       // Send message via socket for real-time delivery
       if (connected && conversationId) {
-        console.log('Sending message via socket:', {
-          conversationId,
-          receiverId: targetUserId,
-          content: newMessage.trim()
-        });
         emit('send-message', {
           conversationId,
           receiverId: targetUserId,
@@ -360,7 +302,6 @@ const NewChatPage: React.FC = () => {
         setNewMessage('');
         showSuccess('تم إرسال الرسالة بنجاح');
       } else {
-        console.log('Socket not connected or no conversationId, using HTTP fallback:', { connected, conversationId });
         // Fallback to HTTP if socket is not connected
         const messageRes = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
           method: 'POST',
