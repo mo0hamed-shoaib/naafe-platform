@@ -269,7 +269,7 @@ const FilterForm = ({
                     minuteStep={5}
                     size="large"
                     className="bg-white border-2 border-gray-300 rounded-lg py-2 pr-3 pl-3 focus:ring-2 focus:ring-accent focus:border-accent text-right text-black custom-timepicker-contrast"
-                    popupClassName="rtl"
+                    classNames={{ popup: { root: 'rtl' } }}
                     style={{ direction: 'rtl' }}
                     placeholder={["من", "إلى"]}
                   />

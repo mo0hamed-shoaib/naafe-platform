@@ -439,7 +439,7 @@ const PostServiceForm: React.FC = () => {
                             placeholder={["من", "إلى"]}
                             minuteStep={5}
                             allowClear
-                            popupClassName="rtl"
+                            classNames={{ popup: { root: 'rtl' } }}
                             style={{ direction: 'rtl' }}
                           />
                         </ConfigProvider>

@@ -152,7 +152,8 @@ const SearchPage = () => {
           ? upgradeStatus as 'none' | 'pending' | 'accepted' | 'rejected' 
           : 'none';
         return {
-          id: providerId || l._id as string,
+          id: l._id as string, // Use the listing's unique ID instead of provider ID
+          providerId: providerId || '', // Keep provider ID for reference
           name: providerName,
           rating: providerStats.averageRating || 0,
           reviewCount: providerStats.totalReviews || 0,
@@ -559,7 +560,7 @@ const SearchPage = () => {
                     <React.Fragment key={provider.id}>
                       <ServiceCard
                         provider={provider}
-                        onViewDetails={handleViewProviderDetails}
+                        onViewDetails={() => handleViewProviderDetails(provider.providerId || provider.id)}
                         featured={provider.featured}
                       />
                       {/* Interstitial Ad every 6 providers */}

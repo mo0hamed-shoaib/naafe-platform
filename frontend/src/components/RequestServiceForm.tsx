@@ -507,8 +507,7 @@ const RequestServiceForm: React.FC = () => {
                       className="w-full custom-timepicker-placeholder bg-white border-2 border-gray-300 rounded-lg py-2 pr-3 pl-3 focus:ring-2 focus:ring-accent focus:border-accent text-right text-[#0e1b18]"
                       placeholder="اختر التاريخ والوقت"
                       style={{ direction: 'rtl' }}
-                      classNames={{ popup: { root: 'rtl' } }}
-                      dropdownClassName="custom-datepicker-dropdown"
+                      classNames={{ popup: { root: 'rtl custom-datepicker-dropdown' } }}
                       disabledDate={current => current && current < dayjs().startOf('day')}
                     />
                   </ConfigProvider>

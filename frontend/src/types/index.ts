@@ -14,6 +14,7 @@ export interface ServiceCategory {
 
 export interface ServiceProvider {
   id: string;
+  providerId?: string; // Provider's user ID for navigation
   name: string;
   rating: number;
   category: string;
