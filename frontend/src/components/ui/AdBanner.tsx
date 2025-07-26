@@ -36,6 +36,10 @@ const AdBanner: React.FC<AdBannerProps> = ({
   onClick
 }) => {
   const handleClick = async () => {
+    // Debug: Log the target URL
+    console.log('Ad click - targetUrl:', ad.targetUrl);
+    console.log('Ad data:', ad);
+
     // Track click
     if (onClick) {
       onClick(ad._id);
@@ -53,8 +57,15 @@ const AdBanner: React.FC<AdBannerProps> = ({
       console.error('Error tracking ad click:', error);
     }
 
-    // Open target URL
-    window.open(ad.targetUrl, '_blank', 'noopener,noreferrer');
+    // Open target URL - ensure it's a valid URL
+    const targetUrl = ad.targetUrl || 'https://example.com';
+    console.log('Opening URL:', targetUrl);
+    
+    // Ensure URL has protocol
+    const finalUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
+    console.log('Final URL:', finalUrl);
+    
+    window.open(finalUrl, '_blank', 'noopener,noreferrer');
   };
 
   // Track impression on mount
@@ -99,7 +110,7 @@ const AdBanner: React.FC<AdBannerProps> = ({
       case 'top':
       case 'bottom':
         return (
-          <div className="relative h-32">
+          <div className="relative h-48">
             {/* Main Image - Full Width */}
             <img
               src={ad.imageUrl}
@@ -115,14 +126,14 @@ const AdBanner: React.FC<AdBannerProps> = ({
               <div className="absolute bottom-0 left-0 right-0 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <h3 className="font-bold text-white text-sm mb-1">{ad.title}</h3>
-                    <p className="text-white/90 text-xs line-clamp-1">{ad.description}</p>
+                    <h3 className="font-bold text-white text-2xl mb-1">{ad.title}</h3>
+                    <p className="text-white/90 text-2xl line-clamp-1">{ad.description}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs bg-white/20 text-white px-2 py-1 rounded">
+                    <span className="text-2xl bg-white/20 text-white px-2 py-1 rounded">
                       إعلان
                     </span>
-                    <ExternalLink className="w-4 h-4 text-white" />
+                    <ExternalLink className="w-7 h-7 text-white" />
                   </div>
                 </div>
               </div>
@@ -153,7 +164,7 @@ const AdBanner: React.FC<AdBannerProps> = ({
       
       case 'interstitial':
         return (
-          <div className="relative h-32">
+          <div className="relative h-48">
             {/* Main Image - Full Width */}
             <img
               src={ad.imageUrl}

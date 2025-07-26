@@ -53,7 +53,7 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
   if (!ads || ads.length === 0) {
     return (
       <div className={`w-full ${className}`}>
-        <div className="bg-white border border-deep-teal/20 rounded-lg p-6 text-center shadow-sm h-32 flex flex-col items-center justify-center">
+        <div className="bg-white border border-deep-teal/20 rounded-lg p-6 text-center shadow-sm h-48 flex flex-col items-center justify-center">
           <Megaphone className="w-8 h-8 text-deep-teal mx-auto mb-3" />
           <h3 className="text-lg font-bold text-deep-teal mb-2">{fallbackMessage}</h3>
           <p className="text-sm text-text-secondary mb-4">

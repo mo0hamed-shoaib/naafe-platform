@@ -228,7 +228,7 @@ const AdvertisePage: React.FC = () => {
         title: adFormData.title,
         description: adFormData.description,
         imageUrl: adFormData.imageUrl || 'https://via.placeholder.com/300x200',
-        targetUrl: adFormData.targetUrl || '/categories',
+        targetUrl: adFormData.targetUrl || 'https://example.com', // Changed from '/categories' to a proper external URL
         duration: selectedDuration,
         placement: {
           id: placement.id,
