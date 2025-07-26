@@ -533,8 +533,8 @@ class UserController {
   // Admin: Get all users (paginated, filterable)
   async getAllUsers(req, res) {
     try {
-      const { page = 1, limit = 20, search = '', role } = req.query;
-      const result = await userService.getAllUsers({ page, limit, search, role });
+      const { page = 1, limit = 20, search = '', role, isVerified, isBlocked } = req.query;
+      const result = await userService.getAllUsers({ page, limit, search, role, isVerified, isBlocked });
       res.json(result);
     } catch (err) {
       res.status(500).json({ message: 'Failed to fetch users', error: err.message });

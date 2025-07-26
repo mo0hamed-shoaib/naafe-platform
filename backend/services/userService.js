@@ -274,7 +274,7 @@ class UserService {
   }
 
   // Admin: Get all users (paginated, filterable)
-  async getAllUsers({ page = 1, limit = 20, search = '', role }) {
+  async getAllUsers({ page = 1, limit = 20, search = '', role, isVerified, isBlocked }) {
     const query = {};
     if (search) {
       query.$or = [
@@ -285,6 +285,12 @@ class UserService {
     }
     if (role) {
       query.roles = role;
+    }
+    if (isVerified !== undefined) {
+      query.isVerified = isVerified === 'true';
+    }
+    if (isBlocked !== undefined) {
+      query.isBlocked = isBlocked === 'true';
     }
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const users = await User.find(query)
