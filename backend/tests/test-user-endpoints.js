@@ -137,6 +137,22 @@ async function testUserEndpoints() {
       });
       console.log('✅ Unverified filter works:', unverifiedUsers.users.length, 'unverified users found');
 
+      // Test phone number search
+      const phoneSearchResults = await userService.getAllUsers({ 
+        page: 1, 
+        limit: 10, 
+        search: '01011111113'
+      });
+      console.log('✅ Phone search works:', phoneSearchResults.users.length, 'users found by phone');
+
+      // Test email search
+      const emailSearchResults = await userService.getAllUsers({ 
+        page: 1, 
+        limit: 10, 
+        search: 'verified@example.com'
+      });
+      console.log('✅ Email search works:', emailSearchResults.users.length, 'users found by email');
+
       // Clean up additional test data
       await User.deleteMany({ 
         email: { $in: ['verified@example.com', 'blocked@example.com'] } 

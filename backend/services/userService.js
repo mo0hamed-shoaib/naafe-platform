@@ -281,6 +281,7 @@ class UserService {
         { email: { $regex: search, $options: 'i' } },
         { 'name.first': { $regex: search, $options: 'i' } },
         { 'name.last': { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
       ];
     }
     if (role) {

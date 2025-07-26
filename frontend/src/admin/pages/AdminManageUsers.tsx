@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Shield, User, UserCheck } from 'lucide-react';
 import SearchAndFilter from '../components/UI/SearchAndFilter';
 import Pagination from '../components/UI/Pagination';
@@ -170,6 +170,7 @@ const AdminManageUsers: React.FC = () => {
   const { accessToken, user: currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterValue, setFilterValue] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<string>('createdAt');
@@ -178,9 +179,37 @@ const AdminManageUsers: React.FC = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [expandedAddresses, setExpandedAddresses] = useState<Set<string>>(new Set());
   const [expandedBadges, setExpandedBadges] = useState<Set<string>>(new Set());
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Debounce search term to prevent excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 800); // 800ms delay for better UX
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm]);
+
+  // Maintain focus on search input after re-renders
+  useEffect(() => {
+    const currentElement = document.activeElement;
+    if (searchInputRef.current && currentElement && searchInputRef.current.contains(currentElement)) {
+      // If the focused element is within our search input, maintain focus
+      setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }, 0);
+    }
+  });
 
   // Toggle address expansion
-  const toggleAddressExpansion = (userId: string) => {
+  const toggleAddressExpansion = useCallback((userId: string) => {
     setExpandedAddresses(prev => {
       const newSet = new Set(prev);
       if (newSet.has(userId)) {
@@ -190,7 +219,7 @@ const AdminManageUsers: React.FC = () => {
       }
       return newSet;
     });
-  };
+  }, []);
 
   // Expandable address component
   const ExpandableAddress = ({ address, userId, isBlocked }: { address: string; userId: string; isBlocked: boolean }) => {
@@ -236,7 +265,7 @@ const AdminManageUsers: React.FC = () => {
     );
   };
 
-  const toggleBadgeExpansion = (userId: string) => {
+  const toggleBadgeExpansion = useCallback((userId: string) => {
     setExpandedBadges(prev => {
       const newSet = new Set(prev);
       if (newSet.has(userId)) {
@@ -246,7 +275,7 @@ const AdminManageUsers: React.FC = () => {
       }
       return newSet;
     });
-  };
+  }, []);
 
   const {
     data,
@@ -254,9 +283,13 @@ const AdminManageUsers: React.FC = () => {
     isError,
     error,
   } = useQuery<UsersApiResponse, Error>({
-    queryKey: ['users', currentPage, searchTerm, filterValue, accessToken],
-    queryFn: () => fetchUsers({ page: currentPage, search: searchTerm, filter: filterValue, token: accessToken }),
-    // keepPreviousData: true, // Not supported in object syntax in React Query v5+
+    queryKey: ['users', currentPage, debouncedSearchTerm, filterValue, accessToken],
+    queryFn: () => fetchUsers({ page: currentPage, search: debouncedSearchTerm, filter: filterValue, token: accessToken }),
+    keepPreviousData: true,
+    staleTime: 30000, // Keep data fresh for 30 seconds
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   const queryClient = useQueryClient();
@@ -273,7 +306,7 @@ const AdminManageUsers: React.FC = () => {
     },
   });
 
-  const handleToggleUserBlock = (user: User) => {
+  const handleToggleUserBlock = useCallback((user: User) => {
     // Prevent admin from blocking themselves
     if (currentUser && user.id === currentUser.id) {
       showError('لا يمكنك حظر نفسك', 'لا يمكن للمدير حظر حسابه الخاص');
@@ -282,7 +315,7 @@ const AdminManageUsers: React.FC = () => {
     
     setSelectedUser(user);
     setIsConfirmModalOpen(true);
-  };
+  }, [currentUser, showError]);
 
   const confirmToggleBlock = () => {
     if (selectedUser) {
@@ -293,20 +326,24 @@ const AdminManageUsers: React.FC = () => {
   };
 
   const users = (data?.users || []) as User[];
-  // Map users to Record<string, unknown> for the table
-  const tableData: Record<string, unknown>[] = users.map(u => ({ ...u }));
+  
+  // Memoize table data to prevent unnecessary re-renders
+  const tableData: Record<string, unknown>[] = useMemo(() => {
+    return users.map(u => ({ ...u }));
+  }, [users]);
+  
   const totalPages = data?.totalPages || 1;
   const totalItems = data?.totalItems || 0;
   const itemsPerPage = data?.itemsPerPage || 10;
 
-  const filterOptions = [
+  const filterOptions = useMemo(() => [
     { value: 'all', label: 'جميع المستخدمين' },
     { value: 'verified', label: 'موثق' },
     { value: 'unverified', label: 'غير موثق' },
     { value: 'blocked', label: 'محظور' }
-  ];
+  ], []);
 
-  const tableColumns = [
+  const tableColumns = useMemo(() => [
     {
       key: 'name' as keyof User,
       label: 'الاسم',
@@ -398,7 +435,7 @@ const AdminManageUsers: React.FC = () => {
         );
       }
     }
-  ];
+  ], [expandedBadges, currentUser, selectedUser, blockMutation.isPending, toggleBadgeExpansion, handleToggleUserBlock]);
 
   if (isLoading) return (
     <div className="flex items-center justify-center min-h-[300px] text-lg text-deep-teal">جاري التحميل...</div>
@@ -419,12 +456,14 @@ const AdminManageUsers: React.FC = () => {
       
       <div className="bg-light-cream rounded-2xl p-8 shadow-md">
         <SearchAndFilter
+          ref={searchInputRef}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           filterValue={filterValue}
           onFilterChange={setFilterValue}
           filterOptions={filterOptions}
-          placeholder="ابحث عن المستخدمين بالاسم أو البريد الإلكتروني أو رقم الهاتف"
+          placeholder="ابحث بالاسم أو البريد الإلكتروني أو رقم الهاتف"
+          isLoading={isLoading}
         />
 
         <SortableTable
