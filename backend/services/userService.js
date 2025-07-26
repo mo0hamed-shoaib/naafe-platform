@@ -38,8 +38,8 @@ class UserService {
       }
 
       // Validate bio length if provided
-      if (safeUpdateData.profile?.bio && safeUpdateData.profile.bio.length > 1000) {
-        throw new Error('Bio cannot exceed 1000 characters');
+      if (safeUpdateData.profile?.bio && safeUpdateData.profile.bio.length > 200) {
+        throw new Error('Bio cannot exceed 200 characters');
       }
 
       // Validate name fields if provided

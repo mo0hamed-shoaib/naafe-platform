@@ -49,8 +49,8 @@ export const validateUpdateProfile = [
   
   body('profile.bio')
     .optional()
-    .isLength({ max: 1000 })
-    .withMessage('Bio cannot exceed 1000 characters')
+    .isLength({ max: 200 })
+    .withMessage('Bio cannot exceed 200 characters')
     .trim()
     .escape(),
   

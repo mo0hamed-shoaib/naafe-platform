@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User, Shield, Key, Trash2, AlertTriangle, CheckCircle, Settings as SettingsIcon } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { User, Shield, Key, Trash2, AlertTriangle, CheckCircle, Settings as SettingsIcon, Loader2 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +11,7 @@ import Button from '../components/ui/Button';
 import SettingsSection from '../components/settings/SettingsSection';
 import SettingsCard from '../components/settings/SettingsCard';
 import SettingsNavigation from '../components/settings/SettingsNavigation';
+import { checkAvailability, debounce } from '../utils/validation';
 
 const SettingsPage: React.FC = () => {
   const { user, accessToken } = useAuth();
@@ -111,9 +112,115 @@ const SettingsPage: React.FC = () => {
     bio: user?.profile?.bio || '',
   });
 
+  const [bioError, setBioError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [phoneAvailabilityStatus, setPhoneAvailabilityStatus] = useState<{
+    available: boolean;
+    message: string;
+    checking?: boolean;
+  } | null>(null);
+
+  // Check if there are any validation errors
+  const hasValidationErrors = () => {
+    // Check for empty required fields
+    const hasEmptyFields = !personalInfo.fullName.trim() || !personalInfo.phone.trim();
+    
+    // Check for validation errors
+    const hasValidationErrors = !!(bioError || nameError || phoneError || (phoneAvailabilityStatus && !phoneAvailabilityStatus.available));
+    
+    return hasEmptyFields || hasValidationErrors;
+  };
+
+  // Debounced phone availability check
+  const debouncedPhoneCheck = useCallback(
+    debounce(async (phone: string) => {
+      if (phone && phone.trim()) {
+        console.log('Checking phone availability for:', phone);
+        
+        // Set checking status
+        setPhoneAvailabilityStatus({ available: false, message: '', checking: true });
+        
+        try {
+          const availability = await checkAvailability('', phone);
+          console.log('Phone availability result:', availability);
+          
+          if (availability.phone) {
+            setPhoneAvailabilityStatus({ 
+              ...availability.phone, 
+              checking: false 
+            });
+          }
+        } catch (error) {
+          console.error('Phone availability check error:', error);
+          setPhoneAvailabilityStatus({ 
+            available: false, 
+            message: 'فشل في التحقق من رقم الهاتف',
+            checking: false 
+          });
+        }
+      } else {
+        setPhoneAvailabilityStatus(null);
+      }
+    }, 500),
+    []
+  );
+
   const handlePersonalInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setPersonalInfo(prev => ({ ...prev, [name]: value }));
+    
+    // Clear errors when user starts typing
+    if (name === 'bio') {
+      setBioError('');
+    } else if (name === 'fullName') {
+      setNameError('');
+    } else if (name === 'phone') {
+      setPhoneError('');
+    }
+    
+    // Handle bio validation
+    if (name === 'bio') {
+      if (value.length > 200) {
+        setBioError('النبذة الشخصية لا يمكن أن تتجاوز 200 حرف');
+      }
+    }
+    
+    // Handle name validation
+    if (name === 'fullName') {
+      if (!value.trim()) {
+        setNameError('الاسم الكامل مطلوب');
+      } else {
+        const nameParts = value.trim().split(' ');
+        if (nameParts.length < 2) {
+          setNameError('يرجى إدخال الاسم الأول والأخير');
+        } else if (nameParts[0].length < 2) {
+          setNameError('الاسم الأول يجب أن يكون حرفين على الأقل');
+        } else if (nameParts.slice(1).join(' ').length < 2) {
+          setNameError('الاسم الأخير يجب أن يكون حرفين على الأقل');
+        } else {
+          setNameError('');
+        }
+      }
+    }
+    
+    // Handle phone validation
+    if (name === 'phone') {
+      const phoneRegex = /^(\+20|0)?1[0125][0-9]{8}$/;
+      
+      // Clear previous availability status
+      setPhoneAvailabilityStatus(null);
+      
+      if (!value.trim()) {
+        setPhoneError('رقم الهاتف مطلوب');
+      } else if (!phoneRegex.test(value)) {
+        setPhoneError('يرجى إدخال رقم هاتف مصري صحيح');
+      } else {
+        // Clear format error and check availability
+        setPhoneError('');
+        debouncedPhoneCheck(value);
+      }
+    }
   };
 
   const handlePersonalInfoSubmit = async (e: React.FormEvent) => {
@@ -121,6 +228,57 @@ const SettingsPage: React.FC = () => {
     setSaving(true);
     setError('');
     setSuccess('');
+    setBioError('');
+    setNameError('');
+    setPhoneError('');
+    
+    // Validate all fields
+    let hasErrors = false;
+    
+    // Validate bio length
+    if (personalInfo.bio && personalInfo.bio.length > 200) {
+      setBioError('النبذة الشخصية لا يمكن أن تتجاوز 200 حرف');
+      hasErrors = true;
+    }
+    
+    // Validate name
+    if (!personalInfo.fullName.trim()) {
+      setNameError('الاسم الكامل مطلوب');
+      hasErrors = true;
+    } else {
+      const nameParts = personalInfo.fullName.trim().split(' ');
+      if (nameParts.length < 2) {
+        setNameError('يرجى إدخال الاسم الأول والأخير');
+        hasErrors = true;
+      } else if (nameParts[0].length < 2) {
+        setNameError('الاسم الأول يجب أن يكون حرفين على الأقل');
+        hasErrors = true;
+      } else if (nameParts.slice(1).join(' ').length < 2) {
+        setNameError('الاسم الأخير يجب أن يكون حرفين على الأقل');
+        hasErrors = true;
+      }
+    }
+    
+    // Validate phone
+    if (!personalInfo.phone.trim()) {
+      setPhoneError('رقم الهاتف مطلوب');
+      hasErrors = true;
+    } else {
+      const phoneRegex = /^(\+20|0)?1[0125][0-9]{8}$/;
+      if (!phoneRegex.test(personalInfo.phone)) {
+        setPhoneError('يرجى إدخال رقم هاتف مصري صحيح');
+        hasErrors = true;
+      } else if (phoneAvailabilityStatus && !phoneAvailabilityStatus.available) {
+        setPhoneError(phoneAvailabilityStatus.message);
+        hasErrors = true;
+      }
+    }
+    
+    if (hasErrors) {
+      setSaving(false);
+      return;
+    }
+    
     try {
       // Split full name
       const [first, ...rest] = personalInfo.fullName.trim().split(' ');
@@ -152,7 +310,14 @@ const SettingsPage: React.FC = () => {
         setSuccess('تم تحديث المعلومات الشخصية بنجاح');
       } else {
         const errorData = await response.json();
-        setError(errorData.error?.message || 'حدث خطأ أثناء تحديث المعلومات الشخصية');
+        const errorMessage = errorData.error?.message || 'حدث خطأ أثناء تحديث المعلومات الشخصية';
+        
+        // Check if it's a bio validation error
+        if (errorMessage.includes('Bio cannot exceed') || errorMessage.includes('1000') || errorMessage.includes('200')) {
+          setBioError('النبذة الشخصية لا يمكن أن تتجاوز 200 حرف');
+        } else {
+          setError(errorMessage);
+        }
       }
     } catch {
       setError('حدث خطأ في الاتصال');
@@ -243,6 +408,16 @@ const SettingsPage: React.FC = () => {
     // eslint-disable-next-line
   }, [isProvider, isPremium]);
 
+  // Effect to update phone errors based on availability status
+  useEffect(() => {
+    if (phoneAvailabilityStatus && !phoneAvailabilityStatus.checking) {
+      if (!phoneAvailabilityStatus.available) {
+        setPhoneError(phoneAvailabilityStatus.message);
+      }
+      // Don't clear error if phone is available - let user see it was successful
+    }
+  }, [phoneAvailabilityStatus]);
+
   const renderAccountInformation = () => (
     <SettingsSection
       title="معلومات الحساب"
@@ -279,13 +454,14 @@ const SettingsPage: React.FC = () => {
             <div className="grid grid-cols-1 gap-4">
             <FormInput
               id="fullName"
-                name="fullName"
+              name="fullName"
               type="text"
               label="الاسم الكامل"
               placeholder="أدخل اسمك الكامل"
-                value={personalInfo.fullName}
-                onChange={handlePersonalInfoChange}
+              value={personalInfo.fullName}
+              onChange={handlePersonalInfoChange}
               className="w-full"
+              error={nameError}
             />
             <FormInput
               id="email"
@@ -298,24 +474,45 @@ const SettingsPage: React.FC = () => {
             />
             <FormInput
               id="phone"
-                name="phone"
+              name="phone"
               type="tel"
               label="رقم الهاتف"
               placeholder="أدخل رقم هاتفك"
-                value={personalInfo.phone}
-                onChange={handlePersonalInfoChange}
-                className="w-full"
-              />
-              <FormTextarea
-                id="bio"
-                name="bio"
-                label="نبذة شخصية"
-                placeholder="اكتب نبذة عن نفسك"
-                value={personalInfo.bio}
-                onChange={handlePersonalInfoChange}
-                className="w-full"
-                rows={3}
-              />
+              value={personalInfo.phone}
+              onChange={handlePersonalInfoChange}
+              className="w-full"
+              error={phoneError}
+            />
+            {phoneAvailabilityStatus?.checking && (
+              <div className="text-xs text-blue-500 mt-1 text-right flex items-center justify-end gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                جاري التحقق من توفر رقم الهاتف...
+              </div>
+            )}
+            {phoneAvailabilityStatus && !phoneAvailabilityStatus.checking && phoneAvailabilityStatus.available && (
+              <div className="text-xs text-green-500 mt-1 text-right flex items-center justify-end gap-1">
+                <CheckCircle className="h-3 w-3" />
+                رقم الهاتف متاح
+              </div>
+            )}
+              <div className="w-full">
+                <FormTextarea
+                  id="bio"
+                  name="bio"
+                  label="نبذة شخصية"
+                  placeholder="اكتب نبذة عن نفسك"
+                  value={personalInfo.bio}
+                  onChange={handlePersonalInfoChange}
+                  className="w-full"
+                  rows={3}
+                  error={bioError}
+                />
+                {personalInfo.bio && (
+                  <div className="text-xs text-gray-500 mt-1 text-right">
+                    {personalInfo.bio.length}/200 حرف
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
@@ -397,9 +594,9 @@ const SettingsPage: React.FC = () => {
         </div>
         <div className="flex justify-end mt-8">
           <Button 
-              type="submit"
+            type="submit"
             className="bg-deep-teal text-white font-semibold py-3 px-8 rounded-xl hover:bg-deep-teal/90 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50"
-            disabled={saving}
+            disabled={saving || hasValidationErrors()}
           >
             {saving ? 'جاري التحديث...' : 'تحديث المعلومات'}
           </Button>

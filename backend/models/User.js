@@ -149,7 +149,7 @@ const userSchema = new Schema({
     profile: {
         bio: {
             type: String,
-            maxlength: 1000,
+            maxlength: 200,
             trim: true
         },
         location: {
