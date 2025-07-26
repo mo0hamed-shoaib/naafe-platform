@@ -268,6 +268,28 @@ const RequestServiceForm: React.FC = () => {
     return (touchedFields[field] || submitAttempted) && validationErrors[field];
   };
 
+  // Helper to check if form is valid for submit button
+  const isFormValid = (): boolean => {
+    // Check if all required fields are filled
+    const hasRequiredFields = 
+      formData.requestTitle.trim() &&
+      formData.category.trim() &&
+      formData.requestDescription.trim() &&
+      formData.minBudget.trim() &&
+      formData.maxBudget.trim() &&
+      formData.government.trim() &&
+      formData.city.trim() &&
+      formData.street.trim() &&
+      formData.apartmentNumber.trim() &&
+      formData.preferredDateTime.trim() &&
+      formData.deliveryTimeDays.trim();
+
+    // Check if there are no validation errors
+    const hasNoErrors = Object.keys(validationErrors).length === 0;
+
+    return hasRequiredFields && hasNoErrors;
+  };
+
   // Image upload handler
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -867,6 +889,7 @@ const RequestServiceForm: React.FC = () => {
                   fullWidth
                   loading={loading}
                   className="rounded-xl"
+                  disabled={!isFormValid()}
                 >
                   إرسال الطلب
                 </Button>

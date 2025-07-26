@@ -159,12 +159,7 @@ const PostServiceForm: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Clear validation errors when field changes
-  const clearFieldError = (field: keyof ValidationErrors) => {
-    if (validationErrors[field]) {
-      setValidationErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  };
+  // Remove unused clearFieldError function
 
   // Remove the real-time validation effect that runs on every formData change
   // useEffect(() => {
@@ -406,6 +401,27 @@ const PostServiceForm: React.FC = () => {
     return (touchedFields[field] || submitAttempted) && validationErrors[field];
   };
 
+  // Helper to check if form is valid for submit button
+  const isFormValid = (): boolean => {
+    // Check if all required fields are filled
+    const hasRequiredFields = 
+      formData.serviceTitle.trim() &&
+      formData.category.trim() &&
+      formData.serviceDescription.trim() &&
+      formData.minBudget.trim() &&
+      formData.maxBudget.trim() &&
+      formData.government.trim() &&
+      formData.city.trim() &&
+      (formData.workingDays && formData.workingDays.length > 0) &&
+      (formData.startTime ?? '').trim() &&
+      (formData.endTime ?? '').trim();
+
+    // Check if there are no validation errors
+    const hasNoErrors = Object.keys(validationErrors).length === 0;
+
+    return hasRequiredFields && hasNoErrors;
+  };
+
   return (
     <div className="min-h-screen bg-[#F5E6D3] flex flex-col font-cairo" dir="rtl">
       <Header />
@@ -470,7 +486,6 @@ const PostServiceForm: React.FC = () => {
                     value={formData.category}
                     onChange={val => {
                       setFormData(prev => ({ ...prev, category: val }));
-                      clearFieldError('category');
                     }}
                     options={categories.map((cat: string) => ({ value: cat, label: cat }))}
                     placeholder="اختر الفئة"
@@ -739,7 +754,7 @@ const PostServiceForm: React.FC = () => {
                 fullWidth
                 loading={loading}
                 className="rounded-xl"
-                disabled={Object.keys(validationErrors).length > 0}
+                disabled={!isFormValid()}
               >
                 إرسال الطلب
               </Button>
