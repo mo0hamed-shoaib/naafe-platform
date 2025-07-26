@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useOfferContext } from '../contexts/OfferContext';
-import { X, Check, Star, Shield, Calendar, Clock } from 'lucide-react';
+import { X, Star, Shield, Calendar, Clock } from 'lucide-react';
 import Button from './ui/Button';
 import BaseCard from './ui/BaseCard';
 import Badge from './ui/Badge';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { FormInput, FormTextarea } from "./ui";
+import { FormInput, FormTextarea, BudgetIndicator, NegotiationToggle, BudgetExplanationTextarea, ScheduleModal } from "./ui";
 import UnifiedSelect from "./ui/UnifiedSelect";
 import Header from './Header';
 import Footer from './Footer';
@@ -21,6 +21,8 @@ interface FormData {
   availableDates: Date[];
   timePreferences: string[];
   agreedToTerms: boolean;
+  negotiationAcknowledged: boolean;
+  budgetExplanation: string;
 }
 
 interface ProviderData {
@@ -64,6 +66,8 @@ const ServiceResponseForm: React.FC = () => {
     availableDates: [],
     timePreferences: [],
     agreedToTerms: false,
+    negotiationAcknowledged: false,
+    budgetExplanation: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,6 +75,7 @@ const ServiceResponseForm: React.FC = () => {
   const [jobRequest, setJobRequest] = useState<{ title?: string; description?: string; category?: string; budget?: { min: number; max: number }; deadline?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -139,6 +144,31 @@ const ServiceResponseForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Budget validation
+    const priceValue = Number(formData.price);
+    const minBudget = jobRequest?.budget?.min || 0;
+    const maxBudget = jobRequest?.budget?.max || 0;
+    
+    // Calculate thresholds for edge cases
+    const tooLowThreshold = minBudget * 0.5; // 50% of min budget
+    const tooHighThreshold = maxBudget * 2; // 200% of max budget
+    
+    const isOverBudget = priceValue > maxBudget;
+    const isTooLow = priceValue < tooLowThreshold;
+    const isTooHigh = priceValue > tooHighThreshold;
+    
+    if ((isOverBudget || isTooLow || isTooHigh) && !formData.negotiationAcknowledged) {
+      if (isTooLow) {
+        setError('يجب عليك الموافقة على المتابعة بهذا السعر المنخفض جداً');
+      } else if (isTooHigh) {
+        setError('يجب عليك الموافقة على المتابعة بهذا السعر المرتفع جداً');
+      } else {
+        setError('يجب عليك الموافقة على أن سعرك يتطلب تفاوض للمتابعة');
+      }
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -151,7 +181,8 @@ const ServiceResponseForm: React.FC = () => {
         message: formData.message,
         estimatedTimeDays: Number(formData.duration) || 1,
         availableDates: formData.availableDates.map(date => date.toISOString()),
-        timePreferences: formData.timePreferences
+        timePreferences: formData.timePreferences,
+        budgetExplanation: formData.budgetExplanation || undefined
       };
 
       const res = await fetch(`/api/requests/${jobRequestId}/offers`, {
@@ -321,10 +352,31 @@ const ServiceResponseForm: React.FC = () => {
                       required
                     />
                   </div>
-                  <p className="mt-2 text-sm text-deep-teal flex items-center">
-                    <Check className="h-4 w-4 ml-1" />
-                    سعر عادل في السوق
-                  </p>
+                  
+                  {/* Budget Helper Components */}
+                  {jobRequest?.budget && (
+                    <>
+                      <BudgetIndicator
+                        price={formData.price}
+                        minBudget={jobRequest.budget.min}
+                        maxBudget={jobRequest.budget.max}
+                      />
+                      <NegotiationToggle
+                        isChecked={formData.negotiationAcknowledged}
+                        onChange={(checked) => setFormData(prev => ({ ...prev, negotiationAcknowledged: checked }))}
+                        price={formData.price}
+                        maxBudget={jobRequest.budget.max}
+                        minBudget={jobRequest.budget.min}
+                      />
+                      <BudgetExplanationTextarea
+                        value={formData.budgetExplanation}
+                        onChange={(value) => setFormData(prev => ({ ...prev, budgetExplanation: value }))}
+                        price={formData.price}
+                        maxBudget={jobRequest.budget.max}
+                        isNegotiationAcknowledged={formData.negotiationAcknowledged}
+                      />
+                    </>
+                  )}
                 </div>
                 
                 <div>
@@ -368,10 +420,22 @@ const ServiceResponseForm: React.FC = () => {
 
             {/* Availability Section */}
             <div>
-              <h2 className="text-lg font-semibold text-deep-teal mb-4 pb-2 border-b border-gray-200 flex items-center">
-                <Calendar className="h-5 w-5 ml-2" />
-                التواريخ المتاحة
-              </h2>
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-deep-teal flex items-center">
+                  <Calendar className="h-5 w-5 ml-2" />
+                  التواريخ المتاحة
+                </h2>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowScheduleModal(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Calendar className="h-4 w-4" />
+                  فحص الجدول
+                </Button>
+              </div>
               
               <div className="mb-6">
                 <label className="text-sm font-medium text-text-primary mb-3 block">
@@ -626,6 +690,14 @@ const ServiceResponseForm: React.FC = () => {
           </BaseCard>
         </div>
       </main>
+      
+      {/* Schedule Modal */}
+      <ScheduleModal
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        providerId={user?.id}
+      />
+      
       <Footer />
     </div>
   );

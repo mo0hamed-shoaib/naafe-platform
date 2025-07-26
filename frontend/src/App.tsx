@@ -39,6 +39,7 @@ import HireProviderPage from './pages/HireProviderPage';
 import ProviderHireRequestsPage from './pages/ProviderHireRequestsPage';
 import TransactionsPage from './pages/TransactionsPage';
 import NewChatPage from './pages/NewChatPage';
+import SchedulePage from './pages/SchedulePage';
 
 const App = () => {
   return (
@@ -66,6 +67,11 @@ const App = () => {
               <Route path="/provider/hire-requests" element={
                 <ProtectedRoute>
                   <ProviderHireRequestsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/schedule" element={
+                <ProtectedRoute requiredRoles={['provider']}>
+                  <SchedulePage />
                 </ProtectedRoute>
               } />
               <Route path="/login" element={<LoginPage />} />
