@@ -35,6 +35,19 @@ interface AddressFields {
   additionalInformation: string;
 }
 
+interface ValidationErrors {
+  serviceTitle?: string;
+  category?: string;
+  serviceDescription?: string;
+  minBudget?: string;
+  maxBudget?: string;
+  government?: string;
+  city?: string;
+  workingDays?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
 const PostServiceForm: React.FC = () => {
   const { accessToken, user } = useAuth();
   const [formData, setFormData] = useState<PostServiceFormData>({
@@ -53,6 +66,7 @@ const PostServiceForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const navigate = useNavigate();
   const [categories, setCategories] = useState<string[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -62,11 +76,108 @@ const PostServiceForm: React.FC = () => {
   const [selectedGovernorate, setSelectedGovernorate] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [customCity, setCustomCity] = useState('');
+  const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   // Update city list when governorate changes
   const cityOptions = selectedGovernorate
     ? [...(EGYPT_CITIES[selectedGovernorate] || []), 'أخرى']
     : [];
+
+  // Validation function
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+
+    // Service Title validation
+    if (!formData.serviceTitle.trim()) {
+      errors.serviceTitle = 'عنوان الخدمة مطلوب';
+    } else if (formData.serviceTitle.length < 10) {
+      errors.serviceTitle = 'عنوان الخدمة يجب أن يكون 10 أحرف على الأقل';
+    } else if (formData.serviceTitle.length > 100) {
+      errors.serviceTitle = 'عنوان الخدمة لا يمكن أن يتجاوز 100 حرف';
+    }
+
+    // Category validation
+    if (!formData.category.trim()) {
+      errors.category = 'الفئة مطلوبة';
+    }
+
+    // Service Description validation
+    if (!formData.serviceDescription.trim()) {
+      errors.serviceDescription = 'وصف الخدمة مطلوب';
+    } else if (formData.serviceDescription.length < 20) {
+      errors.serviceDescription = 'وصف الخدمة يجب أن يكون 20 حرف على الأقل';
+    } else if (formData.serviceDescription.length > 2000) {
+      errors.serviceDescription = 'وصف الخدمة لا يمكن أن يتجاوز 2000 حرف';
+    }
+
+    // Budget validation
+    if (!formData.minBudget.trim()) {
+      errors.minBudget = 'السعر الأدنى مطلوب';
+    } else if (Number(formData.minBudget) < 0) {
+      errors.minBudget = 'السعر الأدنى يجب أن يكون رقم موجب';
+    }
+
+    if (!formData.maxBudget.trim()) {
+      errors.maxBudget = 'السعر الأقصى مطلوب';
+    } else if (Number(formData.maxBudget) < 0) {
+      errors.maxBudget = 'السعر الأقصى يجب أن يكون رقم موجب';
+    }
+
+    if (formData.minBudget && formData.maxBudget && Number(formData.minBudget) > Number(formData.maxBudget)) {
+      errors.maxBudget = 'السعر الأقصى يجب أن يكون أكبر من السعر الأدنى';
+    }
+
+    // Location validation
+    if (!formData.government.trim()) {
+      errors.government = 'المحافظة مطلوبة';
+    }
+
+    if (!formData.city.trim()) {
+      errors.city = 'المدينة مطلوبة';
+    }
+
+    // Working days validation
+    if (!formData.workingDays || formData.workingDays.length === 0) {
+      errors.workingDays = 'يجب اختيار أيام العمل على الأقل';
+    }
+
+    // Time validation
+    if (!(formData.startTime ?? '').trim()) {
+      errors.startTime = 'وقت البداية مطلوب';
+    }
+
+    if (!(formData.endTime ?? '').trim()) {
+      errors.endTime = 'وقت النهاية مطلوب';
+    }
+
+    if ((formData.startTime ?? '') && (formData.endTime ?? '') && (formData.startTime ?? '') >= (formData.endTime ?? '')) {
+      errors.endTime = 'وقت النهاية يجب أن يكون بعد وقت البداية';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Clear validation errors when field changes
+  const clearFieldError = (field: keyof ValidationErrors) => {
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  // Remove the real-time validation effect that runs on every formData change
+  // useEffect(() => {
+  //   // Only validate if user has started interacting with the form
+  //   const hasInteracted = formData.serviceTitle || formData.category || formData.serviceDescription || 
+  //                        formData.minBudget || formData.maxBudget || formData.government || 
+  //                        formData.city || (formData.workingDays && formData.workingDays.length > 0) ||
+  //                        (formData.startTime ?? '') || (formData.endTime ?? '');
+  //   
+  //   if (hasInteracted) {
+  //     validateForm();
+  //   }
+  // }, [formData]);
 
   useEffect(() => {
     setCategoriesLoading(true);
@@ -106,16 +217,108 @@ const PostServiceForm: React.FC = () => {
       });
   }, [accessToken]);
 
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name } = e.target;
+    setTouchedFields(prev => ({ ...prev, [name]: true }));
+    // Validate only this specific field when it's blurred
+    validateField(name as keyof ValidationErrors);
+  };
+
+  const validateField = (fieldName: keyof ValidationErrors) => {
+    const errors: ValidationErrors = {};
+    
+    // Validate only the specific field
+    switch (fieldName) {
+      case 'serviceTitle':
+        if (!formData.serviceTitle.trim()) {
+          errors.serviceTitle = 'عنوان الخدمة مطلوب';
+        } else if (formData.serviceTitle.length < 10) {
+          errors.serviceTitle = 'عنوان الخدمة يجب أن يكون 10 أحرف على الأقل';
+        } else if (formData.serviceTitle.length > 100) {
+          errors.serviceTitle = 'عنوان الخدمة لا يمكن أن يتجاوز 100 حرف';
+        }
+        break;
+      case 'category':
+        if (!formData.category.trim()) {
+          errors.category = 'الفئة مطلوبة';
+        }
+        break;
+      case 'serviceDescription':
+        if (!formData.serviceDescription.trim()) {
+          errors.serviceDescription = 'وصف الخدمة مطلوب';
+        } else if (formData.serviceDescription.length < 20) {
+          errors.serviceDescription = 'وصف الخدمة يجب أن يكون 20 حرف على الأقل';
+        } else if (formData.serviceDescription.length > 2000) {
+          errors.serviceDescription = 'وصف الخدمة لا يمكن أن يتجاوز 2000 حرف';
+        }
+        break;
+      case 'minBudget':
+        if (!formData.minBudget.trim()) {
+          errors.minBudget = 'السعر الأدنى مطلوب';
+        } else if (Number(formData.minBudget) < 0) {
+          errors.minBudget = 'السعر الأدنى يجب أن يكون رقم موجب';
+        }
+        break;
+      case 'maxBudget':
+        if (!formData.maxBudget.trim()) {
+          errors.maxBudget = 'السعر الأقصى مطلوب';
+        } else if (Number(formData.maxBudget) < 0) {
+          errors.maxBudget = 'السعر الأقصى يجب أن يكون رقم موجب';
+        }
+        if (formData.minBudget && formData.maxBudget && Number(formData.minBudget) > Number(formData.maxBudget)) {
+          errors.maxBudget = 'السعر الأقصى يجب أن يكون أكبر من السعر الأدنى';
+        }
+        break;
+      case 'government':
+        if (!formData.government.trim()) {
+          errors.government = 'المحافظة مطلوبة';
+        }
+        break;
+      case 'city':
+        if (!formData.city.trim()) {
+          errors.city = 'المدينة مطلوبة';
+        }
+        break;
+      case 'workingDays':
+        if (!formData.workingDays || formData.workingDays.length === 0) {
+          errors.workingDays = 'يجب اختيار أيام العمل على الأقل';
+        }
+        break;
+      case 'startTime':
+        if (!(formData.startTime ?? '').trim()) {
+          errors.startTime = 'وقت البداية مطلوب';
+        }
+        break;
+      case 'endTime':
+        if (!(formData.endTime ?? '').trim()) {
+          errors.endTime = 'وقت النهاية مطلوب';
+        }
+        if ((formData.startTime ?? '') && (formData.endTime ?? '') && (formData.startTime ?? '') >= (formData.endTime ?? '')) {
+          errors.endTime = 'وقت النهاية يجب أن يكون بعد وقت البداية';
+        }
+        break;
+    }
+    
+    // Update only the specific field error
+    setValidationErrors(prev => ({ ...prev, [fieldName]: errors[fieldName] }));
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear the error for this field when user starts typing
+    if (validationErrors[name as keyof ValidationErrors]) {
+      setValidationErrors(prev => ({ ...prev, [name]: undefined }));
+    }
   };
 
   const handleAISuggestion = (field: string, value: string) => {
     if (field === 'title') {
       setFormData(prev => ({ ...prev, serviceTitle: value }));
     } else if (field === 'description') {
-      setFormData(prev => ({ ...prev, serviceDescription: value }));
+      // Ensure AI suggestions don't exceed 2000 characters
+      const truncatedValue = value.length > 2000 ? value.substring(0, 2000) : value;
+      setFormData(prev => ({ ...prev, serviceDescription: truncatedValue }));
     } else if (field === 'keywords') {
       setFormData(prev => ({ ...prev, tags: value }));
     } else {
@@ -133,6 +336,26 @@ const PostServiceForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitAttempted(true);
+    // Mark all fields as touched ON SUBMIT ONLY
+    setTouchedFields({
+      serviceTitle: true,
+      category: true,
+      serviceDescription: true,
+      minBudget: true,
+      maxBudget: true,
+      government: true,
+      city: true,
+      workingDays: true,
+      startTime: true,
+      endTime: true,
+    });
+    // Validate form before submission
+    if (!validateForm()) {
+      setError('يرجى تصحيح الأخطاء في النموذج');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(false);
@@ -176,6 +399,11 @@ const PostServiceForm: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper to decide if error should be shown
+  const shouldShowError = (field: keyof ValidationErrors) => {
+    return (touchedFields[field] || submitAttempted) && validationErrors[field];
   };
 
   return (
@@ -229,37 +457,52 @@ const PostServiceForm: React.FC = () => {
                     name="serviceTitle"
                     value={formData.serviceTitle}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="عنوان الخدمة"
                     required
                     size="md"
+                    error={shouldShowError('serviceTitle') ? validationErrors.serviceTitle : undefined}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="category">الفئة</label>
                   <UnifiedSelect
                     value={formData.category}
-                    onChange={val => setFormData(prev => ({ ...prev, category: val }))}
+                    onChange={val => {
+                      setFormData(prev => ({ ...prev, category: val }));
+                      clearFieldError('category');
+                    }}
                     options={categories.map((cat: string) => ({ value: cat, label: cat }))}
                     placeholder="اختر الفئة"
                     required
                     disabled={categoriesLoading}
                     size="md"
+                    error={shouldShowError('category') ? validationErrors.category : undefined}
                   />
                   {categoriesError && <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">{categoriesError}</div>}
+                  {validationErrors.category && <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">{validationErrors.category}</div>}
                 </div>
               </div>
                 {/* Service Description Field */}
               <div>
-                <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="serviceDescription">وصف الخدمة</label>
+                <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="serviceDescription">
+                  وصف الخدمة
+                  <span className="text-gray-500 text-xs mr-2">
+                    ({formData.serviceDescription.length}/2000)
+                  </span>
+                </label>
                 <FormTextarea
                   id="serviceDescription"
                   name="serviceDescription"
                   value={formData.serviceDescription}
                   onChange={handleChange}
-                    placeholder="اكتب وصفاً مفصلاً للخدمة التي تقدمها..."
-                    required
-                    size="md"
-                  />
+                  onBlur={handleBlur}
+                  placeholder="اكتب وصفاً مفصلاً للخدمة التي تقدمها..."
+                  required
+                  size="md"
+                  error={shouldShowError('serviceDescription') ? validationErrors.serviceDescription : undefined}
+                  maxLength={2000}
+                />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -271,6 +514,7 @@ const PostServiceForm: React.FC = () => {
                         setSelectedCity('');
                         setCustomCity('');
                         setFormData(prev => ({ ...prev, government: EGYPT_GOVERNORATES.find(g => g.id === val)?.name || '' }));
+                        clearFieldError('government');
                       }}
                       options={EGYPT_GOVERNORATES.map(g => ({ value: g.id, label: g.name }))}
                       placeholder="اختر المحافظة"
@@ -278,7 +522,9 @@ const PostServiceForm: React.FC = () => {
                       searchPlaceholder="ابحث عن محافظة..."
                       required
                       size="md"
+                      error={shouldShowError('government') ? validationErrors.government : undefined}
                     />
+                    {validationErrors.government && <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">{validationErrors.government}</div>}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">المدينة</label>
@@ -288,6 +534,7 @@ const PostServiceForm: React.FC = () => {
                         setSelectedCity(val);
                         setCustomCity('');
                         setFormData(prev => ({ ...prev, city: val === 'أخرى' ? '' : val }));
+                        clearFieldError('city');
                       }}
                       options={cityOptions.map(city => ({ value: city, label: city }))}
                       placeholder="اختر المدينة"
@@ -296,6 +543,7 @@ const PostServiceForm: React.FC = () => {
                       required
                       size="md"
                       disabled={!selectedGovernorate}
+                      error={shouldShowError('city') ? validationErrors.city : undefined}
                     />
                     {selectedCity === 'أخرى' && (
                       <FormInput
@@ -304,13 +552,17 @@ const PostServiceForm: React.FC = () => {
                         onChange={e => {
                           setCustomCity(e.target.value);
                           setFormData(prev => ({ ...prev, city: e.target.value }));
+                          clearFieldError('city');
                         }}
                         placeholder="أدخل اسم المدينة"
                         size="md"
                         className="mt-2"
                         required
+                        onBlur={handleBlur}
+                        error={shouldShowError('city') ? validationErrors.city : undefined}
                       />
                     )}
+                    {validationErrors.city && selectedCity !== 'أخرى' && <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">{validationErrors.city}</div>}
                   </div>
                 </div>
                 {profileAddress && (
@@ -328,6 +580,8 @@ const PostServiceForm: React.FC = () => {
                           government: profileAddress.government || '',
                           city: profileAddress.city || ''
                         }));
+                        clearFieldError('government');
+                        clearFieldError('city');
                       }}
                     >
                       استخدم العنوان المحفوظ
@@ -344,10 +598,12 @@ const PostServiceForm: React.FC = () => {
                       name="minBudget"
                       value={formData.minBudget}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="مثال: 100"
                       min="0"
                       required
                       size="md"
+                      error={shouldShowError('minBudget') ? validationErrors.minBudget : undefined}
                     />
                   </div>
                   <div>
@@ -358,10 +614,12 @@ const PostServiceForm: React.FC = () => {
                       name="maxBudget"
                       value={formData.maxBudget}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="مثال: 500"
                       min="0"
                       required
                       size="md"
+                      error={shouldShowError('maxBudget') ? validationErrors.maxBudget : undefined}
                     />
                   </div>
                 </div>
@@ -403,7 +661,9 @@ const PostServiceForm: React.FC = () => {
                                   ? [...(prev.workingDays || []), day.value]
                                   : (prev.workingDays || []).filter(d => d !== day.value)
                               }));
+                              clearFieldError('workingDays');
                             }}
+                            onBlur={handleBlur}
                           />
                           <span className="ml-1">{day.label}</span>
                         </label>
@@ -432,6 +692,8 @@ const PostServiceForm: React.FC = () => {
                                 startTime: val && val[0] ? val[0].format('HH:mm') : '',
                                 endTime: val && val[1] ? val[1].format('HH:mm') : '',
                               }));
+                              clearFieldError('startTime');
+                              clearFieldError('endTime');
                             }}
                             disabled={false}
                             size="large"
@@ -446,6 +708,14 @@ const PostServiceForm: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                  {/* Validation errors for availability */}
+                  {(validationErrors.workingDays || validationErrors.startTime || validationErrors.endTime) && (
+                    <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">
+                      {validationErrors.workingDays && <div>{validationErrors.workingDays}</div>}
+                      {validationErrors.startTime && <div>{validationErrors.startTime}</div>}
+                      {validationErrors.endTime && <div>{validationErrors.endTime}</div>}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="tags">الوسوم (افصل بينها بفاصلة)</label>
@@ -455,6 +725,7 @@ const PostServiceForm: React.FC = () => {
                     name="tags"
                     value={formData.tags}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="مثال: تنظيف, سباكة, كهرباء"
                     size="md"
                   />
@@ -468,6 +739,7 @@ const PostServiceForm: React.FC = () => {
                 fullWidth
                 loading={loading}
                 className="rounded-xl"
+                disabled={Object.keys(validationErrors).length > 0}
               >
                 إرسال الطلب
               </Button>

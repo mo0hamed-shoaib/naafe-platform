@@ -41,6 +41,20 @@ interface AddressFields {
   additionalInformation: string;
 }
 
+interface ValidationErrors {
+  requestTitle?: string;
+  category?: string;
+  requestDescription?: string;
+  minBudget?: string;
+  maxBudget?: string;
+  government?: string;
+  city?: string;
+  street?: string;
+  apartmentNumber?: string;
+  preferredDateTime?: string;
+  deliveryTimeDays?: string;
+}
+
 const RequestServiceForm: React.FC = () => {
   const { accessToken } = useAuth();
   const [formData, setFormData] = useState<RequestServiceFormData>({
@@ -61,6 +75,9 @@ const RequestServiceForm: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [imageUploadProgress, setImageUploadProgress] = useState<{[key: string]: boolean}>({});
   const navigate = useNavigate();
@@ -77,6 +94,179 @@ const RequestServiceForm: React.FC = () => {
   const cityOptions = selectedGovernorate
     ? [...(EGYPT_CITIES[selectedGovernorate] || []), 'أخرى']
     : [];
+
+  // Validation function
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+
+    // Request Title validation
+    if (!formData.requestTitle.trim()) {
+      errors.requestTitle = 'عنوان الطلب مطلوب';
+    } else if (formData.requestTitle.length < 10) {
+      errors.requestTitle = 'عنوان الطلب يجب أن يكون 10 أحرف على الأقل';
+    } else if (formData.requestTitle.length > 100) {
+      errors.requestTitle = 'عنوان الطلب لا يمكن أن يتجاوز 100 حرف';
+    }
+
+    // Category validation
+    if (!formData.category.trim()) {
+      errors.category = 'الفئة مطلوبة';
+    }
+
+    // Request Description validation
+    if (!formData.requestDescription.trim()) {
+      errors.requestDescription = 'وصف الطلب مطلوب';
+    } else if (formData.requestDescription.length < 20) {
+      errors.requestDescription = 'وصف الطلب يجب أن يكون 20 حرف على الأقل';
+    } else if (formData.requestDescription.length > 2000) {
+      errors.requestDescription = 'وصف الطلب لا يمكن أن يتجاوز 2000 حرف';
+    }
+
+    // Budget validation
+    if (!formData.minBudget.trim()) {
+      errors.minBudget = 'الميزانية الأدنى مطلوبة';
+    } else if (Number(formData.minBudget) < 0) {
+      errors.minBudget = 'الميزانية الأدنى يجب أن تكون رقم موجب';
+    }
+
+    if (!formData.maxBudget.trim()) {
+      errors.maxBudget = 'الميزانية الأقصى مطلوبة';
+    } else if (Number(formData.maxBudget) < 0) {
+      errors.maxBudget = 'الميزانية الأقصى يجب أن تكون رقم موجب';
+    }
+
+    if (formData.minBudget && formData.maxBudget && Number(formData.minBudget) > Number(formData.maxBudget)) {
+      errors.maxBudget = 'الميزانية الأقصى يجب أن تكون أكبر من الميزانية الأدنى';
+    }
+
+    // Location validation
+    if (!formData.government.trim()) {
+      errors.government = 'المحافظة مطلوبة';
+    }
+
+    if (!formData.city.trim()) {
+      errors.city = 'المدينة مطلوبة';
+    }
+
+    // Address validation
+    if (!formData.street.trim()) {
+      errors.street = 'الشارع مطلوب';
+    }
+
+    if (!formData.apartmentNumber.trim()) {
+      errors.apartmentNumber = 'رقم الشقة مطلوب';
+    }
+
+    // Date validation
+    if (!formData.preferredDateTime.trim()) {
+      errors.preferredDateTime = 'التاريخ المفضل مطلوب';
+    }
+
+    // Delivery time validation
+    if (!formData.deliveryTimeDays.trim()) {
+      errors.deliveryTimeDays = 'مدة التسليم مطلوبة';
+    } else if (Number(formData.deliveryTimeDays) < 1) {
+      errors.deliveryTimeDays = 'مدة التسليم يجب أن تكون يوم واحد على الأقل';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name } = e.target;
+    setTouchedFields(prev => ({ ...prev, [name]: true }));
+    // Validate only this specific field when it's blurred
+    validateField(name as keyof ValidationErrors);
+  };
+
+  const validateField = (fieldName: keyof ValidationErrors) => {
+    const errors: ValidationErrors = {};
+    
+    // Validate only the specific field
+    switch (fieldName) {
+      case 'requestTitle':
+        if (!formData.requestTitle.trim()) {
+          errors.requestTitle = 'عنوان الطلب مطلوب';
+        } else if (formData.requestTitle.length < 10) {
+          errors.requestTitle = 'عنوان الطلب يجب أن يكون 10 أحرف على الأقل';
+        } else if (formData.requestTitle.length > 100) {
+          errors.requestTitle = 'عنوان الطلب لا يمكن أن يتجاوز 100 حرف';
+        }
+        break;
+      case 'category':
+        if (!formData.category.trim()) {
+          errors.category = 'الفئة مطلوبة';
+        }
+        break;
+      case 'requestDescription':
+        if (!formData.requestDescription.trim()) {
+          errors.requestDescription = 'وصف الطلب مطلوب';
+        } else if (formData.requestDescription.length < 20) {
+          errors.requestDescription = 'وصف الطلب يجب أن يكون 20 حرف على الأقل';
+        } else if (formData.requestDescription.length > 2000) {
+          errors.requestDescription = 'وصف الطلب لا يمكن أن يتجاوز 2000 حرف';
+        }
+        break;
+      case 'minBudget':
+        if (!formData.minBudget.trim()) {
+          errors.minBudget = 'الميزانية الأدنى مطلوبة';
+        } else if (Number(formData.minBudget) < 0) {
+          errors.minBudget = 'الميزانية الأدنى يجب أن تكون رقم موجب';
+        }
+        break;
+      case 'maxBudget':
+        if (!formData.maxBudget.trim()) {
+          errors.maxBudget = 'الميزانية الأقصى مطلوبة';
+        } else if (Number(formData.maxBudget) < 0) {
+          errors.maxBudget = 'الميزانية الأقصى يجب أن تكون رقم موجب';
+        }
+        if (formData.minBudget && formData.maxBudget && Number(formData.minBudget) > Number(formData.maxBudget)) {
+          errors.maxBudget = 'الميزانية الأقصى يجب أن تكون أكبر من الميزانية الأدنى';
+        }
+        break;
+      case 'government':
+        if (!formData.government.trim()) {
+          errors.government = 'المحافظة مطلوبة';
+        }
+        break;
+      case 'city':
+        if (!formData.city.trim()) {
+          errors.city = 'المدينة مطلوبة';
+        }
+        break;
+      case 'street':
+        if (!formData.street.trim()) {
+          errors.street = 'الشارع مطلوب';
+        }
+        break;
+      case 'apartmentNumber':
+        if (!formData.apartmentNumber.trim()) {
+          errors.apartmentNumber = 'رقم الشقة مطلوب';
+        }
+        break;
+      case 'preferredDateTime':
+        if (!formData.preferredDateTime.trim()) {
+          errors.preferredDateTime = 'التاريخ المفضل مطلوب';
+        }
+        break;
+      case 'deliveryTimeDays':
+        if (!formData.deliveryTimeDays.trim()) {
+          errors.deliveryTimeDays = 'مدة التسليم مطلوبة';
+        } else if (Number(formData.deliveryTimeDays) < 1) {
+          errors.deliveryTimeDays = 'مدة التسليم يجب أن تكون يوم واحد على الأقل';
+        }
+        break;
+    }
+    
+    // Update only the specific field error
+    setValidationErrors(prev => ({ ...prev, [fieldName]: errors[fieldName] }));
+  };
+
+  // Helper to decide if error should be shown
+  const shouldShowError = (field: keyof ValidationErrors) => {
+    return (touchedFields[field] || submitAttempted) && validationErrors[field];
+  };
 
   // Image upload handler
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,35 +289,35 @@ const RequestServiceForm: React.FC = () => {
 
       // Check file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
+        alert(`الملف ${file.name} كبير جداً. الحد الأقصى 5 ميجابايت`);
         continue;
       }
 
-      setImageUploadProgress(prev => ({ ...prev, [file.name]: true }));
+      const formData = new FormData();
+      formData.append('image', file);
 
       try {
-        const formData = new FormData();
-        formData.append('image', file);
-        
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_API_KEY}`, {
+        const response = await fetch('/api/upload/image', {
           method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
           body: formData,
         });
-        
-        const data = await res.json();
-        if (data.success && data.data && data.data.url) {
+
+        if (response.ok) {
+          const data = await response.json();
           setFormData(prev => ({
             ...prev,
-            images: [...prev.images, data.data.url]
+            images: [...prev.images, data.imageUrl]
           }));
+          setImageUploadProgress(prev => ({ ...prev, [file.name]: true }));
         } else {
-          alert('فشل رفع الصورة. يرجى المحاولة مرة أخرى.');
+          alert(`فشل رفع الصورة ${file.name}`);
         }
       } catch (error) {
-        alert('فشل رفع الصورة. يرجى المحاولة مرة أخرى.');
+        alert(`خطأ في رفع الصورة ${file.name}`);
       }
-
-      setImageUploadProgress(prev => ({ ...prev, [file.name]: false }));
     }
 
     setUploadingImages(false);
@@ -170,10 +360,35 @@ const RequestServiceForm: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error when field is changed
+    if (validationErrors[name as keyof ValidationErrors]) {
+      setValidationErrors(prev => ({ ...prev, [name]: undefined }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitAttempted(true);
+    // Mark all fields as touched ON SUBMIT ONLY
+    setTouchedFields({
+      requestTitle: true,
+      category: true,
+      requestDescription: true,
+      minBudget: true,
+      maxBudget: true,
+      government: true,
+      city: true,
+      street: true,
+      apartmentNumber: true,
+      preferredDateTime: true,
+      deliveryTimeDays: true,
+    });
+    
+    if (!validateForm()) {
+      alert('يوجد أخطاء في النموذج. يرجى التأكد من صحة البيانات.');
+      return;
+    }
+    
     setLoading(true);
     try {
       const payload = {
@@ -199,8 +414,8 @@ const RequestServiceForm: React.FC = () => {
         attachments: formData.images.map(url => ({
           url,
           filename: url.split('/').pop() || 'image.jpg',
-          fileType: 'image/jpeg', // You can improve this if you have the actual type
-          fileSize: 0 // If you have the size, set it; otherwise, leave as 0 or omit
+          fileType: 'image/jpeg',
+          fileSize: 0
         })),
       };
       const res = await fetch('/api/requests', {
@@ -229,7 +444,9 @@ const RequestServiceForm: React.FC = () => {
     if (field === 'title') {
       setFormData(prev => ({ ...prev, requestTitle: value }));
     } else if (field === 'description') {
-      setFormData(prev => ({ ...prev, requestDescription: value }));
+      // Ensure AI suggestions don't exceed 2000 characters
+      const truncatedValue = value.length > 2000 ? value.substring(0, 2000) : value;
+      setFormData(prev => ({ ...prev, requestDescription: truncatedValue }));
     } else if (field === 'keywords') {
       setFormData(prev => ({ ...prev, tags: value }));
     } else {
@@ -322,10 +539,13 @@ const RequestServiceForm: React.FC = () => {
                       name="requestTitle"
                       value={formData.requestTitle}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="عنوان الطلب"
                       required
                       size="md"
+                      className={shouldShowError('requestTitle') ? 'border-red-500' : ''}
                     />
+                    {shouldShowError('requestTitle') && <p className="text-red-600 text-sm text-right mt-1">{validationErrors.requestTitle}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="category">الفئة</label>
@@ -337,21 +557,32 @@ const RequestServiceForm: React.FC = () => {
                       required
                       disabled={categoriesLoading}
                       size="md"
+                      className={shouldShowError('category') ? 'border-red-500' : ''}
                     />
+                    {shouldShowError('category') && <p className="text-red-600 text-sm text-right mt-1">{validationErrors.category}</p>}
                     {categoriesError && <div className="text-red-600 text-sm text-right bg-red-50 p-2 rounded-lg border border-red-200 mt-2">{categoriesError}</div>}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="requestDescription">وصف الطلب</label>
+                  <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="requestDescription">
+                    وصف الطلب
+                    <span className="text-gray-500 text-xs mr-2">
+                      ({formData.requestDescription.length}/2000)
+                    </span>
+                  </label>
                   <FormTextarea
                     id="requestDescription"
                     name="requestDescription"
                     value={formData.requestDescription}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="وصف مفصل للخدمة المطلوبة..."
                     required
                     size="md"
+                    maxLength={2000}
+                    className={shouldShowError('requestDescription') ? 'border-red-500' : ''}
                   />
+                  {shouldShowError('requestDescription') && <p className="text-red-600 text-sm text-right mt-1">{validationErrors.requestDescription}</p>}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -362,11 +593,14 @@ const RequestServiceForm: React.FC = () => {
                       name="minBudget"
                       value={formData.minBudget}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="مثال: 50"
                       min="0"
                       required
                       size="md"
+                      className={shouldShowError('minBudget') ? 'border-red-500' : ''}
                     />
+                    {shouldShowError('minBudget') && <p className="text-red-600 text-sm text-right mt-1">{validationErrors.minBudget}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="maxBudget">الحد الأقصى للميزانية (جنيه)</label>
@@ -376,11 +610,14 @@ const RequestServiceForm: React.FC = () => {
                       name="maxBudget"
                       value={formData.maxBudget}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="مثال: 200"
                       min="0"
                       required
                       size="md"
+                      className={shouldShowError('maxBudget') ? 'border-red-500' : ''}
                     />
+                    {shouldShowError('maxBudget') && <p className="text-red-600 text-sm text-right mt-1">{validationErrors.maxBudget}</p>}
                   </div>
                 </div>
                 {profileAddress && (
@@ -412,7 +649,9 @@ const RequestServiceForm: React.FC = () => {
                       searchPlaceholder="ابحث عن محافظة..."
                       required
                       size="md"
+                      className={shouldShowError('government') ? 'border-red-500' : ''}
                     />
+                    {shouldShowError('government') && <p className="text-red-600 text-sm text-right mt-1">{validationErrors.government}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2">المدينة</label>
@@ -430,7 +669,9 @@ const RequestServiceForm: React.FC = () => {
                       required
                       size="md"
                       disabled={!selectedGovernorate}
+                      className={shouldShowError('city') ? 'border-red-500' : ''}
                     />
+                    {shouldShowError('city') && <p className="text-red-600 text-sm text-right mt-1">{validationErrors.city}</p>}
                     {selectedCity === 'أخرى' && (
                       <FormInput
                         type="text"
@@ -439,10 +680,12 @@ const RequestServiceForm: React.FC = () => {
                           setCustomCity(e.target.value);
                           setFormData(prev => ({ ...prev, city: e.target.value }));
                         }}
+                        onBlur={handleBlur}
                         placeholder="أدخل اسم المدينة"
                         size="md"
                         className="mt-2"
                         required
+                        className={shouldShowError('city') ? 'border-red-500' : ''}
                       />
                     )}
                   </div>
@@ -456,10 +699,13 @@ const RequestServiceForm: React.FC = () => {
                       name="street"
                       value={formData.street}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="مثال: شارع التحرير، شارع محمد فريد"
                       required
                       size="md"
+                      className={shouldShowError('street') ? 'border-red-500' : ''}
                     />
+                    {shouldShowError('street') && <p className="text-red-600 text-sm text-right mt-1">{validationErrors.street}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="apartmentNumber">رقم الشقة</label>
@@ -469,21 +715,24 @@ const RequestServiceForm: React.FC = () => {
                       name="apartmentNumber"
                       value={formData.apartmentNumber}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="مثال: شقة 12، الدور 3"
                       size="md"
+                      className={shouldShowError('apartmentNumber') ? 'border-red-500' : ''}
                     />
+                    {shouldShowError('apartmentNumber') && <p className="text-red-600 text-sm text-right mt-1">{validationErrors.apartmentNumber}</p>}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="additionalInformation">معلومات إضافية</label>
-                  <FormTextarea
-                    id="additionalInformation"
-                    name="additionalInformation"
-                    value={formData.additionalInformation}
-                    onChange={handleChange}
-                    placeholder="أي تفاصيل إضافية..."
-                    size="md"
-                  />
+                                      <FormTextarea
+                      id="additionalInformation"
+                      name="additionalInformation"
+                      value={formData.additionalInformation}
+                      onChange={handleChange}
+                      placeholder="أي تفاصيل إضافية..."
+                      size="md"
+                    />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="preferredDateTime">التاريخ والوقت المفضل</label>
@@ -510,6 +759,7 @@ const RequestServiceForm: React.FC = () => {
                       classNames={{ popup: { root: 'rtl custom-datepicker-dropdown' } }}
                       disabledDate={current => current && current < dayjs().startOf('day')}
                     />
+                    {shouldShowError('preferredDateTime') && <p className="text-red-600 text-sm text-right mt-1">{validationErrors.preferredDateTime}</p>}
                   </ConfigProvider>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -521,11 +771,14 @@ const RequestServiceForm: React.FC = () => {
                       name="deliveryTimeDays"
                       value={formData.deliveryTimeDays}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="مثال: 3"
                       min="1"
                       required
                       size="md"
+                      className={shouldShowError('deliveryTimeDays') ? 'border-red-500' : ''}
                     />
+                    {shouldShowError('deliveryTimeDays') && <p className="text-red-600 text-sm text-right mt-1">{validationErrors.deliveryTimeDays}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-[#0e1b18] text-right mb-2" htmlFor="tags">العلامات (اختياري)</label>

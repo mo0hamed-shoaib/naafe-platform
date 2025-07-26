@@ -6,7 +6,7 @@ export const validateCreateListing = [
     .isLength({ min: 10, max: 100 }).withMessage('Title must be 10-100 characters'),
   body('description')
     .isString().withMessage('Description must be a string')
-    .isLength({ min: 20, max: 3000 }).withMessage('Description must be 20-3000 characters'),
+    .isLength({ min: 20, max: 2000 }).withMessage('Description must be 20-2000 characters'),
   body('category')
     .isString().withMessage('Category is required'),
   body('budget.min')
@@ -17,6 +17,16 @@ export const validateCreateListing = [
     .optional().isIn(['EGP', 'USD', 'EUR']).withMessage('Invalid currency'),
   body('status')
     .optional().isIn(['active', 'paused', 'archived']).withMessage('Invalid status'),
+  body('workingDays')
+    .isArray({ min: 1 }).withMessage('At least one working day must be selected'),
+  body('startTime')
+    .isString().withMessage('Start time is required'),
+  body('endTime')
+    .isString().withMessage('End time is required'),
+  body('location.government')
+    .isString().withMessage('Government is required'),
+  body('location.city')
+    .isString().withMessage('City is required'),
 ];
 
 export const validateUpdateListing = [
@@ -27,7 +37,7 @@ export const validateUpdateListing = [
   body('description')
     .optional()
     .isString().withMessage('Description must be a string')
-    .isLength({ min: 20, max: 3000 }).withMessage('Description must be 20-3000 characters'),
+    .isLength({ min: 20, max: 2000 }).withMessage('Description must be 20-2000 characters'),
   body('category')
     .optional()
     .isString().withMessage('Category is required'),
@@ -41,6 +51,16 @@ export const validateUpdateListing = [
     .optional().isIn(['EGP', 'USD', 'EUR']).withMessage('Invalid currency'),
   body('status')
     .optional().isIn(['active', 'paused', 'archived']).withMessage('Invalid status'),
+  body('workingDays')
+    .optional().isArray({ min: 1 }).withMessage('At least one working day must be selected'),
+  body('startTime')
+    .optional().isString().withMessage('Start time is required'),
+  body('endTime')
+    .optional().isString().withMessage('End time is required'),
+  body('location.government')
+    .optional().isString().withMessage('Government is required'),
+  body('location.city')
+    .optional().isString().withMessage('City is required'),
 ];
 
 export const validateListingId = [

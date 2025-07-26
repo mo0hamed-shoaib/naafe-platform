@@ -11,6 +11,7 @@ interface FormTextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAr
   size?: 'sm' | 'md' | 'lg';
   required?: boolean;
   containerClassName?: string;
+  maxLength?: number;
 }
 
 const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(
@@ -28,11 +29,16 @@ const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(
       disabled = false,
       id,
       rows = 4,
+      maxLength,
+      value = '',
       ...props
     },
     ref
   ) => {
     const inputId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
+    const currentLength = typeof value === 'string' ? value.length : 0;
+    const isNearLimit = maxLength && currentLength > maxLength * 0.9;
+    const isOverLimit = maxLength && currentLength > maxLength;
 
     const sizeClasses = {
       sm: 'px-3 py-1.5 text-sm',
@@ -59,7 +65,8 @@ const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(
     const stateClasses = cn(
       error && 'border-red-500 focus:border-red-500 focus:ring-red-500/40',
       success && 'border-green-500 focus:border-green-500 focus:ring-green-500/40',
-      disabled && 'cursor-not-allowed'
+      disabled && 'cursor-not-allowed',
+      isOverLimit && 'border-red-500 focus:border-red-500 focus:ring-red-500/40'
     );
 
     return (
@@ -90,6 +97,8 @@ const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(
             )}
             disabled={disabled}
             rows={rows}
+            maxLength={maxLength}
+            value={value}
             {...props}
           />
 
@@ -105,6 +114,16 @@ const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(
             </div>
           )}
         </div>
+
+        {/* Character Counter */}
+        {maxLength && (
+          <div className={cn(
+            'mt-1 text-xs text-right',
+            isOverLimit ? 'text-red-600' : isNearLimit ? 'text-orange-600' : 'text-gray-500'
+          )}>
+            {currentLength}/{maxLength} حرف
+          </div>
+        )}
 
         {/* Helper Text */}
         {error && (

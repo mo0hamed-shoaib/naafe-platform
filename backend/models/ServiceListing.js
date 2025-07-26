@@ -17,7 +17,7 @@ const serviceListingSchema = new Schema({
   description: {
     type: String,
     required: true,
-    maxlength: 3000,
+    maxlength: 2000,
     trim: true
   },
   category: {
@@ -84,8 +84,5 @@ const serviceListingSchema = new Schema({
 
 // serviceListingSchema.index({ location: '2dsphere' });
 serviceListingSchema.index({ provider: 1, status: 1 });
-serviceListingSchema.index({ category: 1, status: 1 });
-serviceListingSchema.index({ provider: 1 });
 
-const ServiceListing = mongoose.model('ServiceListing', serviceListingSchema);
-export default ServiceListing; 
+export default mongoose.model('ServiceListing', serviceListingSchema); 
