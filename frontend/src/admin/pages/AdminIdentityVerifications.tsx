@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SortableTable from '../components/UI/SortableTable';
 import Modal from '../components/UI/Modal';
 import ConfirmationModal from '../components/UI/ConfirmationModal';
@@ -50,6 +51,7 @@ interface Verification {
 
 const AdminIdentityVerifications: React.FC = () => {
   const { accessToken } = useAuth();
+  const navigate = useNavigate();
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Verification | null>(null);
@@ -168,8 +170,12 @@ const AdminIdentityVerifications: React.FC = () => {
     { 
       key: 'name' as const, 
       label: 'الاسم',
+      clickable: true,
+      onClick: (item: any) => {
+        navigate(`/profile/${item.user._id}`);
+      },
       render: (value: any, item: any) => (
-        <span className="font-medium text-deep-teal">{item.user.name}</span>
+        <span className="font-medium text-deep-teal hover:underline">{item.user.name}</span>
       )
     },
     { 

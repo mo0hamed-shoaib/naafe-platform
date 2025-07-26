@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Eye, CheckCircle, XCircle, Clock, User, MessageSquare, History } from 'lucide-react';
 import SearchAndFilter from '../components/UI/SearchAndFilter';
 import Pagination from '../components/UI/Pagination';
@@ -105,6 +106,7 @@ const COMPLAINT_ACTION_VARIANT_MAP: Record<string, 'status' | 'category' | 'prem
 const AdminManageComplaints: React.FC = () => {
   const { accessToken } = useAuth();
   const { showSuccess, showError } = useToast();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterValue, setFilterValue] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -220,9 +222,14 @@ const AdminManageComplaints: React.FC = () => {
       key: 'reporter' as keyof Complaint,
       label: 'المبلغ',
       sortable: false,
+      clickable: true,
+      onClick: (complaint: Record<string, unknown>) => {
+        const reporter = complaint.reporter as any;
+        navigate(`/profile/${reporter._id}`);
+      },
       render: (value: unknown, complaint: Record<string, unknown>) => (
         <div className="text-right">
-          <div className="font-medium text-text-primary">
+          <div className="font-medium text-text-primary hover:underline cursor-pointer">
             {(complaint.reporter as any).name.first} {(complaint.reporter as any).name.last}
           </div>
           <div className="text-sm text-text-secondary">{(complaint.reporter as any).email}</div>
@@ -233,9 +240,14 @@ const AdminManageComplaints: React.FC = () => {
       key: 'reportedUser' as keyof Complaint,
       label: 'المبلغ عنه',
       sortable: false,
+      clickable: true,
+      onClick: (complaint: Record<string, unknown>) => {
+        const reportedUser = complaint.reportedUser as any;
+        navigate(`/profile/${reportedUser._id}`);
+      },
       render: (value: unknown, complaint: Record<string, unknown>) => (
         <div className="text-right">
-          <div className="font-medium text-text-primary">
+          <div className="font-medium text-text-primary hover:underline cursor-pointer">
             {(complaint.reportedUser as any).name.first} {(complaint.reportedUser as any).name.last}
           </div>
           <div className="text-sm text-text-secondary">{(complaint.reportedUser as any).email}</div>

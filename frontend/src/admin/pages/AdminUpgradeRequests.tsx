@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BadgeCheck, XCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import Breadcrumb from '../components/UI/Breadcrumb';
@@ -25,6 +26,7 @@ const STATUS_VARIANT_MAP: Record<string, 'status' | 'category' | 'premium' | 'to
 interface UpgradeRequest {
   _id: string;
   user: {
+    _id: string;
     name: { first: string; last: string };
     phone: string;
     email: string;
@@ -37,6 +39,7 @@ interface UpgradeRequest {
 
 const AdminUpgradeRequests: React.FC = () => {
   const { accessToken } = useAuth();
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<UpgradeRequest[]>([]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -137,7 +140,15 @@ const AdminUpgradeRequests: React.FC = () => {
       key: 'user',
       label: 'المستخدم',
       sortable: false,
-      render: (_: any, req: UpgradeRequest) => `${req.user?.name?.first} ${req.user?.name?.last}`
+      clickable: true,
+      onClick: (req: UpgradeRequest) => {
+        navigate(`/profile/${req.user._id}`);
+      },
+      render: (_: any, req: UpgradeRequest) => (
+        <span className="font-medium text-deep-teal hover:underline cursor-pointer">
+          {req.user?.name?.first} {req.user?.name?.last}
+        </span>
+      )
     },
     {
       key: 'phone',

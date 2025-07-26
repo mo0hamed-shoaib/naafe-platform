@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Shield, User, UserCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import SearchAndFilter from '../components/UI/SearchAndFilter';
 import Pagination from '../components/UI/Pagination';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -169,6 +170,7 @@ const ExpandableBadges = ({ user, expanded, onToggle }: { user: User; expanded: 
 const AdminManageUsers: React.FC = () => {
   const { accessToken, user: currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterValue, setFilterValue] = useState('all');
@@ -348,10 +350,15 @@ const AdminManageUsers: React.FC = () => {
       key: 'name' as keyof User,
       label: 'الاسم',
       sortable: true,
+      clickable: true,
+      onClick: (item: Record<string, unknown>) => {
+        const user = item as unknown as User;
+        navigate(`/profile/${user.id}`);
+      },
       render: (value: unknown, row: Record<string, unknown>) => {
         const user = row as unknown as User;
         return (
-        <span className={`font-medium ${user.isBlocked ? 'text-red-600' : 'text-deep-teal'}`}>
+        <span className={`font-medium ${user.isBlocked ? 'text-red-600' : 'text-deep-teal'} hover:underline`}>
           {String(value)}
         </span>
         );

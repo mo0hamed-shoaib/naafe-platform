@@ -9,6 +9,8 @@ interface Column<T> {
   sortable?: boolean;
   render?: (value: T[keyof T], item: T) => React.ReactNode;
   className?: string;
+  onClick?: (item: T) => void;
+  clickable?: boolean;
 }
 
 interface SortableTableProps<T> {
@@ -95,7 +97,13 @@ function SortableTable<T extends Record<string, unknown>>({
               data.map((item, index) => (
                 <tr key={index} className="hover:bg-bright-orange/10 transition-colors">
                   {columns.map((column) => (
-                    <td key={String(column.key)} className={`px-6 py-4 ${column.className ? column.className : 'text-right'}`}>
+                    <td 
+                      key={String(column.key)} 
+                      className={`px-6 py-4 ${column.className ? column.className : 'text-right'} ${
+                        column.clickable ? 'cursor-pointer hover:bg-bright-orange/5' : ''
+                      }`}
+                      onClick={() => column.onClick && column.clickable ? column.onClick(item) : undefined}
+                    >
                       {column.render 
                         ? column.render(item[column.key], item)
                         : String(item[column.key] || '')
