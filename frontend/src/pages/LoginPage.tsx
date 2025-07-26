@@ -7,6 +7,7 @@ import BaseCard from '../components/ui/BaseCard';
 import { User } from '../types';
 import { FormInput } from '../components/ui';
 import { validateEmail } from '../utils/validation';
+import { ForgotPasswordModal } from '../components/ui/ForgotPasswordModal';
 import heroImage from '/public/images/hero-section.png';
 
 // Field validation type
@@ -24,6 +25,7 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldValidation>({});
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   // Real-time validation for email
   const validateEmailField = useCallback((email: string) => {
@@ -192,7 +194,13 @@ const LoginPage = () => {
               </div>
               {/* Forgot Password Link */}
               <div className="text-right mb-2">
-                <Link to="#" className="text-sm font-medium text-[#2D5D4F] hover:text-[#F5A623] transition-colors duration-200 focus:outline-none focus:underline">هل نسيت كلمة المرور؟</Link>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPasswordModal(true)}
+                  className="text-sm font-medium text-[#2D5D4F] hover:text-[#F5A623] transition-colors duration-200 focus:outline-none focus:underline"
+                >
+                  هل نسيت كلمة المرور؟
+                </button>
               </div>
               {/* Submit Button */}
               <Button
@@ -232,6 +240,12 @@ const LoginPage = () => {
           </BaseCard>
         </div>
       </div>
+      
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+      />
     </div>
   );
 };

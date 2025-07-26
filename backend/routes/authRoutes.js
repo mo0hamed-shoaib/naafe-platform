@@ -1,6 +1,6 @@
 import express from 'express';
 import authController from '../controllers/authController.js';
-import { validateRegister, validateLogin, validateRefreshToken, validateCheckAvailability } from '../validation/authValidation.js';
+import { validateRegister, validateLogin, validateRefreshToken, validateCheckAvailability, validateForgotPassword, validateResetPassword } from '../validation/authValidation.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
@@ -39,5 +39,19 @@ router.post('/logout', authenticateToken, authController.logout);
  * @access  Public
  */
 router.post('/refresh', validateRefreshToken, authController.refreshToken);
+
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Request password reset
+ * @access  Public
+ */
+router.post('/forgot-password', validateForgotPassword, authController.forgotPassword);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Reset password using token
+ * @access  Public
+ */
+router.post('/reset-password', validateResetPassword, authController.resetPassword);
 
 export default router;

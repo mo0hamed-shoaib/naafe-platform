@@ -170,6 +170,8 @@ const userSchema = new Schema({
     },
     blockedReason: String,
     lastLoginAt: Date,
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
     settings: {
         type: Schema.Types.Mixed,
         default: {}

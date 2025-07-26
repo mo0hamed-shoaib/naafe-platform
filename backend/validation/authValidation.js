@@ -113,4 +113,29 @@ export const validateRefreshToken = [
     .withMessage('رمز التحديث مطلوب'),
   
   handleValidationErrors
+];
+
+// Forgot password validation
+export const validateForgotPassword = [
+  body('email')
+    .isEmail()
+    .withMessage('يرجى إدخال عنوان بريد إلكتروني صحيح')
+    .normalizeEmail(),
+  
+  handleValidationErrors
+];
+
+// Reset password validation
+export const validateResetPassword = [
+  body('token')
+    .notEmpty()
+    .withMessage('رمز إعادة التعيين مطلوب'),
+  
+  body('newPassword')
+    .isLength({ min: 8 })
+    .withMessage('كلمة المرور يجب أن تكون 8 أحرف على الأقل')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .withMessage('كلمة المرور يجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص واحد على الأقل'),
+  
+  handleValidationErrors
 ]; 

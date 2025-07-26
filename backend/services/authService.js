@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../models/User.js';
 
 class AuthService {
@@ -260,6 +261,105 @@ class AuthService {
       delete userResponse.password;
 
       return userResponse;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Request password reset
+   * @param {string} email - User email
+   * @returns {Object} Success message
+   */
+  async forgotPassword(email) {
+    try {
+      // Find user by email
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        throw new Error('البريد الإلكتروني غير مسجل');
+      }
+
+      // Check if user is blocked
+      if (user.isBlocked) {
+        throw new Error('الحساب محظور. يرجى التواصل مع الدعم الفني.');
+      }
+
+      // Check if user is active
+      if (!user.isActive) {
+        throw new Error('الحساب معطل. يرجى التواصل مع الدعم الفني.');
+      }
+
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+
+      // Save reset token to user
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordExpires = resetTokenExpiry;
+      await user.save();
+
+      // For development - log to console
+      console.log(`\n🔗 Reset Password Link for ${email}:`);
+      console.log(`http://localhost:5173/reset-password?token=${resetToken}`);
+      console.log(`⏰ Expires at: ${resetTokenExpiry.toLocaleString('ar-EG')}`);
+      console.log(`\n📋 Instructions:`);
+      console.log(`1. Copy the link above`);
+      console.log(`2. Open it in your browser`);
+      console.log(`3. Enter your new password`);
+      console.log(`4. The link will expire in 1 hour\n`);
+
+      return { 
+        message: 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني',
+        resetToken: resetToken // Only for development
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Reset password using token
+   * @param {string} token - Reset token
+   * @param {string} newPassword - New password
+   * @returns {Object} Success message
+   */
+  async resetPassword(token, newPassword) {
+    try {
+      // Find user by reset token
+      const user = await User.findOne({
+        resetPasswordToken: token,
+        resetPasswordExpires: { $gt: Date.now() }
+      });
+
+      if (!user) {
+        throw new Error('رابط إعادة تعيين كلمة المرور غير صالح أو منتهي الصلاحية');
+      }
+
+      // Check if user is blocked
+      if (user.isBlocked) {
+        throw new Error('الحساب محظور. يرجى التواصل مع الدعم الفني.');
+      }
+
+      // Check if user is active
+      if (!user.isActive) {
+        throw new Error('الحساب معطل. يرجى التواصل مع الدعم الفني.');
+      }
+
+      // Hash new password
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+      // Update password and clear reset token
+      user.password = hashedPassword;
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+
+      console.log(`✅ Password reset successful for ${user.email}`);
+
+      return { 
+        message: 'تم إعادة تعيين كلمة المرور بنجاح' 
+      };
     } catch (error) {
       throw error;
     }

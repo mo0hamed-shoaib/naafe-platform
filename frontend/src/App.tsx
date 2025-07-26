@@ -40,6 +40,7 @@ import ProviderHireRequestsPage from './pages/ProviderHireRequestsPage';
 import TransactionsPage from './pages/TransactionsPage';
 import NewChatPage from './pages/NewChatPage';
 import SchedulePage from './pages/SchedulePage';
+import { ResetPasswordHandler } from './components/ui/ResetPasswordHandler';
 
 const App = () => {
   return (
@@ -76,6 +77,7 @@ const App = () => {
               } />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/reset-password" element={<ResetPasswordHandler />} />
                 <Route path="/profile" element={
                   <ProtectedRoute>
                     <ProfilePage />

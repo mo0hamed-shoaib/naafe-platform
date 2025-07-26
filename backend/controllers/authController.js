@@ -227,6 +227,92 @@ class AuthController {
       });
     }
   }
+
+  /**
+   * Request password reset
+   * POST /api/auth/forgot-password
+   */
+  async forgotPassword(req, res) {
+    try {
+      const { email } = req.body;
+      const result = await authService.forgotPassword(email);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Password reset request successful',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      // Handle specific errors
+      if (error.message.includes('البريد الإلكتروني غير مسجل') ||
+          error.message.includes('الحساب محظور') ||
+          error.message.includes('الحساب معطل')) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'BAD_REQUEST',
+            message: error.message
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Handle other errors
+      console.error('Forgot password error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Internal server error'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Reset password using token
+   * POST /api/auth/reset-password
+   */
+  async resetPassword(req, res) {
+    try {
+      const { token, newPassword } = req.body;
+      const result = await authService.resetPassword(token, newPassword);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Password reset successful',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      // Handle specific errors
+      if (error.message.includes('رابط إعادة تعيين كلمة المرور غير صالح أو منتهي الصلاحية') ||
+          error.message.includes('الحساب محظور') ||
+          error.message.includes('الحساب معطل')) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'BAD_REQUEST',
+            message: error.message
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Handle other errors
+      console.error('Reset password error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Internal server error'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
 }
 
 export default new AuthController(); 
