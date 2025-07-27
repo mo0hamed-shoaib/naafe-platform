@@ -8,9 +8,7 @@ import { EGYPT_GOVERNORATES, EGYPT_CITIES, PRICE_RANGES } from '../../utils/cons
 import { SearchTab } from './SearchTabs';
 import { FormInput } from './';
 import UnifiedSelect from './UnifiedSelect';
-import { TimePicker, ConfigProvider } from 'antd';
-import dayjs from 'dayjs';
-import arEG from 'antd/locale/ar_EG';
+
 
 interface FilterFormProps {
   filters: FilterState;
@@ -218,92 +216,7 @@ const FilterForm = ({
             </div>
           )}
 
-          {activeTab === 'services' && (
-            <>
-              {/* Working Days Filter (for providers) */}
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-3">
-                  أيام العمل
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {['saturday','sunday','monday','tuesday','wednesday','thursday','friday'].map(day => (
-                    <label
-                      key={day}
-                      className={
-                        `flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-colors cursor-pointer select-none
-                        ${filters.workingDays?.includes(day)
-                          ? 'bg-deep-teal/90 border-deep-teal text-white'
-                          : 'bg-white border-gray-300 text-deep-teal hover:bg-deep-teal/10'}
-                        text-base font-semibold`
-                      }
-                      style={{ minWidth: '90px' }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={filters.workingDays?.includes(day) || false}
-                        onChange={e => {
-                          const newDays = e.target.checked
-                            ? [...(filters.workingDays || []), day]
-                            : (filters.workingDays || []).filter(d => d !== day);
-                          onFiltersChange({ ...filters, workingDays: newDays });
-                        }}
-                        className="w-5 h-5 accent-[#2D5D4F] border-2 border-gray-400 rounded focus:ring-2 focus:ring-accent focus:ring-offset-2"
-                        style={{ accentColor: filters.workingDays?.includes(day) ? '#fff' : '#2D5D4F' }}
-                      />
-                      <span className="ml-1">
-                        {{
-                          saturday: 'السبت',
-                          sunday: 'الأحد',
-                          monday: 'الاثنين',
-                          tuesday: 'الثلاثاء',
-                          wednesday: 'الأربعاء',
-                          thursday: 'الخميس',
-                          friday: 'الجمعة'
-                        }[day]}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              {/* Work Time Range Filter (for providers) */}
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-3">
-                  وقت العمل
-                </label>
-                <ConfigProvider locale={arEG}>
-                  <TimePicker.RangePicker
-                    format={value => {
-                      if (!value) return '';
-                      const hour = value.hour();
-                      const minute = value.minute().toString().padStart(2, '0');
-                      const isAM = hour < 12;
-                      let displayHour = hour % 12;
-                      if (displayHour === 0) displayHour = 12;
-                      return `${displayHour}:${minute} ${isAM ? 'ص' : 'م'}`;
-                    }}
-                    use12Hours
-                    showSecond={false}
-                    value={filters.timeRange && filters.timeRange.length === 2 ? [dayjs(filters.timeRange[0], 'HH:mm'), dayjs(filters.timeRange[1], 'HH:mm')] : null}
-                    onChange={val => {
-                      onFiltersChange({
-                        ...filters,
-                        timeRange: val && val.length === 2 && val[0] && val[1]
-                          ? [val[0].format('HH:mm'), val[1].format('HH:mm')]
-                          : undefined
-                      });
-                    }}
-                    allowClear
-                    minuteStep={5}
-                    size="large"
-                    className="bg-white border-2 border-gray-300 rounded-lg py-2 pr-3 pl-3 focus:ring-2 focus:ring-accent focus:border-accent text-right text-black custom-timepicker-contrast"
-                    classNames={{ popup: { root: 'rtl' } }}
-                    style={{ direction: 'rtl' }}
-                    placeholder={["من", "إلى"]}
-                  />
-                </ConfigProvider>
-              </div>
-            </>
-          )}
+
           {activeTab === 'requests' && (
             <>
               {/* Only show filters relevant to seekers here (e.g., category, location, price, etc.) */}
