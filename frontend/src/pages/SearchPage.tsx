@@ -320,7 +320,9 @@ const SearchPage = () => {
   };
 
   const handleViewRequestDetails = (requestId: string) => {
-    navigate(`/requests/${requestId}`);
+    navigate(`/requests/${requestId}`, { 
+      state: { from: searchType === 'service-requests' ? '/search/service-requests' : '/search' }
+    });
   };
 
   const handleInterestedInRequest = (requestId: string) => {

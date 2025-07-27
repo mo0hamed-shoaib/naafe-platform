@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import ServiceDetailsContainer from '../components/ServiceDetails';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -43,6 +43,7 @@ interface BackendOffer {
 
 const RequestServiceDetailsPage = () => {
   const { id } = useParams();
+  const location = useLocation();
   const { accessToken, user } = useAuth();
   const { offers, addNewOffer, setOffers } = useOfferContext();
   const { showSuccess, showError } = useToast();
@@ -384,7 +385,7 @@ const RequestServiceDetailsPage = () => {
       <main className="flex-1">
         {/* Back Button Section */}
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <BackButton to="/search" className="mb-4" />
+          <BackButton to={location.state?.from || '/search'} className="mb-4" />
         </div>
         
         {/* Service Details */}
