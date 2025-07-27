@@ -163,8 +163,30 @@ class JobRequestService {
 
       console.log(`[JobRequestService] Found ${jobRequests.length} job requests out of ${totalCount} total`);
 
+      // Get offers count for each job request
+      const Offer = (await import('../models/Offer.js')).default;
+      const jobRequestIds = jobRequests.map(jr => jr._id);
+      
+      const offersCounts = await Offer.aggregate([
+        { $match: { jobRequest: { $in: jobRequestIds } } },
+        { $group: { _id: '$jobRequest', count: { $sum: 1 } } }
+      ]);
+
+      // Create a map of jobRequestId to offers count
+      const offersCountMap = {};
+      offersCounts.forEach(item => {
+        offersCountMap[item._id.toString()] = item.count;
+      });
+
+      // Add offers count to each job request
+      const jobRequestsWithOffersCount = jobRequests.map(jr => {
+        const jobRequestObj = jr.toObject();
+        jobRequestObj.offersCount = offersCountMap[jr._id.toString()] || 0;
+        return jobRequestObj;
+      });
+
       return {
-        jobRequests,
+        jobRequests: jobRequestsWithOffersCount,
         totalCount,
         page,
         limit,

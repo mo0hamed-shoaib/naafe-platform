@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, DollarSign, Clock, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
+import { MapPin, Clock, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 import BaseCard from './ui/BaseCard';
 import Button from './ui/Button';
 import PremiumBadge from './ui/PremiumBadge';
@@ -173,7 +173,7 @@ const ServiceRequestCard = ({ request, alreadyApplied, onInterested, onViewDetai
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
             <div className="text-sm font-bold text-blue-600">
-              {request.responses !== undefined ? request.responses : '...'}
+              {request.responses || 0}
             </div>
             <div className="text-xs text-text-secondary">عرض</div>
           </div>
@@ -207,17 +207,6 @@ const ServiceRequestCard = ({ request, alreadyApplied, onInterested, onViewDetai
 
         {/* Action Section - Fixed Height */}
         <div className="mt-auto space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-1">
-              <DollarSign className="w-4 h-4 text-bright-orange" />
-              <span className="font-bold text-bright-orange drop-shadow-sm">
-                {request.budget?.min} - {request.budget?.max} جنيه
-              </span>
-            </div>
-            {request.responses !== undefined && request.responses > 0 && (
-              <span className="text-blue-600 font-medium">{request.responses} عرض</span>
-            )}
-          </div>
           
           <div className="flex gap-2">
             <Button
