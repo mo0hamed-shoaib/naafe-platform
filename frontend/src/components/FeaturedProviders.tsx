@@ -26,11 +26,11 @@ const FeaturedProviders: React.FC = () => {
   }, []);
 
   return (
-    <section className="py-16 bg-gradient-to-b from-yellow-50 to-orange-50 font-arabic text-text-primary">
+    <section className="py-8 bg-gradient-to-b from-yellow-50 to-orange-50 font-arabic text-text-primary">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-yellow-700">مقدمو الخدمات المميزون</h2>
-          <p className="text-lg text-text-secondary mt-2">أفضل المحترفين الموثوقين على منصتنا</p>
+        <div className="text-center mb-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-yellow-700">مقدمو الخدمات المميزون</h2>
+          <p className="text-base text-text-secondary mt-2">أفضل المحترفين الموثوقين على منصتنا</p>
         </div>
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -51,7 +51,7 @@ const FeaturedProviders: React.FC = () => {
             </div>
           </div>
         ) : providers.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {providers.map((provider) => {
               // Flatten providerProfile fields
               const profile = provider.providerProfile || {};
@@ -64,8 +64,8 @@ const FeaturedProviders: React.FC = () => {
                 name: provider.name,
                 rating: profile.rating ?? 0,
                 category: profile.category || '',
-                description: profile.description || '',
-                title: profile.title || '',
+                description: provider.profile?.bio || profile.description || provider.description || profile.bio || '',
+                title: profile.title || provider.title || '',
                 location,
                 startingPrice: profile.startingPrice ?? 0,
                 imageUrl: provider.avatarUrl || '',
@@ -94,7 +94,7 @@ const FeaturedProviders: React.FC = () => {
             })}
           </div>
         ) : (
-          <div className="text-center py-12 text-lg text-yellow-700">لا يوجد مقدمو خدمات مميزون حالياً</div>
+          <div className="text-center py-6 text-base text-yellow-700">لا يوجد مقدمو خدمات مميزون حالياً</div>
         )}
       </div>
     </section>

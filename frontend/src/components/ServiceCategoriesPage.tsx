@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from './layout/PageLayout';
-import FilterForm from './ui/FilterForm';
 import CategoryCard from './CategoryCard';
-import { useFilters } from '../hooks/useFilters';
 import { useAuth } from '../contexts/AuthContext';
 import { ComponentType } from 'react';
-import FeaturedProviders from './FeaturedProviders';
 import AdPlacement from './ui/AdPlacement';
 import React from 'react';
 
@@ -27,7 +24,6 @@ interface Category {
 const ServiceCategoriesPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { filters, updateFilters, clearFilters } = useFilters();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -72,16 +68,8 @@ const ServiceCategoriesPage = () => {
   }, [navigate]);
 
   const handleSearch = useCallback((query: string) => {
-    // Build search URL with all current filters
-    const params = new URLSearchParams();
-    params.set('query', query);
-    
-    if (filters.location) params.set('location', filters.location);
-    if (filters.priceRange) params.set('priceRange', filters.priceRange);
-    if (filters.rating) params.set('rating', filters.rating);
-    
-    navigate(`/search?${params.toString()}`);
-  }, [navigate, filters]);
+    navigate(`/search?query=${encodeURIComponent(query)}`);
+  }, [navigate]);
 
   return (
     <PageLayout
@@ -96,17 +84,12 @@ const ServiceCategoriesPage = () => {
       <div className="mb-6">
         <AdPlacement location="categories" type="top" />
       </div>
-      
-      <FeaturedProviders />
-      <FilterForm
-        filters={filters}
-        onFiltersChange={updateFilters}
-        onClearFilters={clearFilters}
-        onSearch={handleSearch}
-      />
 
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-2xl font-bold text-text-primary">جميع الفئات</h2>
+      <div className="mb-8">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl md:text-4xl font-bold text-deep-teal mb-4">جميع الفئات</h2>
+          <p className="text-lg text-text-secondary">تصفح جميع فئات الخدمات المتاحة على منصتنا</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

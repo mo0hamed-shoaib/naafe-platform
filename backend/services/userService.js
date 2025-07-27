@@ -480,7 +480,7 @@ class UserService {
     })
       .sort({ createdAt: -1 })
       .limit(limit)
-      .select('name avatarUrl providerProfile isPremium isTopRated isVerified createdAt profile.location');
+      .select('name avatarUrl providerProfile isPremium isTopRated isVerified createdAt profile.location profile.bio');
     return users;
   }
 }

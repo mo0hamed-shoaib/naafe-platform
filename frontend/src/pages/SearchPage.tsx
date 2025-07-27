@@ -12,6 +12,7 @@ import { useUrlParams } from '../hooks/useUrlParams';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, Users, FileText, ArrowLeft, CheckCircle } from 'lucide-react';
 import AdPlacement from '../components/ui/AdPlacement';
+import FeaturedProviders from '../components/FeaturedProviders';
 
 const fetchListings = async (filters: FilterState) => {
   const params = new URLSearchParams();
@@ -497,6 +498,13 @@ const SearchPage = () => {
           <div className="mb-6">
             <AdPlacement location="search" type="top" />
           </div>
+          
+          {/* Featured Providers Section - Only show for providers search */}
+          {searchType === 'providers' && (
+            <div className="mb-8">
+              <FeaturedProviders />
+            </div>
+          )}
           
           {/* Targeted Leads for Premium Providers */}
           {/* Removed: عروض مستهدفة لك (مميز) section as per new requirements */}
