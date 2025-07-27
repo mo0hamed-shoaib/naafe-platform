@@ -582,15 +582,202 @@ class UserController {
     }
   }
 
-  // Admin: Unblock a user
+  /**
+   * Unblock a user (admin only)
+   * PATCH /api/users/:id/unblock
+   */
   async unblockUser(req, res) {
     try {
       const { id } = req.params;
-      const adminId = req.user._id;
-      await userService.unblockUser(id, adminId);
-      res.json({ message: 'User unblocked successfully' });
-    } catch (err) {
-      res.status(400).json({ message: 'Failed to unblock user', error: err.message });
+      const user = await userService.unblockUser(id);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          user
+        },
+        message: 'User unblocked successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error(`Unblock user error: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Internal server error'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Get saved services for current user
+   * GET /api/users/me/saved-services
+   */
+  async getSavedServices(req, res) {
+    try {
+      const userId = req.user._id;
+      const savedServices = await userService.getSavedServices(userId);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          savedServices
+        },
+        message: 'Saved services retrieved successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error(`Get saved services error: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Internal server error'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Save a service request
+   * POST /api/users/me/saved-services/:serviceId
+   */
+  async saveService(req, res) {
+    try {
+      const userId = req.user._id;
+      const { serviceId } = req.params;
+
+      await userService.saveService(userId, serviceId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Service saved successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      if (error.message.includes('Service not found')) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: error.message
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      if (error.message.includes('already saved')) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'ALREADY_SAVED',
+            message: error.message
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      logger.error(`Save service error: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Internal server error'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Remove a saved service request
+   * DELETE /api/users/me/saved-services/:serviceId
+   */
+  async unsaveService(req, res) {
+    try {
+      const userId = req.user._id;
+      const { serviceId } = req.params;
+
+      await userService.unsaveService(userId, serviceId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Service removed from saved successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      if (error.message.includes('Service not found')) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: error.message
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      if (error.message.includes('not saved')) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'NOT_SAVED',
+            message: error.message
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      logger.error(`Unsave service error: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Internal server error'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Check if a service is saved by current user
+   * GET /api/users/me/saved-services/:serviceId
+   */
+  async checkIfServiceSaved(req, res) {
+    try {
+      const userId = req.user._id;
+      const { serviceId } = req.params;
+
+      console.log('🔍 Backend checkIfServiceSaved called:', { userId, serviceId });
+
+      const isSaved = await userService.checkIfServiceSaved(userId, serviceId);
+
+      console.log('🔍 Backend checkIfServiceSaved result:', { isSaved });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          isSaved
+        },
+        message: 'Service saved status checked successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('🔍 Backend checkIfServiceSaved error:', error.message);
+      logger.error(`Check if service saved error: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Internal server error'
+        },
+        timestamp: new Date().toISOString()
+      });
     }
   }
 }

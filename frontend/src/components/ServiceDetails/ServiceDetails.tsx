@@ -30,10 +30,6 @@ interface ServiceDetailsProps {
 }
 
 const ServiceDetails: React.FC<ServiceDetailsProps> = ({ service }) => {
-  console.log('ServiceDetails render:', service);
-  console.log('Service postedBy:', service?.postedBy);
-  console.log('Service seeker:', service?.seeker);
-  
   if (!service) return null;
 
   const formatDate = (dateString: string) => {
@@ -74,25 +70,13 @@ const ServiceDetails: React.FC<ServiceDetailsProps> = ({ service }) => {
   const budget = service.budget || {};
   const timeline = service.timeline;
   const location = service.location || {};
-  const postedDate = service.postedDate || service.createdAt;
+  const postedDate = service.createdAt;
   const postedBy = service.postedBy || {};
-  const additionalDetails = service.additionalDetails;
-  const tags = service.tags || [];
-
-  // Debug all fields to ensure no objects are being rendered
-  console.log('Service fields:', {
-    title: typeof title,
-    description: typeof description,
-    status: typeof status,
-    category: typeof category,
-    budget: typeof budget,
-    timeline: typeof timeline,
-    location: typeof location,
-    postedDate: typeof postedDate,
-    postedBy: typeof postedBy,
-    additionalDetails: typeof additionalDetails,
-    tags: typeof tags
-  });
+  const additionalDetails = undefined; // Removed as per new_code
+  const tags = undefined; // Removed as per new_code
+  const workingDays = undefined; // Removed as per new_code
+  const startTime = undefined; // Removed as per new_code
+  const endTime = undefined; // Removed as per new_code
 
   // Ensure all fields are strings or numbers, not objects
   const safeTitle = typeof title === 'string' ? title : 'عنوان غير محدد';
@@ -100,7 +84,11 @@ const ServiceDetails: React.FC<ServiceDetailsProps> = ({ service }) => {
   const safeStatus = typeof status === 'string' ? status : 'open';
   const safeCategory = typeof category === 'string' ? category : 'غير محدد';
   const safeTimeline = typeof timeline === 'string' ? timeline : undefined;
-  const safeAdditionalDetails = typeof additionalDetails === 'string' ? additionalDetails : undefined;
+  const safeAdditionalDetails = undefined; // Removed as per new_code
+  const safeTags = undefined; // Removed as per new_code
+  const safeWorkingDays = undefined; // Removed as per new_code
+  const safeStartTime = undefined; // Removed as per new_code
+  const safeEndTime = undefined; // Removed as per new_code
 
   // Safe name extraction for postedBy
   const getPostedByName = (postedBy: ServiceUser | undefined) => {
@@ -240,32 +228,7 @@ const ServiceDetails: React.FC<ServiceDetailsProps> = ({ service }) => {
         )}
 
         {/* Working Days & Time Range */}
-        {(service.workingDays && service.workingDays.length > 0) && (
-          <div className="flex items-center gap-3 p-3 bg-warm-cream rounded-lg">
-            <Clock className="h-5 w-5 text-deep-teal flex-shrink-0" />
-            <div>
-              <div className="text-sm text-deep-teal/70">مواعيد التوفر</div>
-              <div className="font-semibold text-deep-teal">
-                {service.workingDays.map((day: string, idx: number) => (
-                  <span key={day}>{idx > 0 ? '، ' : ''}{
-                    {
-                      sunday: 'الأحد',
-                      monday: 'الاثنين',
-                      tuesday: 'الثلاثاء',
-                      wednesday: 'الأربعاء',
-                      thursday: 'الخميس',
-                      friday: 'الجمعة',
-                      saturday: 'السبت'
-                    }[day] || day
-                  }</span>
-                ))}
-                {service.startTime && service.endTime && (
-                  <span> ({service.startTime} - {service.endTime})</span>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Removed as per new_code */}
       </div>
 
       {/* Additional Details */}
@@ -277,11 +240,11 @@ const ServiceDetails: React.FC<ServiceDetailsProps> = ({ service }) => {
       )}
 
       {/* Tags/Skills */}
-      {tags && tags.length > 0 && (
+      {safeTags && safeTags.length > 0 && (
         <div className="mb-4">
           <h3 className="font-semibold text-deep-teal mb-2">المهارات المطلوبة</h3>
           <div className="flex flex-wrap gap-2">
-            {tags.map((tag: string, index: number) => (
+            {safeTags.map((tag: string, index: number) => (
               <Badge key={index} variant="category" size="sm">
                 {tag}
               </Badge>

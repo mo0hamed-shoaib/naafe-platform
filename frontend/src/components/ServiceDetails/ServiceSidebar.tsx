@@ -17,6 +17,9 @@ interface ServiceSidebarProps {
   onBookmark?: () => void;
   onReport?: () => void;
   alreadyApplied?: boolean;
+  isSaved?: boolean;
+  isSharing?: boolean;
+  isReporting?: boolean;
 }
 
 const ServiceSidebar: React.FC<ServiceSidebarProps> = ({
@@ -24,7 +27,10 @@ const ServiceSidebar: React.FC<ServiceSidebarProps> = ({
   onShare,
   onBookmark,
   onReport,
-  alreadyApplied
+  alreadyApplied,
+  isSaved = false,
+  isSharing = false,
+  isReporting = false
 }) => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -167,18 +173,21 @@ const ServiceSidebar: React.FC<ServiceSidebarProps> = ({
           <Button 
             variant="outline" 
             onClick={onShare}
+            disabled={isSharing}
+            loading={isSharing}
             className="flex items-center justify-center gap-2"
           >
             <Share2 className="h-4 w-4" />
-            مشاركة
+            {isSharing ? 'جاري المشاركة...' : 'مشاركة'}
           </Button>
           <Button 
-            variant="outline" 
+            variant={isSaved ? "primary" : "outline"}
             onClick={onBookmark}
+            disabled={isSharing || isReporting}
             className="flex items-center justify-center gap-2"
           >
-            <Bookmark className="h-4 w-4" />
-            حفظ
+            <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
+            {isSaved ? 'محفوظ' : 'حفظ'}
           </Button>
         </div>
 
@@ -186,10 +195,12 @@ const ServiceSidebar: React.FC<ServiceSidebarProps> = ({
         <Button 
           variant="danger" 
           onClick={onReport}
+          disabled={isSharing || isReporting}
+          loading={isReporting}
           className="w-full flex items-center justify-center gap-2"
         >
           <Flag className="h-4 w-4" />
-          إبلاغ عن مشكلة
+          {isReporting ? 'جاري الإبلاغ...' : 'إبلاغ عن مشكلة'}
         </Button>
       </div>
 

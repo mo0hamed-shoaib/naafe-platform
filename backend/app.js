@@ -20,6 +20,7 @@ import complaintRoutes from './routes/complaintRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import adRoutes from './routes/adRoutes.js';
 import scheduleRoutes from './routes/scheduleRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
 import { requestLogger, errorLogger, performanceLogger, securityLogger } from './middlewares/logging.middleware.js';
 
 const app = express();
@@ -77,6 +78,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/ads', adRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/schedule', scheduleRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

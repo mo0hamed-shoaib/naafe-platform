@@ -20,21 +20,25 @@ interface ServiceDetailsContainerProps {
   onReport?: () => void;
   onOfferAdded?: (newOffer: any) => void;
   onOffersRefresh?: () => Promise<void>;
+  isSaved?: boolean;
+  isSharing?: boolean;
+  isReporting?: boolean;
 }
 
-const ServiceDetailsContainer: React.FC<ServiceDetailsContainerProps> = ({
-  service,
-  offers,
-  onInterested,
-  onShare,
-  onBookmark,
-  onReport,
-  onOfferAdded,
-  onOffersRefresh
+const ServiceDetailsContainer: React.FC<ServiceDetailsContainerProps> = ({ 
+  service, 
+  offers, 
+  onInterested, 
+  onShare, 
+  onBookmark, 
+  onReport, 
+  onOfferAdded, 
+  onOffersRefresh,
+  isSaved = false,
+  isSharing = false,
+  isReporting = false
 }) => {
   const { user } = useAuth();
-  
-  console.log('ServiceDetailsContainer render:', { service, offers, user });
   
   const alreadyApplied = !!(user && user.roles.includes('provider') && offers.some(o => o.providerId === user.id));
   
@@ -108,6 +112,9 @@ const ServiceDetailsContainer: React.FC<ServiceDetailsContainerProps> = ({
                   onBookmark={onBookmark}
                   onReport={onReport}
                   alreadyApplied={alreadyApplied}
+                  isSaved={isSaved}
+                  isSharing={isSharing}
+                  isReporting={isReporting}
                 />
               );
             } catch (error) {

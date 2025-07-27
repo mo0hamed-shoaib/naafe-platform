@@ -179,7 +179,11 @@ const userSchema = new Schema({
     portfolio: {
         type: [String],
         default: []
-    }
+    },
+    savedServices: [{
+        type: Schema.Types.ObjectId,
+        ref: 'JobRequest'
+    }]
 }, {
     timestamps: true
 });

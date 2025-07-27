@@ -54,8 +54,6 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
   jobRequestId,
   seekerId
 }) => {
-  console.log('ResponsesSection render:', { responses, jobRequestStatus });
-  
   const { user, accessToken } = useAuth();
   const { negotiationState, fetchNegotiation, confirmNegotiation, resetNegotiation } = useOfferContext();
   const navigate = useNavigate();
@@ -63,12 +61,16 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
 
   // Fetch conversation existence and negotiation state for each offer on mount
   React.useEffect(() => {
-    if (responses && responses.length > 0) {
+    if (responses && responses.length > 0 && user) {
       responses.forEach(async (resp) => {
-        if (resp.id && resp.jobRequestId && resp.providerId) {
+        // Only fetch conversation if current user is the seeker (job request owner)
+        if (resp.id && resp.jobRequestId && resp.providerId && user.id === resp.jobRequestSeekerId) {
           // Check if conversation exists
           const res = await fetch(`/api/chat/job-requests/${resp.jobRequestId}/conversation`, {
-            headers: { 'Authorization': accessToken || '' }
+            headers: { 
+              'Authorization': accessToken ? `Bearer ${accessToken}` : '',
+              'Content-Type': 'application/json'
+            }
           });
           const data = await res.json();
           setConversationMap(prev => ({ ...prev, [resp.id]: data.success && data.data && data.data._id ? data.data._id : null }));
@@ -79,7 +81,7 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [responses]);
+  }, [responses, user]);
   if (!responses || responses.length === 0) return null;
 
   // Safe property access for responses
@@ -150,6 +152,19 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
       case 'evening': return 'مساءً';
       case 'flexible': return 'مرن';
       default: return pref;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return 'في الانتظار';
+      case 'accepted': return 'تم القبول';
+      case 'rejected': return 'مرفوض';
+      case 'cancelled': return 'ملغي';
+      case 'negotiating': return 'قيد التفاوض';
+      case 'completed': return 'مكتمل';
+      case 'in_progress': return 'قيد التنفيذ';
+      default: return status;
     }
   };
 
@@ -253,18 +268,6 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
           }
           return (
             <div key={resp.id} className="bg-white rounded-lg shadow-lg p-6 border border-deep-teal/10">
-              {/* Debug output for development */}
-              {import.meta.env.MODE === 'development' && (
-                <pre className="bg-gray-100 p-2 text-xs overflow-x-auto mb-2">
-                  {JSON.stringify({
-                    offerId: resp.id,
-                    jobRequestId: resp.jobRequestId,
-                    providerId: resp.providerId,
-                    conversationId,
-                    userId: user?.id
-                  }, null, 2)}
-                </pre>
-              )}
               {/* Provider Info */}
               <div className="flex items-center gap-4 mb-4">
                 <button
@@ -320,7 +323,7 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
                   {resp.specialties && resp.specialties.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">
                       {resp.specialties.map((skill, index) => (
-                        <span key={index} className="text-xs bg-soft-teal/20 text-deep-teal px-2 py-1 rounded-full">
+                        <span key={`skill-${resp.id}-${index}`} className="text-xs bg-soft-teal/20 text-deep-teal px-2 py-1 rounded-full">
                           {skill}
                         </span>
                       ))}
@@ -350,7 +353,7 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
                   <p className="text-sm font-medium text-deep-teal mb-2">التخصصات:</p>
                   <div className="flex flex-wrap gap-2">
                     {resp.specialties.map((specialty, index) => (
-                      <Badge key={index} variant="category" size="sm">
+                      <Badge key={`specialty-${resp.id}-${index}`} variant="category" size="sm">
                         {specialty}
                       </Badge>
                     ))}
@@ -383,7 +386,7 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {resp.availableDates.slice(0, 6).map((date, index) => (
-                          <div key={index} className="bg-white px-2 py-1 rounded-md border border-deep-teal/20 text-center min-w-[80px]">
+                          <div key={`date-${resp.id}-${index}`} className="bg-white px-2 py-1 rounded-md border border-deep-teal/20 text-center min-w-[80px]">
                             <span className="text-xs text-deep-teal font-medium">{formatDate(date)}</span>
                           </div>
                         ))}
@@ -407,7 +410,7 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {resp.timePreferences.map((pref, index) => (
-                          <div key={index} className="bg-white px-2 py-1 rounded-md border border-deep-teal/20 text-center">
+                          <div key={`time-${resp.id}-${index}`} className="bg-white px-2 py-1 rounded-md border border-deep-teal/20 text-center">
                             <span className="text-xs font-medium text-deep-teal">{getTimePreferenceLabel(pref)}</span>
                           </div>
                         ))}
@@ -518,13 +521,13 @@ const ResponsesSection: React.FC<ResponsesSectionProps> = ({
                       ? 'bg-blue-100 text-blue-800 border border-blue-200'
                     : resp.status === 'rejected'
                       ? 'bg-red-100 text-red-800 border border-red-200'
+                    : resp.status === 'cancelled'
+                      ? 'bg-gray-100 text-gray-600 border border-gray-200'
+                    : resp.status === 'negotiating'
+                      ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
                     : 'bg-gray-100 text-gray-600 border border-gray-200'
                   }`}>
-                    {resp.status === 'accepted' && 'تم قبول العرض'}
-                    {resp.status === 'completed' && 'تم إنجاز الخدمة'}
-                    {resp.status === 'in_progress' && 'الخدمة قيد التنفيذ'}
-                    {resp.status === 'rejected' && 'تم رفض العرض'}
-                    {['accepted','completed','in_progress','rejected'].indexOf(resp.status) === -1 && resp.status}
+                    {getStatusLabel(resp.status)}
                   </div>
                 </div>
               )}

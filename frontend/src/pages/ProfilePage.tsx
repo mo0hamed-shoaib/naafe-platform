@@ -24,6 +24,7 @@ const fetchWithAuth = async (url: string, token: string) => {
 const TABS = [
   { key: 'offered', label: 'الخدمات' },
   { key: 'requested', label: 'الخدمات المطلوبة' },
+  { key: 'saved', label: 'الخدمات المحفوظة' },
   { key: 'reviews', label: 'التقييمات والمراجعات' },
   { key: 'portfolio', label: 'الأعمال/المعرض' },
 ];
@@ -31,6 +32,7 @@ const TABS = [
 const PROVIDER_TABS = [
   { key: 'offered', label: 'الخدمات' },
   { key: 'hire-requests', label: 'طلبات التوظيف' },
+  { key: 'saved', label: 'الخدمات المحفوظة' },
   { key: 'reviews', label: 'التقييمات والمراجعات' },
   { key: 'portfolio', label: 'الأعمال/المعرض' },
 ];
@@ -154,10 +156,12 @@ const ProfilePage: React.FC = () => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [requestedServices, setRequestedServices] = useState<Service[]>([]);
+  const [savedServices, setSavedServices] = useState<Service[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [activeTab, setActiveTab] = useState('offered');
   const [offeredStatus, setOfferedStatus] = useState('');
   const [requestedStatus, setRequestedStatus] = useState('');
+  const [savedStatus, setSavedStatus] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [skillsError, setSkillsError] = useState<string | null>(null);
@@ -229,6 +233,20 @@ const ProfilePage: React.FC = () => {
         } else {
           setRequestedServices([]);
         }
+        
+        // Fetch saved services (only for self)
+        if (isSelf) {
+          try {
+            const savedRes = await fetchWithAuth('/api/users/me/saved-services', token);
+            setSavedServices((savedRes.data.savedServices || []).map((s: Service) => ({ ...s, id: (s as unknown as { _id: string })._id })));
+          } catch (error) {
+            console.warn('Could not fetch saved services:', error);
+            setSavedServices([]);
+          }
+        } else {
+          setSavedServices([]);
+        }
+        
         const reviewsRes = await fetchWithAuth(`/api/reviews/user/${userId}`, token);
         setReviews(reviewsRes.data.reviews || []);
       } catch (err: unknown) {
@@ -918,6 +936,75 @@ const ProfilePage: React.FC = () => {
                   <div className="text-[#50958A] text-center w-full py-8">لا توجد خدمات مطلوبة بعد.</div>
                 )}
                 </div>
+            )}
+            {/* الخدمات المحفوظة (saved services) */}
+            {activeTab === 'saved' && isSelf && (
+              <div id="tab-panel-saved" role="tabpanel" aria-labelledby="saved">
+                <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
+                  <label htmlFor="saved-status" className="text-[#0E1B18] font-medium">تصفية حسب الحالة:</label>
+                  <UnifiedSelect
+                    value={savedStatus}
+                    onChange={setSavedStatus}
+                    options={STATUS_FILTERS}
+                    placeholder="تصفية حسب الحالة"
+                    size="md"
+                    className="w-48 max-w-xs"
+                  />
+                </div>
+                {savedServices && savedServices.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(savedServices as Service[]).filter((s: Service) => !savedStatus || s.status === savedStatus).length > 0 ? (
+                      (savedServices as Service[]).filter((s: Service) => !savedStatus || s.status === savedStatus).map((service: Service, idx: number) => (
+                        <BaseCard key={service.id || idx} className="flex flex-col gap-3 h-full">
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="font-bold text-[#2D5D4F] flex-1 leading-tight">{service.title}</span>
+                              <div className="flex flex-col gap-1 shrink-0">
+                                <span className="text-sm text-[#50958A] bg-[#F5E6D3] rounded-full px-3 py-1 whitespace-nowrap text-center">{service.status ? STATUS_FILTERS.find(f => f.value === service.status)?.label : '—'}</span>
+                                {service.category && <span className="text-sm text-[#50958A] bg-[#FDF8F0] rounded-full px-3 py-1 whitespace-nowrap text-center">{service.category}</span>}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-sm text-[#50958A]">
+                              {service.createdAt && <span className="bg-gray-50 px-2 py-1 rounded">تاريخ الإضافة: {new Date(service.createdAt).toLocaleDateString('ar-EG')}</span>}
+                              {service.budget && <span className="bg-gray-50 px-2 py-1 rounded">الميزانية: يبدأ من {service.budget.min} جنيه إلى {service.budget.max} جنيه</span>}
+                            </div>
+                          </div>
+                          <div className="text-[#0E1B18] text-sm line-clamp-3 flex-1">{service.description}</div>
+                          <div className="flex justify-end mt-auto pt-2 gap-2">
+                            <Button size="sm" variant="outline" onClick={() => window.location.href = `/requests/${service.id}`}>عرض التفاصيل</Button>
+                            <Button 
+                              size="sm" 
+                              variant="danger" 
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`/api/users/me/saved-services/${service.id}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                                  });
+                                  if (res.ok) {
+                                    setSavedServices(prev => prev.filter(s => s.id !== service.id));
+                                  }
+                                } catch (error) {
+                                  console.error('Error removing saved service:', error);
+                                }
+                              }}
+                            >
+                              إزالة من المحفوظات
+                            </Button>
+                          </div>
+                        </BaseCard>
+                      ))
+                    ) : (
+                      <div className="text-[#50958A] text-center w-full py-8 flex flex-col items-center justify-center gap-2">
+                        <svg className="w-8 h-8 mb-2 text-[#50958A]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none"/><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01" /></svg>
+                        لا توجد خدمات محفوظة بهذه الحالة.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-[#50958A] text-center w-full py-8">لا توجد خدمات محفوظة بعد.</div>
+                )}
+              </div>
             )}
             {/* التقييمات والمراجعات (reviews) */}
             {activeTab === 'reviews' && (

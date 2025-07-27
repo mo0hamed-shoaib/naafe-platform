@@ -349,19 +349,127 @@ class UserService {
     return user;
   }
 
-  // Admin: Unblock a user
-  async unblockUser(id, adminId) {
-    const user = await User.findById(id);
+  /**
+   * Unblock a user (admin only)
+   */
+  async unblockUser(id) {
+    const user = await User.findByIdAndUpdate(
+      id,
+      { isBlocked: false },
+      { new: true, select: '-password' }
+    );
     if (!user) throw new Error('User not found');
-    
-    // Prevent admin from unblocking themselves (though this is less critical)
-    if (id === adminId) {
-      throw new Error('Cannot modify your own account status');
-    }
-    
-    user.isBlocked = false;
-    await user.save();
     return user;
+  }
+
+  /**
+   * Get saved services for a user
+   */
+  async getSavedServices(userId) {
+    const user = await User.findById(userId).populate({
+      path: 'savedServices',
+      populate: {
+        path: 'seeker',
+        select: 'name avatarUrl'
+      }
+    });
+    
+    if (!user) throw new Error('User not found');
+    return user.savedServices || [];
+  }
+
+  /**
+   * Save a service request
+   */
+  async saveService(userId, serviceId) {
+    // Check if service exists
+    const JobRequest = (await import('../models/JobRequest.js')).default;
+    const service = await JobRequest.findById(serviceId);
+    if (!service) throw new Error('Service not found');
+
+    // Check if already saved
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    // Convert serviceId to ObjectId for proper comparison
+    const mongoose = (await import('mongoose')).default;
+    const serviceObjectId = new mongoose.Types.ObjectId(serviceId);
+
+    if (user.savedServices && user.savedServices.some(id => id.equals(serviceObjectId))) {
+      throw new Error('Service is already saved');
+    }
+
+    // Add to saved services
+    await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { savedServices: serviceObjectId } }
+    );
+
+    return true;
+  }
+
+  /**
+   * Remove a saved service request
+   */
+  async unsaveService(userId, serviceId) {
+    // Check if service exists
+    const JobRequest = (await import('../models/JobRequest.js')).default;
+    const service = await JobRequest.findById(serviceId);
+    if (!service) throw new Error('Service not found');
+
+    // Check if saved
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    // Convert serviceId to ObjectId for proper comparison
+    const mongoose = (await import('mongoose')).default;
+    const serviceObjectId = new mongoose.Types.ObjectId(serviceId);
+
+    if (!user.savedServices || !user.savedServices.some(id => id.equals(serviceObjectId))) {
+      throw new Error('Service is not saved');
+    }
+
+    // Remove from saved services
+    await User.findByIdAndUpdate(
+      userId,
+      { $pull: { savedServices: serviceObjectId } }
+    );
+
+    return true;
+  }
+
+  /**
+   * Check if a service is saved by user
+   */
+  async checkIfServiceSaved(userId, serviceId) {
+    console.log('🔍 userService.checkIfServiceSaved called:', { userId, serviceId });
+    
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    // Convert serviceId to ObjectId for proper comparison
+    const mongoose = (await import('mongoose')).default;
+    const serviceObjectId = new mongoose.Types.ObjectId(serviceId);
+
+    console.log('🔍 userService.checkIfServiceSaved - user.savedServices:', user.savedServices);
+    console.log('🔍 userService.checkIfServiceSaved - serviceObjectId:', serviceObjectId);
+    console.log('🔍 userService.checkIfServiceSaved - user.savedServices type:', typeof user.savedServices);
+    console.log('🔍 userService.checkIfServiceSaved - user.savedServices length:', user.savedServices?.length);
+
+    if (user.savedServices && user.savedServices.length > 0) {
+      console.log('🔍 userService.checkIfServiceSaved - checking each saved service:');
+      user.savedServices.forEach((savedId, index) => {
+        console.log(`🔍 userService.checkIfServiceSaved - savedId[${index}]:`, savedId);
+        console.log(`🔍 userService.checkIfServiceSaved - savedId[${index}] type:`, typeof savedId);
+        console.log(`🔍 userService.checkIfServiceSaved - savedId[${index}] equals serviceObjectId:`, savedId.equals(serviceObjectId));
+      });
+    }
+
+    const result = user.savedServices && user.savedServices.some(id => id.equals(serviceObjectId));
+    
+    console.log('🔍 userService.checkIfServiceSaved - result:', result);
+    
+    return result;
   }
 
   // Get up to 5 premium providers for featured sections

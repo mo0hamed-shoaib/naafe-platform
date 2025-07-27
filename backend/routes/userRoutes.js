@@ -116,6 +116,34 @@ router.get('/:id/listings', validateUserId, userController.getUserListings);
  */
 router.get('/:id/reviews', validateUserId, userController.getUserReviews);
 
+/**
+ * @route   POST /api/users/me/saved-services/:serviceId
+ * @desc    Save a service request
+ * @access  Private
+ */
+router.post('/me/saved-services/:serviceId', authenticateToken, userController.saveService);
+
+/**
+ * @route   DELETE /api/users/me/saved-services/:serviceId
+ * @desc    Remove a saved service request
+ * @access  Private
+ */
+router.delete('/me/saved-services/:serviceId', authenticateToken, userController.unsaveService);
+
+/**
+ * @route   GET /api/users/me/saved-services/:serviceId
+ * @desc    Check if a service is saved by current user
+ * @access  Private
+ */
+router.get('/me/saved-services/:serviceId', authenticateToken, userController.checkIfServiceSaved);
+
+/**
+ * @route   GET /api/users/me/saved-services
+ * @desc    Get current user's saved services
+ * @access  Private
+ */
+router.get('/me/saved-services', authenticateToken, userController.getSavedServices);
+
 // Admin: Get all users (paginated, filterable)
 router.get('/', authenticateToken, requireRole(['admin']), userController.getAllUsers);
 // Admin: Block a user
