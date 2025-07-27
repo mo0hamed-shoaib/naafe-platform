@@ -388,7 +388,7 @@ const PostServiceForm: React.FC = () => {
         throw new Error(data.error?.message || 'Failed to post service');
       }
       setSuccess(true);
-      setTimeout(() => navigate('/search?category=' + encodeURIComponent(formData.category)), 1500);
+      setTimeout(() => navigate('/search/providers?category=' + encodeURIComponent(formData.category)), 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {

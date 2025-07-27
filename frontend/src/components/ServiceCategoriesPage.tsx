@@ -64,11 +64,11 @@ const ServiceCategoriesPage = () => {
   ];
 
   const handleCategoryClick = useCallback((category: Category) => {
-    navigate(`/search?category=${encodeURIComponent(category.name)}`);
+    navigate(`/search/providers?category=${encodeURIComponent(category.name)}`);
   }, [navigate]);
 
   const handleSearch = useCallback((query: string) => {
-    navigate(`/search?query=${encodeURIComponent(query)}`);
+    navigate(`/search/providers?query=${encodeURIComponent(query)}`);
   }, [navigate]);
 
   return (

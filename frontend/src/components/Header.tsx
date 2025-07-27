@@ -191,7 +191,21 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
       if (onSearch) {
         onSearch(searchQuery.trim());
       } else {
-        navigate(`/search?query=${encodeURIComponent(searchQuery.trim())}`);
+        // Smart navigation based on current location
+        const currentPath = location.pathname;
+        if (currentPath.includes('/search/providers')) {
+          // Already on providers search, maintain context
+          navigate(`/search/providers?query=${encodeURIComponent(searchQuery.trim())}`);
+        } else if (currentPath.includes('/search/service-requests')) {
+          // Already on service requests search, maintain context
+          navigate(`/search/service-requests?query=${encodeURIComponent(searchQuery.trim())}`);
+        } else if (currentPath.includes('/categories')) {
+          // On categories page, default to providers search
+          navigate(`/search/providers?query=${encodeURIComponent(searchQuery.trim())}`);
+        } else {
+          // Default to providers search for other pages
+          navigate(`/search/providers?query=${encodeURIComponent(searchQuery.trim())}`);
+        }
       }
       setShowMobileSearch(false);
     }
