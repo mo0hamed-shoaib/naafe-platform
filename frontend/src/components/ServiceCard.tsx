@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MapPin, Star } from 'lucide-react';
+import { MapPin, Star, CheckCircle } from 'lucide-react';
 import BaseCard from './ui/BaseCard';
 import Button from './ui/Button';
 import PremiumBadge from './ui/PremiumBadge';
@@ -55,12 +55,7 @@ const ServiceCard = ({ provider, onViewDetails, featured }: ServiceCardProps) =>
       }
       ${provider.isTopRated ? 'ring-2 ring-teal-300' : ''}
     `}>
-      {/* Featured Tag - Top Right */}
-      {featured && (
-        <span className="absolute right-4 top-4 z-30 text-xs font-bold bg-yellow-400 text-white px-3 py-1 rounded-full shadow-lg border-2 border-yellow-600">
-          مميز
-        </span>
-      )}
+
       {/* Category Badge - Top Left Absolute */}
       <span className="absolute left-4 top-4 z-20 text-base font-bold bg-soft-teal/30 text-deep-teal px-4 py-1 rounded-lg whitespace-nowrap" style={{ fontSize: '1.1rem' }}>
         {translateCategory(provider.category)}
@@ -82,13 +77,13 @@ const ServiceCard = ({ provider, onViewDetails, featured }: ServiceCardProps) =>
               }`}
             />
             {(provider.isPremium || featured) && (
-              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-                <PremiumBadge size="md" />
+              <div className="absolute -bottom-2.5 left-1/2 transform -translate-x-1/2">
+                <PremiumBadge size="sm" />
               </div>
             )}
             {provider.isVerified && (
-              <div className="absolute -top-2 right-0">
-                <span className="inline-block bg-green-500 text-white text-xs px-2 py-0.5 rounded-full shadow">موثوق</span>
+              <div className="absolute -top-1 right-1">
+                <CheckCircle className="w-6 h-6 text-green-500 bg-white rounded-full shadow-sm" />
               </div>
             )}
           </div>
