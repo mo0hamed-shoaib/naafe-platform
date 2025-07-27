@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Grid3X3, Layout, X, CheckCircle, TrendingUp, Target, Upload, MapPin, Users } from 'lucide-react';
+import { Star, Grid3X3, X, CheckCircle, TrendingUp, Target, Upload, MapPin, Users } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Button from '../components/ui/Button';
 import BaseCard from '../components/ui/BaseCard';
@@ -13,38 +13,24 @@ const adPlans = [
   {
     id: 'featured',
     icon: Star,
-    title: 'إعلان مميز',
+    title: 'إعلان مميز بالأعلى',
     description: 'الظهور في أعلى نتائج البحث لضمان أقصى مشاهدة.',
     pricing: {
       daily: 35,
       weekly: 200,
       monthly: 750
-    },
-    reach: '20,000+ مستخدم',
-    features: [
-      'الظهور في أعلى نتائج البحث',
-      'استهداف ذكي بالذكاء الاصطناعي',
-      'إحصائيات مفصلة',
-      'دعم مخصص'
-    ]
+    }
   },
   {
     id: 'sidebar',
-    icon: Layout,
-    title: 'إعلان جانبي',
-    description: 'ظهور ثابت في الشريط الجانبي على نسخة سطح المكتب.',
+    icon: Grid3X3,
+    title: 'إعلان بالمنتصف',
+    description: 'يظهر بين مجموعة من البطاقات في المنتصف.',
     pricing: {
       daily: 25,
       weekly: 150,
       monthly: 500
-    },
-    reach: '10,000+ مستخدم',
-    features: [
-      'ظهور ثابت في الشريط الجانبي',
-      'استهداف جغرافي',
-      'تقارير أسبوعية',
-      'دعم أساسي'
-    ]
+    }
   },
   {
     id: 'banner',
@@ -55,14 +41,7 @@ const adPlans = [
       daily: 15,
       weekly: 90,
       monthly: 300
-    },
-    reach: '5,000+ مستخدم',
-    features: [
-      'ظهور في البانر السفلي',
-      'استهداف أساسي',
-      'إحصائيات بسيطة',
-      'دعم أساسي'
-    ]
+    }
   }
 ];
 
@@ -124,6 +103,7 @@ const AdvertisePage: React.FC = () => {
     location: '',
     type: ''
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [imageUploading, setImageUploading] = useState(false);
 
   // Handle pre-selected placement from navigation
@@ -145,6 +125,79 @@ const AdvertisePage: React.FC = () => {
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId);
     setShowAdForm(true);
+    // Clear form errors when opening new form
+    setFormErrors({});
+  };
+
+  // Validation functions
+  const validateTitle = (title: string): string => {
+    if (!title.trim()) {
+      return 'عنوان الإعلان مطلوب';
+    }
+    if (title.trim().length < 5) {
+      return 'عنوان الإعلان يجب أن يكون 5 أحرف على الأقل';
+    }
+    if (title.trim().length > 100) {
+      return 'عنوان الإعلان يجب أن يكون أقل من 100 حرف';
+    }
+    // Check for invalid special characters (only allow Arabic, English, numbers, spaces, and basic punctuation)
+    const validPattern = /^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z0-9\s\-_.,!?()]+$/;
+    if (!validPattern.test(title.trim())) {
+      return 'عنوان الإعلان يحتوي على رموز غير مسموحة';
+    }
+    return '';
+  };
+
+  const validateDescription = (description: string): string => {
+    if (!description.trim()) {
+      return 'وصف الإعلان مطلوب';
+    }
+    if (description.trim().length < 10) {
+      return 'وصف الإعلان يجب أن يكون 10 أحرف على الأقل';
+    }
+    if (description.trim().length > 300) {
+      return 'وصف الإعلان يجب أن يكون أقل من 300 حرف';
+    }
+    // Check for invalid special characters
+    const validPattern = /^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z0-9\s\-_.,!?()\n\r]+$/;
+    if (!validPattern.test(description.trim())) {
+      return 'وصف الإعلان يحتوي على رموز غير مسموحة';
+    }
+    return '';
+  };
+
+  const validateTargetUrl = (url: string): string => {
+    if (url && url.trim()) {
+      try {
+        const urlObj = new URL(url);
+        if (!['http:', 'https:'].includes(urlObj.protocol)) {
+          return 'الرابط يجب أن يبدأ بـ http:// أو https://';
+        }
+      } catch {
+        return 'الرابط غير صحيح';
+      }
+    }
+    return '';
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    const titleError = validateTitle(adFormData.title);
+    if (titleError) errors.title = titleError;
+    
+    const descriptionError = validateDescription(adFormData.description);
+    if (descriptionError) errors.description = descriptionError;
+    
+    const targetUrlError = validateTargetUrl(adFormData.targetUrl);
+    if (targetUrlError) errors.targetUrl = targetUrlError;
+    
+    if (!adFormData.location || !adFormData.type) {
+      errors.placement = 'يرجى اختيار موقع الإعلان';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleImageUpload = async (file: File) => {
@@ -206,8 +259,12 @@ const AdvertisePage: React.FC = () => {
     }
 
     // Validate form data
-    if (!adFormData.title || !adFormData.description) {
-      alert('يرجى ملء جميع الحقول المطلوبة');
+    if (!validateForm()) {
+      // Show first error message
+      const firstError = Object.values(formErrors)[0];
+      if (firstError) {
+        alert(firstError);
+      }
       return;
     }
 
@@ -309,22 +366,6 @@ const AdvertisePage: React.FC = () => {
           <p className="text-xl text-text-secondary max-w-3xl mx-auto leading-relaxed mb-8">
             الإعلانات المميزة تضمن لك الظهور الأول في نتائج البحث، وزيادة فرصك في الحصول على عملاء جدد
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={() => document.getElementById('plans')?.scrollIntoView({ behavior: 'smooth' })}
-            >
-              ابدأ الآن
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
-            >
-              تواصل مع الدعم
-            </Button>
-          </div>
         </section>
 
         {/* Ad Plan Cards Section */}
@@ -361,7 +402,7 @@ const AdvertisePage: React.FC = () => {
               return (
                 <BaseCard
                   key={plan.id}
-                  className={`relative p-8 transition-all duration-300 hover:scale-105 ${
+                  className={`relative p-8 transition-all duration-300 hover:scale-105 flex flex-col h-full ${
                     selectedPlan === plan.id ? 'ring-2 ring-accent' : ''
                   }`}
                 >
@@ -370,34 +411,22 @@ const AdvertisePage: React.FC = () => {
                       <IconComponent className="h-8 w-8 text-deep-teal" />
                     </div>
                     <h3 className="text-2xl font-bold text-deep-teal mb-2">{plan.title}</h3>
-                    <p className="text-text-secondary mb-4">{plan.description}</p>
+                    <p className="text-text-secondary">{plan.description}</p>
                   </div>
 
-                  <div className="text-center mb-6">
+                  <div className="text-center mb-6 flex-grow">
                     <div className="text-3xl font-bold text-deep-teal mb-2">
                       {price} جنيه
                     </div>
                     <div className="text-sm text-text-secondary">
                       {selectedDuration === 'daily' ? 'يومياً' : selectedDuration === 'weekly' ? 'أسبوعياً' : 'شهرياً'}
                     </div>
-                    <div className="text-sm text-accent mt-2">
-                      وصول تقديري: {plan.reach}
-                    </div>
                   </div>
-
-                  <ul className="space-y-3 mb-6">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                        <span className="text-sm text-text-primary">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
 
                   <Button
                     variant={selectedPlan === plan.id ? "primary" : "outline"}
                     size="lg"
-                    className="w-full"
+                    className="w-full mt-auto"
                     onClick={() => handleSelectPlan(plan.id)}
                   >
                     {selectedPlan === plan.id ? 'محدد' : 'اشتر الآن'}
@@ -416,9 +445,9 @@ const AdvertisePage: React.FC = () => {
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Featured Ad Preview */}
-            <div className="bg-white rounded-lg p-6 shadow-md">
+            <div className="bg-white rounded-lg p-6 shadow-md flex flex-col h-full">
               <h3 className="font-bold text-deep-teal mb-4 text-center">إعلان مميز</h3>
-              <div className="relative">
+              <div className="relative flex-grow">
                 {/* Website Header Mockup */}
                 <div className="bg-deep-teal text-white p-3 rounded-t-lg">
                   <div className="flex items-center justify-between">
@@ -452,58 +481,62 @@ const AdvertisePage: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <p className="mt-3 text-center text-sm text-text-secondary">
+              <p className="mt-3 text-center text-sm text-text-secondary mt-auto">
                 يظهر في أعلى نتائج البحث
               </p>
             </div>
 
-            {/* Sidebar Ad Preview */}
-            <div className="bg-white rounded-lg p-6 shadow-md">
-              <h3 className="font-bold text-deep-teal mb-4 text-center">إعلان جانبي</h3>
-              <div className="flex gap-4">
-                {/* Main Content */}
-                <div className="flex-1">
-                  <div className="bg-gray-50 p-4 rounded-lg h-48">
-                    <div className="space-y-3">
-                      <div className="h-4 bg-gray-200 rounded"></div>
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                      <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+            {/* Middle Ad Preview */}
+            <div className="bg-white rounded-lg p-6 shadow-md flex flex-col h-full">
+              <h3 className="font-bold text-deep-teal mb-4 text-center">إعلان بالمنتصف</h3>
+              <div className="relative flex-grow">
+                {/* Website Content Mockup */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="space-y-3">
+                    {/* First card */}
+                    <div className="bg-white p-3 rounded-lg border">
+                      <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
                     </div>
-                  </div>
-                </div>
-                
-                {/* Sidebar */}
-                <div className="w-28">
-                  <div className="bg-gradient-to-b from-deep-teal/10 to-accent/10 p-3 rounded-lg border border-deep-teal/20 h-48 flex flex-col justify-between">
-                    <div className="text-center">
-                      <div className="w-6 h-6 bg-accent rounded-full mx-auto mb-2 flex items-center justify-center">
-                        <Star className="w-3 h-3 text-white" />
-                      </div>
-                      <div className="text-xs font-bold text-deep-teal mb-1">إعلان جانبي</div>
-                      <div className="text-xs text-text-secondary">تصميم شعار</div>
-                      <div className="text-xs text-accent font-bold mt-1">25 جنيه</div>
+                    
+                    {/* Second card */}
+                    <div className="bg-white p-3 rounded-lg border">
+                      <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-2/3"></div>
                     </div>
-                    <div className="text-center">
-                      <div className="w-6 h-6 bg-deep-teal/20 rounded-full mx-auto mb-2 flex items-center justify-center">
-                        <Layout className="w-3 h-3 text-deep-teal" />
+                    
+                    {/* Ad Banner in Middle */}
+                    <div className="bg-gradient-to-r from-deep-teal to-accent p-3 rounded-lg text-white text-center relative">
+                      <div className="absolute top-1 right-1 bg-white/20 px-2 py-1 rounded text-xs">
+                        إعلان
                       </div>
-                      <div className="text-xs text-text-secondary">إعلان آخر</div>
+                      <div className="text-sm font-bold">تصميم احترافي</div>
+                      <div className="text-xs opacity-90">يبدأ من 25 جنيه</div>
+                    </div>
+                    
+                    {/* Third card */}
+                    <div className="bg-white p-3 rounded-lg border">
+                      <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-4/5"></div>
+                    </div>
+                    
+                    {/* Fourth card */}
+                    <div className="bg-white p-3 rounded-lg border">
+                      <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                     </div>
                   </div>
                 </div>
               </div>
-              <p className="mt-3 text-center text-sm text-text-secondary">
-                يظهر بجانب المحتوى الرئيسي
+              <p className="mt-3 text-center text-sm text-text-secondary mt-auto">
+                يظهر بين مجموعة من البطاقات في المنتصف
               </p>
             </div>
 
             {/* Banner Ad Preview */}
-            <div className="bg-white rounded-lg p-6 shadow-md">
+            <div className="bg-white rounded-lg p-6 shadow-md flex flex-col h-full">
               <h3 className="font-bold text-deep-teal mb-4 text-center">إعلان بالأسفل</h3>
-              <div className="relative">
+              <div className="relative flex-grow">
                 {/* Website Content Mockup */}
                 <div className="bg-gray-50 p-4 rounded-t-lg">
                   <div className="space-y-2">
@@ -531,7 +564,7 @@ const AdvertisePage: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <p className="mt-3 text-center text-sm text-text-secondary">
+              <p className="mt-3 text-center text-sm text-text-secondary mt-auto">
                 يظهر أسفل الصفحة
               </p>
             </div>
@@ -570,25 +603,7 @@ const AdvertisePage: React.FC = () => {
           </div>
         </section>
 
-        {/* Why Advertise With Us Section */}
-        <section className="mb-16">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-deep-teal mb-4">
-              لماذا الإعلان معنا؟
-            </h2>
-            <p className="text-lg text-text-secondary mb-12 max-w-2xl mx-auto">
-              منصتنا تجذب الآلاف من العملاء الباحثين عن خدمات عالية الجودة. الإعلان معنا يضعك في مقدمة المنافسة.
-            </p>
-            {/* Statistics Highlight */}
-            <div className="bg-gradient-to-r from-deep-teal to-accent rounded-2xl p-12 text-white shadow-xl mb-12">
-              <div className="text-6xl font-extrabold mb-4">3x</div>
-              <p className="text-2xl font-semibold">
-                نسبة ظهور أعلى من الحسابات العادية
-              </p>
-            </div>
-            {/* Success Story section removed */}
-          </div>
-        </section>
+
 
         {/* Payment Steps Section */}
         <section className="bg-light-cream rounded-2xl p-8 mb-16">
@@ -607,6 +622,62 @@ const AdvertisePage: React.FC = () => {
                 <p className="text-text-secondary">{step.description}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* Refund Policy Section */}
+        <section className="bg-white rounded-2xl p-8 mb-16 shadow-md">
+          <h2 className="text-2xl font-bold text-deep-teal text-center mb-8">سياسة الاسترداد</h2>
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-deep-teal mb-1">استرداد كامل خلال 24 ساعة</h3>
+                    <p className="text-text-secondary text-sm">يمكنك إلغاء إعلانك واسترداد المبلغ كاملاً خلال 24 ساعة من بدء الإعلان</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-deep-teal mb-1">إلغاء في أي وقت</h3>
+                    <p className="text-text-secondary text-sm">يمكنك إيقاف إعلانك في أي وقت من لوحة التحكم الخاصة بك</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <CheckCircle className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-deep-teal mb-1">استرداد جزئي</h3>
+                    <p className="text-text-secondary text-sm">بعد 24 ساعة، يتم استرداد المبلغ المتبقي من المدة المتبقية</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <CheckCircle className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-deep-teal mb-1">دعم مخصص</h3>
+                    <p className="text-text-secondary text-sm">فريق الدعم متاح لمساعدتك في أي استفسارات حول الاسترداد</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-8 p-4 bg-deep-teal/10 rounded-lg border border-deep-teal/20">
+              <h4 className="font-bold text-deep-teal mb-2">ملاحظة مهمة:</h4>
+              <p className="text-text-secondary text-sm">
+                يتم احتساب المدة المستخدمة من وقت بدء الإعلان. في حالة الإلغاء المبكر، 
+                يتم استرداد المبلغ المتبقي تلقائياً.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -635,7 +706,10 @@ const AdvertisePage: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowAdForm(false)}
+                onClick={() => {
+                  setShowAdForm(false);
+                  setFormErrors({});
+                }}
                 className="rounded-full p-2 hover:bg-gray-100"
                 aria-label="إغلاق"
               >
@@ -647,18 +721,42 @@ const AdvertisePage: React.FC = () => {
                 <FormInput
                   label="عنوان الإعلان *"
                   value={adFormData.title}
-                  onChange={(e) => setAdFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="أدخل عنوان الإعلان"
+                  onChange={(e) => {
+                    const newTitle = e.target.value;
+                    setAdFormData(prev => ({ ...prev, title: newTitle }));
+                    // Clear error when user starts typing
+                    if (formErrors.title) {
+                      setFormErrors(prev => ({ ...prev, title: '' }));
+                    }
+                  }}
+                  onBlur={() => {
+                    const error = validateTitle(adFormData.title);
+                    setFormErrors(prev => ({ ...prev, title: error }));
+                  }}
+                  placeholder="أدخل عنوان الإعلان (5-100 حرف)"
                   required
+                  error={formErrors.title}
                 />
                 
                 <FormTextarea
                   label="وصف الإعلان *"
                   value={adFormData.description}
-                  onChange={(e) => setAdFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="أدخل وصف الإعلان"
+                  onChange={(e) => {
+                    const newDescription = e.target.value;
+                    setAdFormData(prev => ({ ...prev, description: newDescription }));
+                    // Clear error when user starts typing
+                    if (formErrors.description) {
+                      setFormErrors(prev => ({ ...prev, description: '' }));
+                    }
+                  }}
+                  onBlur={() => {
+                    const error = validateDescription(adFormData.description);
+                    setFormErrors(prev => ({ ...prev, description: error }));
+                  }}
+                  placeholder="أدخل وصف الإعلان (10-300 حرف)"
                   rows={3}
                   required
+                  error={formErrors.description}
                 />
 
                 {/* Placement Selection */}
@@ -666,6 +764,9 @@ const AdvertisePage: React.FC = () => {
                   <label className="block text-base font-semibold text-deep-teal mb-3">
                     موقع الإعلان *
                   </label>
+                  {formErrors.placement && (
+                    <div className="text-red-600 text-sm mb-2">{formErrors.placement}</div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {adPlacements.map((placement) => (
                       <div
@@ -675,11 +776,17 @@ const AdvertisePage: React.FC = () => {
                             ? 'border-deep-teal bg-deep-teal/10'
                             : 'border-gray-300 hover:border-deep-teal/50 hover:bg-gray-50'
                         }`}
-                        onClick={() => setAdFormData(prev => ({
-                          ...prev,
-                          location: placement.location,
-                          type: placement.type
-                        }))}
+                        onClick={() => {
+                          setAdFormData(prev => ({
+                            ...prev,
+                            location: placement.location,
+                            type: placement.type
+                          }));
+                          // Clear placement error when user selects a placement
+                          if (formErrors.placement) {
+                            setFormErrors(prev => ({ ...prev, placement: '' }));
+                          }
+                        }}
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <MapPin className="w-5 h-5 text-deep-teal" />
@@ -745,8 +852,20 @@ const AdvertisePage: React.FC = () => {
                   label="رابط الوجهة (اختياري)"
                   type="url"
                   value={adFormData.targetUrl}
-                  onChange={(e) => setAdFormData(prev => ({ ...prev, targetUrl: e.target.value }))}
+                  onChange={(e) => {
+                    const newUrl = e.target.value;
+                    setAdFormData(prev => ({ ...prev, targetUrl: newUrl }));
+                    // Clear error when user starts typing
+                    if (formErrors.targetUrl) {
+                      setFormErrors(prev => ({ ...prev, targetUrl: '' }));
+                    }
+                  }}
+                  onBlur={() => {
+                    const error = validateTargetUrl(adFormData.targetUrl);
+                    setFormErrors(prev => ({ ...prev, targetUrl: error }));
+                  }}
                   placeholder="https://example.com"
+                  error={formErrors.targetUrl}
                 />
                 
                 {/* Order Summary - Enhanced */}
@@ -789,7 +908,10 @@ const AdvertisePage: React.FC = () => {
                   <Button
                     variant="outline"
                     size="lg"
-                    onClick={() => setShowAdForm(false)}
+                    onClick={() => {
+                      setShowAdForm(false);
+                      setFormErrors({});
+                    }}
                     className="flex-1 text-deep-teal border-deep-teal hover:bg-deep-teal hover:text-white font-semibold"
                   >
                     إلغاء
@@ -799,7 +921,7 @@ const AdvertisePage: React.FC = () => {
                     size="lg"
                     onClick={handlePurchase}
                     className="flex-1 font-bold text-lg"
-                    disabled={!adFormData.title || !adFormData.description}
+                    disabled={!adFormData.title || !adFormData.description || Object.keys(formErrors).length > 0}
                   >
                     اشتري الإعلان
                   </Button>

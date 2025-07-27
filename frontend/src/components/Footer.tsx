@@ -1,40 +1,47 @@
 
 
-import Button from './ui/Button';
+import { serviceCategories } from '../data/categories';
 
 const Footer = () => {
+  // Get top categories for footer
+  const topCategories = serviceCategories.slice(0, 4);
+  
   const footerSections = [
     {
       title: 'الفئات',
       links: [
-        { label: 'إصلاح المنزل', href: '#' },
-        { label: 'التنظيف', href: '#' },
-        { label: 'الدراسة', href: '#' },
-        { label: 'المزيد...', href: '#' },
+        ...topCategories.map(category => ({
+          label: category.name,
+          href: `/search?category=${category.id}`
+        })),
+        { label: 'جميع الفئات', href: '/search' },
       ],
     },
     {
-      title: 'حول',
+      title: 'الخدمات',
       links: [
-        { label: 'من نحن', href: '#' },
-        { label: 'الوظائف', href: '#' },
-        { label: 'الصحافة', href: '#' },
+        { label: 'طلب خدمة', href: '/request-service' },
+        { label: 'عرض خدمة', href: '/post-service' },
+        { label: 'البحث عن خدمات', href: '/search' },
+        { label: 'الإعلانات', href: '/advertise' },
       ],
     },
     {
       title: 'الدعم',
       links: [
         { label: 'مركز المساعدة', href: '/help' },
-        { label: 'اتصل بنا', href: '#' },
-        { label: 'الثقة والأمان', href: '#' },
+        { label: 'التحقق من الحساب', href: '/help?section=Verification' },
+        { label: 'المدفوعات', href: '/help?section=Payments' },
+        { label: 'قواعد المنصة', href: '/help?section=Platform Rules' },
       ],
     },
     {
-      title: 'المجتمع',
+      title: 'الحساب',
       links: [
-        { label: 'المدونة', href: '#' },
-        { label: 'المنتدى', href: '#' },
-        { label: 'الفعاليات', href: '#' },
+        { label: 'تسجيل الدخول', href: '/login' },
+        { label: 'إنشاء حساب', href: '/register' },
+        { label: 'الإعدادات', href: '/settings' },
+        { label: 'الملف الشخصي', href: '/profile' },
       ],
     },
   ];
@@ -82,20 +89,24 @@ const Footer = () => {
         <div className="flex flex-col sm:flex-row justify-between items-center">
           <p className="text-sm text-light-cream">© 2024 نافع. جميع الحقوق محفوظة.</p>
           <div className="mt-4 sm:mt-0 flex gap-4">
-            <Button
-              variant="link"
-              size="sm"
-              className="text-light-cream hover:text-white transition-colors"
+            <a
+              href="/help?section=Platform Rules"
+              className="text-sm text-light-cream hover:text-white transition-colors"
             >
               الشروط
-            </Button>
-            <Button
-              variant="link"
-              size="sm"
-              className="text-light-cream hover:text-white transition-colors"
+            </a>
+            <a
+              href="/help?section=Platform Rules"
+              className="text-sm text-light-cream hover:text-white transition-colors"
             >
               الخصوصية
-            </Button>
+            </a>
+            <a
+              href="/help"
+              className="text-sm text-light-cream hover:text-white transition-colors"
+            >
+              المساعدة
+            </a>
           </div>
         </div>
       </div>

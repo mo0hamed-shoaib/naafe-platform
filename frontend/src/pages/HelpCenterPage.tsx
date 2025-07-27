@@ -6,7 +6,6 @@ import {
   HelpCenterSearch,
   HelpCenterBreadcrumb,
   HelpCenterCategories,
-  RelatedArticles,
   HelpCenterChat,
   GettingStartedContent,
   VerificationContent,
@@ -26,8 +25,7 @@ const HelpCenterPage: React.FC = () => {
     searchQuery,
     setActiveSection,
     setSearchQuery,
-    getBreadcrumbItems,
-    getRelatedArticles
+    getBreadcrumbItems
   } = useHelpCenter(sectionParam || undefined);
 
   // Sync URL with active section when it changes
@@ -53,7 +51,6 @@ const HelpCenterPage: React.FC = () => {
   const handleBack = () => setActiveSection(undefined as HelpSection | undefined);
 
   const breadcrumbItems = getBreadcrumbItems();
-  const relatedArticles = getRelatedArticles();
 
   return (
     <div className="min-h-screen flex flex-col bg-warm-cream" dir="rtl">
@@ -96,7 +93,6 @@ const HelpCenterPage: React.FC = () => {
               {activeSection === 'Platform Rules' && (
                 <PlatformRulesContent onBack={handleBack} />
               )}
-              <RelatedArticles articles={relatedArticles} />
             </>
           )}
         </div>

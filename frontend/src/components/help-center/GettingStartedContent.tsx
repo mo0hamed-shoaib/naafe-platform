@@ -100,18 +100,18 @@ const GettingStartedContent: React.FC<GettingStartedContentProps> = ({ onBack })
         <p className="text-center text-text-secondary font-medium mb-4">هل كان هذا مفيدًا؟</p>
         <div className="flex justify-center gap-4">
           <button 
-            className="flex items-center gap-2 px-6 py-3 rounded-full border border-gray-300 bg-white hover:bg-gray-50 hover:scale-105 transition-all duration-300 shadow-sm"
+            className="flex items-center gap-2 px-6 py-3 rounded-full border border-green-300 bg-green-50 hover:bg-green-100 hover:scale-105 transition-all duration-300 shadow-sm"
             aria-label="نعم، هذا مفيد"
           >
-            <ThumbsUp className="w-5 h-5 text-green-500" />
-            <span className="font-medium">نعم</span>
+            <ThumbsUp className="w-5 h-5 text-green-600" />
+            <span className="font-medium text-green-700">نعم</span>
           </button>
           <button 
-            className="flex items-center gap-2 px-6 py-3 rounded-full border border-gray-300 bg-white hover:bg-gray-50 hover:scale-105 transition-all duration-300 shadow-sm"
+            className="flex items-center gap-2 px-6 py-3 rounded-full border border-red-300 bg-red-50 hover:bg-red-100 hover:scale-105 transition-all duration-300 shadow-sm"
             aria-label="لا، هذا غير مفيد"
           >
-            <ThumbsDown className="w-5 h-5 text-red-500" />
-            <span className="font-medium">لا</span>
+            <ThumbsDown className="w-5 h-5 text-red-600" />
+            <span className="font-medium text-red-700">لا</span>
           </button>
         </div>
       </div>

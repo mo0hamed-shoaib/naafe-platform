@@ -9,7 +9,6 @@ import Breadcrumb from '../components/UI/Breadcrumb';
 import { FormInput, FormTextarea } from '../../components/ui';
 import ConfirmationModal from '../components/UI/ConfirmationModal';
 import Button from '../../components/ui/Button';
-import SearchAndFilter from '../components/UI/SearchAndFilter';
 import SortableTable, { SortDirection } from '../components/UI/SortableTable';
 
 const CATEGORIES_API = '/api/categories';
@@ -42,10 +41,9 @@ function mapCategory(raw: unknown): Category {
   };
 }
 
-const fetchCategories = async ({ page, search }: { page: number; search: string; }): Promise<CategoriesApiResponse> => {
+const fetchCategories = async ({ page }: { page: number; }): Promise<CategoriesApiResponse> => {
   const params = new URLSearchParams();
   params.append('page', page.toString());
-  if (search) params.append('search', search);
   const res = await fetch(`${CATEGORIES_API}?${params.toString()}`, {
     credentials: 'include',
   });
@@ -116,7 +114,6 @@ const AdminManageCategories: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [iconUploadLoading, setIconUploadLoading] = useState(false);
   const [iconUploadError, setIconUploadError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState<keyof Category>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -164,8 +161,8 @@ const AdminManageCategories: React.FC = () => {
     isError,
     error,
   } = useQuery<CategoriesApiResponse, Error>({
-    queryKey: ['categories', currentPage, searchTerm],
-    queryFn: () => fetchCategories({ page: currentPage, search: searchTerm }),
+    queryKey: ['categories', currentPage],
+    queryFn: () => fetchCategories({ page: currentPage }),
   });
 
   const categories = data?.categories || [];
@@ -319,14 +316,6 @@ const AdminManageCategories: React.FC = () => {
         </Button>
       </div>
       <div className="bg-light-cream rounded-2xl shadow-md overflow-hidden p-8">
-        <SearchAndFilter
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          filterValue={''}
-          onFilterChange={() => {}}
-          filterOptions={[]}
-          placeholder="ابحث عن الفئة بالاسم"
-        />
         <SortableTable
           data={categories}
           columns={tableColumns}
