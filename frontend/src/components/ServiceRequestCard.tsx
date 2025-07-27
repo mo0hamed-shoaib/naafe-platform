@@ -38,16 +38,28 @@ const ServiceRequestCard = ({ request, alreadyApplied, onInterested, onViewDetai
           label: 'مفتوح',
           icon: Clock
         };
-      case 'accepted': 
+      case 'assigned': 
         return { 
           color: 'bg-blue-100 text-blue-800 border-blue-200', 
-          label: 'مقبول',
+          label: 'مُسند',
           icon: CheckCircle
         };
-      case 'closed': 
+      case 'in_progress': 
         return { 
-          color: 'bg-gray-100 text-gray-800 border-gray-200', 
-          label: 'مغلق',
+          color: 'bg-yellow-100 text-yellow-800 border-yellow-200', 
+          label: 'قيد التنفيذ',
+          icon: Clock
+        };
+      case 'completed': 
+        return { 
+          color: 'bg-green-100 text-green-800 border-green-200', 
+          label: 'مكتمل',
+          icon: CheckCircle
+        };
+      case 'cancelled': 
+        return { 
+          color: 'bg-red-100 text-red-800 border-red-200', 
+          label: 'ملغي',
           icon: AlertCircle
         };
       default: 
@@ -116,13 +128,18 @@ const ServiceRequestCard = ({ request, alreadyApplied, onInterested, onViewDetai
                 <PremiumBadge size="sm" />
               </div>
             )}
+            {request.postedBy?.isVerified && (
+              <div className="absolute -top-1 right-1">
+                <CheckCircle className="w-6 h-6 text-green-500 bg-white rounded-full shadow-sm" />
+              </div>
+            )}
 
           </div>
           
           {/* Request Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start gap-2 mb-2">
-              <h3 className="text-xl font-bold text-deep-teal leading-tight flex-1 line-clamp-2">
+              <h3 className="text-xl font-bold text-deep-teal leading-tight flex-1 line-clamp-2 min-h-[3.5rem]">
                 {request.title}
               </h3>
               <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border ${statusConfig.color}`}>
@@ -136,7 +153,7 @@ const ServiceRequestCard = ({ request, alreadyApplied, onInterested, onViewDetai
                 {translateCategory(request.category || 'عام')}
               </span>
               <span className="text-sm">•</span>
-              <span className="text-sm">{formatDate(request.createdAt)}</span>
+              <span className="text-sm">{formatDate(request.timePosted)}</span>
             </div>
             
             {/* Posted By Name */}
@@ -156,14 +173,14 @@ const ServiceRequestCard = ({ request, alreadyApplied, onInterested, onViewDetai
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
             <div className="text-sm font-bold text-blue-600">
-              0
+              {request.responses !== undefined ? request.responses : '...'}
             </div>
             <div className="text-xs text-text-secondary">عرض</div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
             <div className="text-sm font-bold text-orange-600 flex items-center justify-center gap-1">
               <Calendar className="w-3 h-3" />
-              مفتوح
+              {request.deadline ? new Date(request.deadline).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' }) : 'مفتوح'}
             </div>
             <div className="text-xs text-text-secondary">موعد</div>
           </div>
@@ -193,11 +210,13 @@ const ServiceRequestCard = ({ request, alreadyApplied, onInterested, onViewDetai
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-1">
               <DollarSign className="w-4 h-4 text-bright-orange" />
-              <span className="font-bold text-bright-orange">
+              <span className="font-bold text-bright-orange drop-shadow-sm">
                 {request.budget?.min} - {request.budget?.max} جنيه
               </span>
             </div>
-
+            {request.responses !== undefined && request.responses > 0 && (
+              <span className="text-blue-600 font-medium">{request.responses} عرض</span>
+            )}
           </div>
           
           <div className="flex gap-2">

@@ -217,7 +217,7 @@ const SearchPage = () => {
     const urgencyValue = r.urgency as string;
     const validUrgency = ['low', 'medium', 'high'].includes(urgencyValue) ? urgencyValue as 'low' | 'medium' | 'high' : 'medium';
     const statusValue = r.status as string;
-    const validStatus = ['open', 'accepted', 'closed'].includes(statusValue) ? statusValue as 'open' | 'accepted' | 'closed' : 'open';
+    const validStatus = ['open', 'assigned', 'in_progress', 'completed', 'cancelled'].includes(statusValue) ? statusValue as 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' : 'open';
     
     return {
       id: r._id as string,

@@ -56,12 +56,17 @@ export interface ServiceRequest {
     name: string;
     avatar?: string;
     isPremium: boolean;
+    isVerified?: boolean;
   };
   createdAt: string;
+  timePosted: string;
   preferredDate?: string;
-  status: 'open' | 'accepted' | 'closed';
+  status: 'open' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
   category: string;
   urgency?: 'low' | 'medium' | 'high';
+  responses?: number;
+  deadline?: string;
+  requiredSkills?: string[];
   availability: {
     days: string[];
     timeSlots: string[];
