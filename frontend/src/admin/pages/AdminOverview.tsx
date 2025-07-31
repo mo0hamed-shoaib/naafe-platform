@@ -196,11 +196,21 @@ const AdminOverview: React.FC = () => {
   };
 
   // Chart data for service categories
+  // Filter out categories with 0 services for the chart (Chart.js doesn't show 0 values in doughnut)
+  const chartLabels = categoriesData?.labels || [];
+  const chartData = categoriesData?.data || [];
+  
+  // Filter to only show categories with services > 0
+  const filteredData = chartLabels.map((label: string, index: number) => ({
+    label,
+    data: chartData[index] || 0
+  })).filter((item: { label: string; data: number }) => item.data > 0);
+  
   const serviceCategoriesChartData = {
-    labels: categoriesData?.labels || [],
+    labels: filteredData.map((item: { label: string; data: number }) => item.label),
     datasets: [
       {
-        data: categoriesData?.data || [],
+        data: filteredData.map((item: { label: string; data: number }) => item.data),
         backgroundColor: [
           '#2D5D4F',
           '#F5A623',
@@ -208,6 +218,16 @@ const AdminOverview: React.FC = () => {
           '#8BC34A',
           '#FF9800',
           '#9C27B0',
+          '#E91E63',
+          '#3F51B5',
+          '#009688',
+          '#FF5722',
+          '#795548',
+          '#607D8B',
+          '#FFC107',
+          '#4CAF50',
+          '#2196F3',
+          '#9E9E9E',
         ],
         borderWidth: 2,
         borderColor: '#fff',
@@ -282,11 +302,13 @@ const AdminOverview: React.FC = () => {
         labels: {
           font: {
             family: 'Cairo',
-            size: 11,
+            size: 10,
           },
           color: '#2D5D4F',
           usePointStyle: true,
+          padding: 8,
         },
+        display: true,
       },
     },
   };
@@ -360,15 +382,34 @@ const AdminOverview: React.FC = () => {
 
         {/* Service Categories Chart */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-deep-teal mb-4">توزيع فئات الخدمات</h3>
+          <h3 className="text-lg font-semibold text-deep-teal mb-4">توزيع فئات الخدمات والطلبات</h3>
           {categoriesLoading ? (
             <div className="h-64 flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-deep-teal"></div>
             </div>
           ) : (
-            <div className="h-64">
-              <Doughnut data={serviceCategoriesChartData} options={doughnutOptions} />
-            </div>
+            <>
+              <div className="h-64">
+                <Doughnut data={serviceCategoriesChartData} options={doughnutOptions} />
+              </div>
+              {/* Categories Summary */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">ملخص جميع الفئات (خدمات + طلبات):</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {chartLabels.map((label: string, index: number) => {
+                    const count = chartData[index] || 0;
+                    return (
+                      <div key={label} className="flex justify-between items-center">
+                        <span className="text-gray-600 truncate">{label}</span>
+                        <span className={`font-medium ${count > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                          {count} خدمة/طلب
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>

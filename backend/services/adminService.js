@@ -108,22 +108,38 @@ class AdminService {
   async getServiceCategoriesData() {
     // Fetch all categories (active only)
     const allCategories = await Category.find({ isActive: true }, 'name');
-    // Aggregate counts by category string from ServiceListing
-    const categoriesData = await ServiceListing.aggregate([
+    
+    // Aggregate counts by category from ServiceListing (services offered by providers)
+    const serviceListingsData = await ServiceListing.aggregate([
       { $match: { status: 'active' } },
       { $group: { _id: '$category', count: { $sum: 1 } } }
     ]);
-    // Map: category name => count
-    const countMap = new Map(categoriesData.map(cat => [cat._id, cat.count]));
+    
+    // Aggregate counts by category from JobRequest (service requests by users)
+    const jobRequestsData = await JobRequest.aggregate([
+      { $match: { status: { $in: ['open', 'assigned', 'in_progress'] } } },
+      { $group: { _id: '$category', count: { $sum: 1 } } }
+    ]);
+    
+    // Combine both datasets
+    const combinedData = [...serviceListingsData, ...jobRequestsData];
+    
+    // Map: category name => total count (services + requests)
+    const countMap = new Map();
+    combinedData.forEach(item => {
+      const currentCount = countMap.get(item._id) || 0;
+      countMap.set(item._id, currentCount + item.count);
+    });
+    
     // Build result for all categories
     let result = allCategories.map(cat => ({
       name: cat.name,
       count: countMap.get(cat.name) || 0
     }));
+    
     // Sort by count descending, then name
     result = result.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-    // Limit to top 6
-    result = result.slice(0, 6);
+    
     return {
       labels: result.map(cat => cat.name),
       data: result.map(cat => cat.count)
