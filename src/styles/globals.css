@@ -112,11 +112,19 @@
     border-color: hsl(var(--border));
   }
   
+  html {
+    /* Prevent text resizing unexpectedly in landscape mode on iOS */
+    -webkit-text-size-adjust: 100%;
+    /* Better font rendering */
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-feature-settings: "rlig" 1, "calt" 1;
-    /* Ensure minimum font size for elderly users */
+    /* Ensure minimum font size for elderly users and prevent iOS zoom */
     font-size: 16px;
     line-height: 1.6;
   }
@@ -128,7 +136,7 @@
     border-radius: var(--radius);
   }
   
-  /* Ensure sufficient touch targets for mobile */
+  /* Ensure sufficient touch targets for mobile (44px minimum) */
   button, a, input, select, textarea {
     min-height: 44px;
     min-width: 44px;
@@ -144,6 +152,28 @@
   .text-xs, .text-sm {
     font-weight: 500;
   }
+  
+  /* RTL Support */
+  [dir="rtl"] {
+    direction: rtl;
+    text-align: right;
+  }
+  
+  /* Prevent layout shift on font weight changes */
+  * {
+    font-weight: inherit;
+  }
+  
+  /* Smooth scrolling for in-page navigation */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Better selection styling */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.2);
+    color: hsl(var(--primary-foreground));
+  }
 }
 
 /* Restore default behaviors for Tailwind v4 */
@@ -153,6 +183,21 @@
   }
   [class*="border"] {
     @apply border-border;
+  }
+  
+  /* Interactive elements should disable user-select for inner content */
+  button, a, input, select, textarea {
+    user-select: none;
+  }
+  
+  /* Decorative elements should disable pointer-events */
+  .decorative {
+    pointer-events: none;
+  }
+  
+  /* Interactive elements in lists should have no dead areas */
+  nav a, nav button {
+    padding: 0.75rem 1rem;
   }
 }
 
@@ -170,12 +215,6 @@
 
 .font-mono-technical {
   font-family: var(--font-family-mono);
-}
-
-/* RTL support for Arabic */
-[dir="rtl"] {
-  direction: rtl;
-  text-align: right;
 }
 
 /* Large touch targets for elderly users */
@@ -214,6 +253,21 @@
   }
 }
 
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Disable hover states on touch devices */
+  *:hover {
+    background-color: inherit !important;
+    color: inherit !important;
+  }
+  
+  /* Larger touch targets on mobile */
+  button, a, input, select, textarea {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
 /* Focus indicators for keyboard navigation */
 .skip-link {
   position: absolute;
@@ -229,4 +283,55 @@
 
 .skip-link:focus {
   top: 6px;
+}
+
+/* Navigation Menu RTL Support */
+[dir="rtl"] .navigation-menu {
+  direction: rtl;
+}
+
+[dir="rtl"] .navigation-menu-list {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .navigation-menu-trigger svg {
+  transform: scaleX(-1);
+}
+
+/* Button spacing improvements */
+.btn-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.btn-group > * {
+  flex-shrink: 0;
+}
+
+/* Icon spacing improvements */
+.icon-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+[dir="rtl"] .icon-text {
+  flex-direction: row-reverse;
+}
+
+/* Form improvements */
+input, textarea, select {
+  font-size: 16px; /* Prevent iOS zoom */
+}
+
+/* Animation improvements */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-in {
+    animation-duration: 200ms;
+  }
+  
+  .animate-out {
+    animation-duration: 150ms;
+  }
 }

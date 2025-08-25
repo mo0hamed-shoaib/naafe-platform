@@ -138,16 +138,16 @@ export function HomePage() {
                 </Button>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-2 sm:space-y-0 sm:space-x-6 sm:space-x-reverse text-sm text-muted-foreground">
-                <div className="flex items-center space-x-2 space-x-reverse">
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 text-sm text-muted-foreground">
+                <div className="icon-text">
                   <CheckCircle className="h-4 w-4 text-success" />
                   <span className="font-cairo">موثقين ومتحقق منهم</span>
                 </div>
-                <div className="flex items-center space-x-2 space-x-reverse">
+                <div className="icon-text">
                   <CheckCircle className="h-4 w-4 text-success" />
                   <span className="font-cairo">ضمان الجودة</span>
                 </div>
-                <div className="flex items-center space-x-2 space-x-reverse">
+                <div className="icon-text">
                   <CheckCircle className="h-4 w-4 text-success" />
                   <span className="font-cairo">دعم 24/7</span>
                 </div>
@@ -284,7 +284,7 @@ export function HomePage() {
             موثقين
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="btn-group flex-col sm:flex-row justify-center">
             <Button
               size="lg"
               variant="secondary"
@@ -303,7 +303,7 @@ export function HomePage() {
             </Button>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-8 sm:space-x-reverse mt-8">
+          <div className="btn-group flex-col sm:flex-row justify-center mt-8">
             <Button
               variant="ghost"
               size="sm"

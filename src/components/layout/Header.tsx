@@ -4,6 +4,15 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from '@/components/ui/navigation-menu'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
@@ -15,29 +24,87 @@ import {
   Bell,
   Search,
   Plus,
-  ChevronDown
+  Sparkles,
+  Wrench,
+  Zap,
+  Truck
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useAuth } from '@/contexts/AuthContext'
 
+const services = [
+  {
+    title: "التنظيف",
+    href: "/services/cleaning",
+    description: "خدمات التنظيف المنزلية والمكتبية",
+    icon: Sparkles,
+  },
+  {
+    title: "السباكة",
+    href: "/services/plumbing", 
+    description: "إصلاح وصيانة أنظمة السباكة",
+    icon: Wrench,
+  },
+  {
+    title: "الكهرباء",
+    href: "/services/electrical",
+    description: "أعمال الكهرباء والصيانة",
+    icon: Zap,
+  },
+  {
+    title: "النقل",
+    href: "/services/moving",
+    description: "خدمات النقل والانتقال",
+    icon: Truck,
+  },
+]
+
+function ListItem({
+  className,
+  title,
+  children,
+  href,
+  icon: Icon,
+  ...props
+}: React.ComponentPropsWithoutRef<"li"> & { 
+  href: string
+  title: string
+  icon?: React.ComponentType<{ className?: string }>
+}) {
+  return (
+    <li {...props}>
+      <NavigationMenuLink asChild>
+        <Link
+          to={href}
+          className={cn(
+            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+            className
+          )}
+        >
+          <div className="flex items-center gap-2 text-sm font-medium leading-none">
+            {Icon && <Icon className="h-4 w-4" />}
+            {title}
+          </div>
+          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+            {children}
+          </p>
+        </Link>
+      </NavigationMenuLink>
+    </li>
+  )
+}
+
 export function Header() {
   const { user, isAuthenticated, logout } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-
-  const services = [
-    { name: 'التنظيف', description: 'خدمات التنظيف المنزلية', href: '/services/cleaning' },
-    { name: 'السباكة', description: 'إصلاح وصيانة السباكة', href: '/services/plumbing' },
-    { name: 'الكهرباء', description: 'أعمال الكهرباء والصيانة', href: '/services/electrical' },
-    { name: 'النقل', description: 'خدمات النقل والانتقال', href: '/services/moving' },
-  ]
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" dir="rtl">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo and Brand */}
-          <div className="flex items-center space-x-4 space-x-reverse">
-            <Link to="/" className="flex items-center space-x-2 space-x-reverse hover:opacity-80 transition-opacity">
+          <div className="flex items-center gap-6">
+            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-lg">ن</span>
               </div>
@@ -47,40 +114,41 @@ export function Header() {
             <Separator orientation="vertical" className="h-6 hidden md:block" />
             
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center space-x-6 space-x-reverse">
-              {/* Services Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="font-cairo hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                    الخدمات
-                    <ChevronDown className="mr-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="start">
-                  <DropdownMenuLabel className="font-cairo">اختر الخدمة</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {services.map((service) => (
-                    <DropdownMenuItem key={service.href} asChild>
-                      <Link to={service.href} className="font-cairo hover:bg-accent hover:text-accent-foreground">
-                        {service.name}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              <Button variant="ghost" asChild className="font-cairo hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                <Link to="/providers">المزودين</Link>
-              </Button>
-              
-              <Button variant="ghost" asChild className="font-cairo hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                <Link to="/about">عن المنصة</Link>
-              </Button>
-            </nav>
+            <NavigationMenu className="hidden lg:flex">
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="font-cairo">الخدمات</NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                      {services.map((service) => (
+                        <ListItem
+                          key={service.href}
+                          title={service.title}
+                          href={service.href}
+                          icon={service.icon}
+                        >
+                          {service.description}
+                        </ListItem>
+                      ))}
+                    </ul>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                    <Link to="/providers" className="font-cairo">المزودين</Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+                    <Link to="/about" className="font-cairo">عن المنصة</Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
           </div>
 
           {/* Right Side Actions */}
-          <div className="flex items-center space-x-4 space-x-reverse">
+          <div className="flex items-center gap-4">
             {/* Search - Hidden on mobile */}
             <Button variant="ghost" size="sm" className="hidden md:flex hover:bg-accent hover:text-accent-foreground">
               <Search className="h-4 w-4" />
@@ -139,7 +207,7 @@ export function Header() {
               </DropdownMenu>
             ) : (
               /* Guest User Actions - Hidden on mobile */
-              <div className="hidden md:flex items-center space-x-2 space-x-reverse">
+              <div className="hidden md:flex items-center gap-3">
                 <Button variant="ghost" size="sm" asChild className="font-cairo hover:bg-accent hover:text-accent-foreground">
                   <Link to="/login">تسجيل الدخول</Link>
                 </Button>
@@ -147,7 +215,7 @@ export function Header() {
                   <Link to="/register">إنشاء حساب</Link>
                 </Button>
                 <Button variant="secondary" size="sm" asChild className="font-cairo hover:bg-secondary/80">
-                  <Link to="/become-provider" className="flex items-center space-x-1 space-x-reverse">
+                  <Link to="/become-provider" className="flex items-center gap-1">
                     <Plus className="h-4 w-4" />
                     <span>كن مزود خدمة</span>
                   </Link>
@@ -179,7 +247,10 @@ export function Header() {
                         className="w-full justify-start font-cairo hover:bg-accent hover:text-accent-foreground"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
-                        <Link to={service.href}>{service.name}</Link>
+                        <Link to={service.href} className="flex items-center gap-2">
+                          {service.icon && <service.icon className="h-4 w-4" />}
+                          {service.title}
+                        </Link>
                       </Button>
                     ))}
                   </div>
@@ -205,7 +276,7 @@ export function Header() {
                   {!isAuthenticated && (
                     <>
                       <Separator />
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <Button asChild className="w-full font-cairo">
                           <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>تسجيل الدخول</Link>
                         </Button>
@@ -229,4 +300,9 @@ export function Header() {
       </div>
     </header>
   )
+}
+
+// Helper function for className merging
+function cn(...classes: (string | undefined | null | false)[]) {
+  return classes.filter(Boolean).join(' ')
 }

@@ -1,7 +1,6 @@
 "use client"
 
-
-import { Moon, Sun } from "lucide-react"
+import { Moon, Sun, Monitor } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -25,16 +24,16 @@ export function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="font-cairo">
-        <DropdownMenuItem onClick={() => setTheme("light")} className="hover:bg-accent hover:text-accent-foreground">
+        <DropdownMenuItem onClick={() => setTheme("light")} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
           <Sun className="ml-2 h-4 w-4" />
           فاتح
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")} className="hover:bg-accent hover:text-accent-foreground">
+        <DropdownMenuItem onClick={() => setTheme("dark")} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
           <Moon className="ml-2 h-4 w-4" />
           داكن
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")} className="hover:bg-accent hover:text-accent-foreground">
-          <span className="ml-2 h-4 w-4">💻</span>
+        <DropdownMenuItem onClick={() => setTheme("system")} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">
+          <Monitor className="ml-2 h-4 w-4" />
           النظام
         </DropdownMenuItem>
       </DropdownMenuContent>

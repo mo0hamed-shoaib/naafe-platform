@@ -1,8 +1,5 @@
 # Cursor Rules for Naafe Project
 
-## Project Context
-This is an Arabic service marketplace platform for Egypt. All development must follow the documentation in `naafe-docs/` directory.
-
 ## Critical Constraints
 - ONLY use shadcn/ui components - no other UI libraries
 - Stripe test mode only - no production payment integration
@@ -11,17 +8,10 @@ This is an Arabic service marketplace platform for Egypt. All development must f
 - Mobile-first responsive design with large buttons
 
 ## Documentation References
-- Theme System: `naafe-docs/THEME_SYSTEM.md`
-- Technical Architecture: `naafe-docs/TECHNICAL_ARCHITECTURE.md`
-- Business Logic: `naafe-docs/BUSINESS_LOGIC.md`
-- Development Roadmap: `naafe-docs/DEVELOPMENT_ROADMAP.md`
-- Project Overview: `naafe-docs/PROJECT_OVERVIEW.md`
+- Project Instructions and Overview: `docs/V0_PROJECT_SPEC.md`
 
 ## Development Guidelines
-- Follow the current development phase from DEVELOPMENT_ROADMAP.md
-- Use theme colors from THEME_SYSTEM.md (Teal, Orange, Purple)
-- Implement Egypt-specific features from BUSINESS_LOGIC.md
-- Follow database schema from TECHNICAL_ARCHITECTURE.md
+- Follow the development plan and phase from V0_PROJECT_SPEC.md
 - Ensure all components are accessible and mobile-friendly
 
 ## Code Standards
@@ -33,7 +23,7 @@ This is an Arabic service marketplace platform for Egypt. All development must f
 
 ## Before Implementing Any Feature
 1. Check which development phase it belongs to
-2. Reference the specific requirements from naafe-docs/
+2. Make sure it's responsive and mobile-first
 3. Confirm shadcn/ui component usage
 4. Include Egypt-specific adaptations
 5. Ensure accessibility compliance
@@ -41,6 +31,5 @@ This is an Arabic service marketplace platform for Egypt. All development must f
 ## Quality Checks
 - Run `npx tsc --noEmit` before committing
 - Verify all components use shadcn/ui
-- Check theme color usage
 - Confirm Egypt-specific features
 - Validate against current development phase
