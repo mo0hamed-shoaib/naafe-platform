@@ -5,20 +5,13 @@ import { Toaster } from '@/components/ui/sonner'
 
 interface LayoutProps {
   children: React.ReactNode
-  isAuthenticated?: boolean
-  user?: {
-    name: string
-    email: string
-    avatar?: string
-    role: 'seeker' | 'provider' | 'admin'
-  }
 }
 
-export function Layout({ children, isAuthenticated = false, user }: LayoutProps) {
+export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background font-cairo flex flex-col">
       {/* Header */}
-      <Header isAuthenticated={isAuthenticated} user={user} />
+      <Header />
       
       {/* Main Content */}
       <main className="flex-1">
