@@ -16,18 +16,10 @@ import {
   Plus
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { useAuth } from '@/contexts/AuthContext'
 
-interface HeaderProps {
-  isAuthenticated?: boolean
-  user?: {
-    name: string
-    email: string
-    avatar?: string
-    role: 'seeker' | 'provider' | 'admin'
-  }
-}
-
-export function Header({ isAuthenticated = false, user }: HeaderProps) {
+export function Header() {
+  const { user, isAuthenticated, logout } = useAuth()
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
@@ -128,16 +120,18 @@ export function Header({ isAuthenticated = false, user }: HeaderProps) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <User className="mr-2 h-4 w-4" />
-                    <span className="font-cairo">الملف الشخصي</span>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      <span className="font-cairo">الملف الشخصي</span>
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Settings className="mr-2 h-4 w-4" />
                     <span className="font-cairo">الإعدادات</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span className="font-cairo">تسجيل الخروج</span>
                   </DropdownMenuItem>
