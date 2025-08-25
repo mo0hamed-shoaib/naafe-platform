@@ -10,6 +10,8 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { UserProfile } from '@/components/auth/UserProfile'
+import { ThemeTest } from '@/components/ui/theme-test'
+import { ColorTest } from '@/components/ui/color-test'
 import './styles/globals.css'
 
 function App() {
@@ -21,6 +23,8 @@ function App() {
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Layout><HomePage /></Layout>} />
+              <Route path="/theme-test" element={<Layout><ThemeTest /></Layout>} />
+              <Route path="/color-test" element={<Layout><ColorTest /></Layout>} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />

@@ -102,69 +102,69 @@ export function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" dir="rtl">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 py-20">
+      <section className="relative bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 py-12 sm:py-16 lg:py-20">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <div className="space-y-6 lg:space-y-8 text-center lg:text-right">
               <div className="space-y-4">
-                <Badge variant="secondary" className="w-fit font-cairo">
+                <Badge variant="secondary" className="w-fit font-cairo mx-auto lg:mx-0">
                   منصة الخدمات العربية الأولى في مصر
                 </Badge>
-                <h1 className="text-4xl lg:text-6xl font-bold text-foreground font-cairo leading-tight">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-foreground font-cairo leading-tight">
                   ابحث عن الخدمات
                   <span className="text-primary block">بسهولة وأمان</span>
                 </h1>
-                <p className="text-xl text-muted-foreground font-cairo leading-relaxed">
+                <p className="text-lg sm:text-xl text-muted-foreground font-cairo leading-relaxed max-w-2xl mx-auto lg:mx-0">
                   منصة Naafe تربطك بأفضل مزودي الخدمات المحترفين في مصر. احصل
                   على خدمات عالية الجودة بأسعار مناسبة مع ضمان الأمان
                   والموثوقية.
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="font-cairo text-lg px-8 py-6">
-                  <Search className="mr-2 h-5 w-5" />
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <Button size="lg" className="font-cairo text-lg px-6 sm:px-8 py-4 sm:py-6 hover:bg-primary/90 transition-colors">
+                  <Search className="ml-2 h-5 w-5" />
                   ابحث عن خدمة
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
-                  className="font-cairo text-lg px-8 py-6"
+                  className="font-cairo text-lg px-6 sm:px-8 py-4 sm:py-6 hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
-                  <ArrowRight className="mr-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-5 w-5" />
                   كن مزود خدمة
                 </Button>
               </div>
 
-              <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-                <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-2 sm:space-y-0 sm:space-x-6 sm:space-x-reverse text-sm text-muted-foreground">
+                <div className="flex items-center space-x-2 space-x-reverse">
                   <CheckCircle className="h-4 w-4 text-success" />
                   <span className="font-cairo">موثقين ومتحقق منهم</span>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 space-x-reverse">
                   <CheckCircle className="h-4 w-4 text-success" />
                   <span className="font-cairo">ضمان الجودة</span>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 space-x-reverse">
                   <CheckCircle className="h-4 w-4 text-success" />
                   <span className="font-cairo">دعم 24/7</span>
                 </div>
               </div>
             </div>
 
-            <div className="relative">
-              <div className="bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl p-8 backdrop-blur-sm">
-                <div className="grid grid-cols-2 gap-4">
+            <div className="relative order-first lg:order-last">
+              <div className="bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl p-4 sm:p-6 lg:p-8 backdrop-blur-sm">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   {services.slice(0, 4).map((service) => (
                     <Card
                       key={service.id}
-                      className="bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-all duration-300"
+                      className="bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 hover:shadow-lg transition-all duration-300 cursor-pointer group"
                     >
-                      <CardContent className="p-4 text-center">
-                        <div className="text-3xl mb-2">{service.icon}</div>
-                        <h3 className="font-semibold font-cairo">
+                      <CardContent className="p-3 sm:p-4 text-center">
+                        <div className="text-2xl sm:text-3xl mb-2 group-hover:scale-110 transition-transform">{service.icon}</div>
+                        <h3 className="font-semibold font-cairo text-sm sm:text-base">
                           {service.name}
                         </h3>
                         <p className="text-xs text-muted-foreground font-cairo">
@@ -181,15 +181,15 @@ export function HomePage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-card">
+      <section className="py-12 sm:py-16 bg-card">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
-                <div className="text-3xl lg:text-4xl font-bold text-primary font-cairo">
+                <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary font-cairo">
                   {stat.number}
                 </div>
-                <div className="text-muted-foreground font-cairo mt-2">
+                <div className="text-sm sm:text-base text-muted-foreground font-cairo mt-2">
                   {stat.label}
                 </div>
               </div>
@@ -199,38 +199,38 @@ export function HomePage() {
       </section>
 
       {/* Services Section */}
-      <section className="py-20">
+      <section className="py-12 sm:py-16 lg:py-20">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground font-cairo mb-4">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground font-cairo mb-4">
               خدماتنا المتنوعة
             </h2>
-            <p className="text-xl text-muted-foreground font-cairo max-w-2xl mx-auto">
+            <p className="text-lg sm:text-xl text-muted-foreground font-cairo max-w-2xl mx-auto">
               نقدم مجموعة واسعة من الخدمات المنزلية والمكتبية بجودة عالية وأسعار
               مناسبة
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {services.map((service) => (
               <Card
                 key={service.id}
-                className="group hover:shadow-lg transition-all duration-300 border-primary/10 hover:border-primary/30"
+                className="group hover:shadow-lg transition-all duration-300 border-primary/10 hover:border-primary/30 cursor-pointer"
               >
-                <CardHeader className="text-center">
-                  <div className="text-4xl mb-4">{service.icon}</div>
-                  <CardTitle className="font-cairo text-xl">
+                <CardHeader className="text-center pb-4">
+                  <div className="text-3xl sm:text-4xl mb-4 group-hover:scale-110 transition-transform">{service.icon}</div>
+                  <CardTitle className="font-cairo text-lg sm:text-xl">
                     {service.name}
                   </CardTitle>
-                  <CardDescription className="font-cairo">
+                  <CardDescription className="font-cairo text-sm sm:text-base">
                     {service.description}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="text-center">
+                <CardContent className="text-center pt-0">
                   <div className="text-sm text-muted-foreground font-cairo mb-4">
                     {service.providers} مزود خدمة متاح
                   </div>
-                  <Button variant="outline" className="w-full font-cairo">
+                  <Button variant="outline" className="w-full font-cairo hover:bg-accent hover:text-accent-foreground transition-colors">
                     ابحث الآن
                   </Button>
                 </CardContent>
@@ -241,29 +241,29 @@ export function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-12 sm:py-16 lg:py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground font-cairo mb-4">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground font-cairo mb-4">
               لماذا تختار Naafe؟
             </h2>
-            <p className="text-xl text-muted-foreground font-cairo max-w-2xl mx-auto">
+            <p className="text-lg sm:text-xl text-muted-foreground font-cairo max-w-2xl mx-auto">
               نتميز بالجودة والموثوقية والأمان في جميع خدماتنا
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {features.map((feature, index) => (
               <Card
                 key={index}
-                className="text-center border-0 shadow-lg bg-background"
+                className="text-center border-0 shadow-lg bg-background hover:shadow-xl transition-shadow duration-300"
               >
-                <CardContent className="p-8">
-                  <div className="flex justify-center mb-4">{feature.icon}</div>
-                  <h3 className="text-xl font-semibold font-cairo mb-2">
+                <CardContent className="p-6 sm:p-8">
+                  <div className="flex justify-center mb-4 group-hover:scale-110 transition-transform">{feature.icon}</div>
+                  <h3 className="text-lg sm:text-xl font-semibold font-cairo mb-2">
                     {feature.title}
                   </h3>
-                  <p className="text-muted-foreground font-cairo">
+                  <p className="text-sm sm:text-base text-muted-foreground font-cairo">
                     {feature.description}
                   </p>
                 </CardContent>
@@ -274,12 +274,12 @@ export function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-primary to-secondary">
+      <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-r from-primary to-secondary">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl lg:text-4xl font-bold text-primary-foreground font-cairo mb-4">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary-foreground font-cairo mb-4">
             ابدأ رحلتك مع Naafe اليوم
           </h2>
-          <p className="text-xl text-primary-foreground/90 font-cairo mb-8 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-primary-foreground/90 font-cairo mb-8 max-w-2xl mx-auto">
             انضم إلى آلاف العملاء الراضين واحصل على أفضل الخدمات من مزودين
             موثقين
           </p>
@@ -288,36 +288,36 @@ export function HomePage() {
             <Button
               size="lg"
               variant="secondary"
-              className="font-cairo text-lg px-8 py-6"
+              className="font-cairo text-lg px-6 sm:px-8 py-4 sm:py-6 hover:bg-secondary/80 transition-colors"
             >
-              <Search className="mr-2 h-5 w-5" />
+              <Search className="ml-2 h-5 w-5" />
               ابحث عن خدمة
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="font-cairo text-lg px-8 py-6 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary"
+              className="font-cairo text-lg px-6 sm:px-8 py-4 sm:py-6 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary transition-colors"
             >
-              <Users className="mr-2 h-5 w-5" />
+              <Users className="ml-2 h-5 w-5" />
               كن مزود خدمة
             </Button>
           </div>
 
-          <div className="flex justify-center space-x-8 mt-8">
+          <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-8 sm:space-x-reverse mt-8">
             <Button
               variant="ghost"
               size="sm"
-              className="text-primary-foreground hover:bg-primary-foreground/20"
+              className="text-primary-foreground hover:bg-primary-foreground/20 transition-colors"
             >
-              <Phone className="mr-2 h-4 w-4" />
+              <Phone className="ml-2 h-4 w-4" />
               اتصل بنا
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="text-primary-foreground hover:bg-primary-foreground/20"
+              className="text-primary-foreground hover:bg-primary-foreground/20 transition-colors"
             >
-              <MessageCircle className="mr-2 h-4 w-4" />
+              <MessageCircle className="ml-2 h-4 w-4" />
               WhatsApp
             </Button>
           </div>

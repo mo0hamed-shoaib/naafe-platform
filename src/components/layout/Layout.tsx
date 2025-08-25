@@ -12,12 +12,17 @@ export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-background font-cairo flex flex-col">
+    <div className="min-h-screen bg-background font-cairo flex flex-col" dir="rtl">
+      {/* Skip to main content link for accessibility */}
+      <a href="#main-content" className="skip-link">
+        تخطي إلى المحتوى الرئيسي
+      </a>
+      
       {/* Header */}
       <Header />
       
       {/* Main Content */}
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         {children}
       </main>
       
@@ -29,7 +34,7 @@ export function Layout({ children }: LayoutProps) {
       
       {/* Toast Notifications */}
       <Toaster 
-        position="top-right"
+        position="top-left"
         richColors
         closeButton
         duration={4000}
