@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Header } from './Header'
 import { Footer } from './Footer'
+import { Sidebar } from './Sidebar'
 import { Toaster } from '@/components/ui/sonner'
 
 interface LayoutProps {
@@ -8,6 +9,8 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-background font-cairo flex flex-col">
       {/* Header */}
@@ -20,6 +23,9 @@ export function Layout({ children }: LayoutProps) {
       
       {/* Footer */}
       <Footer />
+      
+      {/* Sidebar */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       {/* Toast Notifications */}
       <Toaster 
