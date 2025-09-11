@@ -197,6 +197,27 @@ export const api = {
       apiRequest('/api/upgrade-requests/me', {
         headers: getAuthHeaders(token),
       }),
+    
+    markAsViewed: (token: string) =>
+      apiRequest('/api/upgrade-requests/viewed', {
+        method: 'PATCH',
+        headers: getAuthHeaders(token),
+      }),
+  },
+
+  // Admin endpoints
+  admin: {
+    getUpgradeRequests: (token: string) =>
+      apiRequest('/api/admin/upgrade-requests', {
+        headers: getAuthHeaders(token),
+      }),
+    
+    createUpgradeRequest: (payload: any, token: string) =>
+      apiRequest('/api/admin/upgrade-requests', {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify(payload),
+      }),
   },
 
   // Review endpoints
@@ -211,6 +232,19 @@ export const api = {
   payment: {
     getTransactions: (page: number, limit: number, token: string) =>
       apiRequest(`/api/payment/transactions?page=${page}&limit=${limit}`, {
+        headers: getAuthHeaders(token),
+      }),
+  },
+
+  // Chat endpoints
+  chat: {
+    getConversation: (conversationId: string, token: string) =>
+      apiRequest(`/api/chat/conversations/${conversationId}`, {
+        headers: getAuthHeaders(token),
+      }),
+    
+    getConversationMessages: (conversationId: string, page: number, limit: number, token: string) =>
+      apiRequest(`/api/chat/conversations/${conversationId}/messages?page=${page}&limit=${limit}`, {
         headers: getAuthHeaders(token),
       }),
   },

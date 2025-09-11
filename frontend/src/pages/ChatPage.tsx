@@ -8,6 +8,7 @@ import NegotiationSummary from '../components/ui/NegotiationSummary';
 import NegotiationHistory from '../components/ui/NegotiationHistory';
 import PageLayout from '../components/layout/PageLayout';
 import BaseCard from '../components/ui/BaseCard';
+import api from '../utils/api';
 import Button from '../components/ui/Button';
 import FormTextarea from '../components/ui/FormTextarea';
 import PaymentModal from '../components/ui/PaymentModal';
@@ -115,9 +116,7 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     if (!chatId || !accessToken) return;
     
-    fetch(`/api/chat/conversations/${chatId}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+    api.chat.getConversation(chatId, accessToken)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -284,9 +283,7 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     if (!chatId || !accessToken) return;
     
-    fetch(`/api/chat/conversations/${chatId}/messages?page=${page}&limit=50`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+    api.chat.getConversationMessages(chatId, page, 50, accessToken)
       .then(res => res.json())
       .then(data => {
         if (data.success) {

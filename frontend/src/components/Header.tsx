@@ -87,10 +87,7 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
   useEffect(() => {
     if (showUpgradeModal && hasUnviewedResponse) {
       setHasUnviewedResponse(false);
-      fetch('/api/upgrade-requests/viewed', {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${accessToken || localStorage.getItem('accessToken')}` },
-      });
+      api.upgradeRequests.markAsViewed(accessToken || localStorage.getItem('accessToken') || '');
     }
   }, [showUpgradeModal, hasUnviewedResponse, accessToken]);
 
@@ -113,10 +110,7 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
             setHasUnviewedResponse(hasUnviewed);
             // Mark as viewed
             if (hasUnviewed) {
-              fetch('/api/upgrade-requests/viewed', {
-                method: 'PATCH',
-                headers: { Authorization: `Bearer ${accessToken || localStorage.getItem('accessToken')}` },
-              });
+              api.upgradeRequests.markAsViewed(accessToken || localStorage.getItem('accessToken') || '');
             }
           }
         });
@@ -243,14 +237,7 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
         attachments: attachmentUrls,
         comment,
       };
-      const res = await fetch('/api/admin/upgrade-requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken || localStorage.getItem('accessToken')}`,
-        },
-        body: JSON.stringify(payload),
-      });
+      const res = await api.admin.createUpgradeRequest(payload, accessToken || localStorage.getItem('accessToken') || '');
       const data = await res.json();
       if (!data.success) {
         if (data.error?.message?.includes('قيد الانتظار')) {
@@ -340,9 +327,7 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
         if (relatedChatId) {
           // Check if this is a direct conversation (no jobRequestId)
           try {
-            const conversationRes = await fetch(`/api/chat/conversations/${relatedChatId}`, {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            });
+            const conversationRes = await api.chat.getConversation(relatedChatId, accessToken);
             const conversationData = await conversationRes.json();
             
             if (conversationData.success && conversationData.data.conversation) {
