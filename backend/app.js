@@ -27,15 +27,24 @@ const app = express();
 
 // Middleware
 // app.use(morgan('dev')); // HTTP request logging
+// CORS configuration - only allow the custom domain to avoid multiple origins issue
+const allowedOrigins = [
+  'http://localhost:5173', 
+  'http://127.0.0.1:5173',
+  'https://naafe-platform.vercel.app' // Only the custom domain
+];
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173', 
-    'http://127.0.0.1:5173',
-    'https://naafe-platform.vercel.app',
-    'https://naafe-platform-eml4s5r7l-mohamed-gamals-projects-634a25af.vercel.app',
-    'https://naafe-platform-3mfilwk41-mohamed-gamals-projects-634a25af.vercel.app',
-    process.env.FRONTEND_URL || 'https://your-vercel-domain.vercel.app'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 })); // Enable CORS
 // Parse JSON for all routes except webhook

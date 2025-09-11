@@ -8,6 +8,7 @@ import Modal from '../admin/components/UI/Modal';
 import { useRef } from 'react';
 import { FormInput, FormTextarea } from './ui';
 import { useSocket } from '../hooks/useSocket';
+import api from '../utils/api';
 
 interface UpgradeRequest {
   _id: string;
@@ -69,9 +70,7 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
   // Fetch upgrade requests on mount/user change for notification dot
   useEffect(() => {
     if (user && !isProvider) {
-      fetch('/api/upgrade-requests/me', {
-        headers: { Authorization: `Bearer ${accessToken || localStorage.getItem('accessToken')}` },
-      })
+      api.upgradeRequests.getMyRequests(accessToken || localStorage.getItem('accessToken') || '')
         .then(res => res.json())
         .then(data => {
           if (data.success && Array.isArray(data.data.requests)) {
@@ -127,9 +126,7 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
   // Fetch notifications on mount and when user changes
   useEffect(() => {
     if (!accessToken) return;
-    fetch('/api/notifications?limit=10', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+    api.notifications.get(accessToken, 10)
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.data.notifications)) {

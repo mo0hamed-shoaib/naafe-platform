@@ -94,7 +94,7 @@ export const api = {
 
   // Provider endpoints
   providers: {
-    getFeatured: () => apiRequest('/api/providers/featured'),
+    getFeatured: () => apiRequest('/api/users/providers/featured'),
   },
 
   // Ad endpoints
@@ -128,6 +128,22 @@ export const api = {
         method: 'POST',
         headers: getAuthHeaders(token),
         body: JSON.stringify(listingData),
+      }),
+  },
+
+  // Notification endpoints
+  notifications: {
+    get: (token: string, limit?: number) =>
+      apiRequest(`/api/notifications?limit=${limit || 10}`, {
+        headers: getAuthHeaders(token),
+      }),
+  },
+
+  // Upgrade request endpoints
+  upgradeRequests: {
+    getMyRequests: (token: string) =>
+      apiRequest('/api/upgrade-requests/me', {
+        headers: getAuthHeaders(token),
       }),
   },
 };
