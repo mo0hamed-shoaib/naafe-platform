@@ -14,9 +14,20 @@ class SocketService {
    * Initialize Socket.IO server
    */
   initialize(server) {
+    // Socket.IO CORS configuration - only allow the custom domain
+    const allowedOrigins = [
+      'http://localhost:5173', 
+      'http://127.0.0.1:5173',
+      'https://naafe-platform.vercel.app' // Only the custom domain
+    ];
+    
+    console.log('🔌 Socket.IO CORS Configuration:');
+    console.log('  - Allowed origins:', allowedOrigins);
+    console.log('  - FRONTEND_URL env var:', process.env.FRONTEND_URL);
+    
     this.io = new Server(server, {
       cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:5173",
+        origin: allowedOrigins,
         methods: ["GET", "POST"],
         credentials: true
       }

@@ -34,14 +34,26 @@ const allowedOrigins = [
   'https://naafe-platform.vercel.app' // Only the custom domain
 ];
 
+// Debug logging
+console.log('🔧 CORS Configuration:');
+console.log('  - Allowed origins:', allowedOrigins);
+console.log('  - FRONTEND_URL env var:', process.env.FRONTEND_URL);
+
 app.use(cors({
   origin: function (origin, callback) {
+    console.log(`🌐 CORS Request from origin: ${origin}`);
+    
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('  ✅ Allowing request with no origin');
+      return callback(null, true);
+    }
     
     if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('  ✅ Origin allowed');
       callback(null, true);
     } else {
+      console.log('  ❌ Origin rejected');
       callback(new Error('Not allowed by CORS'));
     }
   },
