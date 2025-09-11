@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
+import api from '../utils/api';
 
 interface AuthContextType {
   user: User | null;
@@ -29,8 +30,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const API_BASE = '/api/auth';
-const USER_API = '/api/users/me';
+// API endpoints now handled by centralized api utility
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const navigate = useNavigate();
@@ -48,9 +48,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     if (accessToken) {
       setLoading(true);
-      fetch(USER_API, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
+      api.user.getMe(accessToken)
         .then(async (res) => {
           if (!res.ok) throw new Error('فشل تحميل بيانات المستخدم');
           const data = await res.json();
@@ -74,11 +72,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      const res = await api.auth.login(email, password);
       const data = await res.json();
       if (!res.ok || !data.success) {
         setError(data.error?.message || 'فشل تسجيل الدخول');
@@ -103,11 +97,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const res = await api.auth.register(payload);
       const data = await res.json();
       if (!res.ok || !data.success) {
         setError(data.error?.message || 'فشل إنشاء الحساب');

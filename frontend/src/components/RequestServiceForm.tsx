@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { FormInput, FormTextarea } from './ui';
 import UnifiedSelect from './ui/UnifiedSelect';
 import { AIAssistant } from './ui';
+import api from '../utils/api';
 import { PricingGuidance } from './ui';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { EGYPT_GOVERNORATES, EGYPT_CITIES } from '../utils/constants';
@@ -354,7 +355,7 @@ const RequestServiceForm: React.FC = () => {
 
   useEffect(() => {
     setCategoriesLoading(true);
-    fetch('/api/categories')
+    api.categories.getAll()
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.data.categories)) {
@@ -440,15 +441,7 @@ const RequestServiceForm: React.FC = () => {
           fileSize: 0
         })),
       };
-      const res = await fetch('/api/requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(payload),
-        credentials: 'include',
-      });
+      const res = await api.requests.create(payload, accessToken);
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error?.message || 'Failed to post request');

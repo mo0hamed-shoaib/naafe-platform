@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+import { API_BASE } from '../utils/api';
 
 export function useSocket(token?: string) {
   const [connected, setConnected] = useState(false);
@@ -10,10 +9,10 @@ export function useSocket(token?: string) {
   useEffect(() => {
     if (!token) return;
     
-    console.log('Initializing socket connection to:', BACKEND_URL);
+    console.log('Initializing socket connection to:', API_BASE);
     
     // Create socket instance
-    const socket = io(BACKEND_URL, {
+    const socket = io(API_BASE, {
       auth: { token },
       autoConnect: true,
       reconnection: true,

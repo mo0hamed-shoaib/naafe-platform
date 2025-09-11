@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ComponentType } from 'react';
 import AdPlacement from './ui/AdPlacement';
 import React from 'react';
+import api from '../utils/api';
 
 interface Category {
   _id: string;
@@ -31,7 +32,7 @@ const ServiceCategoriesPage = () => {
 
   useEffect(() => {
     setCategoriesLoading(true);
-    fetch('/api/categories')
+    api.categories.getAll()
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.data.categories)) {

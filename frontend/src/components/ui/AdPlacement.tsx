@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AdCarousel, { Ad } from './AdCarousel';
 import { getPlacementByLocation, AdPlacement as IAdPlacement } from '../../data/adPlacements';
 import { useNavigate } from 'react-router-dom';
+import api from '../../utils/api';
 
 interface AdPlacementProps {
   location: string;
@@ -38,7 +39,7 @@ const AdPlacement: React.FC<AdPlacementProps> = ({
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/ads/active?type=${type}&location=${location}&limit=${placement.maxAds}`);
+        const response = await api.ads.getActive(type, location, placement.maxAds);
         
         if (!response.ok) {
           throw new Error('Failed to fetch ads');

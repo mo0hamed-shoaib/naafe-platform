@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ServiceCard from './ServiceCard';
 import BaseCard from './ui/BaseCard';
+import api from '../utils/api';
 // import { ServiceProvider } from '../types';
 
 const FeaturedProviders: React.FC = () => {
@@ -12,7 +13,7 @@ const FeaturedProviders: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    fetch('/api/users/providers/featured')
+    api.providers.getFeatured()
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.data.providers)) {
