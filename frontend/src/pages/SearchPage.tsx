@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Search, Users, FileText, ArrowLeft, CheckCircle } from 'lucide-react';
 import AdPlacement from '../components/ui/AdPlacement';
 import FeaturedProviders from '../components/FeaturedProviders';
+import api from '../utils/api';
 
 const fetchListings = async (filters: FilterState) => {
   const params = new URLSearchParams();
@@ -39,7 +40,7 @@ const fetchListings = async (filters: FilterState) => {
     }
   }
   
-  const res = await fetch(`/api/listings/listings?${params.toString()}`);
+  const res = await api.listings.getAll(params);
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message || 'فشل تحميل الخدمات');
   return json.data.listings || json.data.items || [];
@@ -69,7 +70,7 @@ const fetchRequests = async (filters: FilterState) => {
     }
   }
   
-  const res = await fetch(`/api/requests?${params.toString()}`);
+  const res = await api.requests.getAll(params);
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message || 'فشل تحميل الطلبات');
   return json.data.requests || json.data.jobRequests || json.data.items || [];

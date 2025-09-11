@@ -8,6 +8,7 @@ import { EGYPT_GOVERNORATES, EGYPT_CITIES, PRICE_RANGES } from '../../utils/cons
 import { SearchTab } from './SearchTabs';
 import { FormInput } from './';
 import UnifiedSelect from './UnifiedSelect';
+import api from '../../utils/api';
 
 
 interface FilterFormProps {
@@ -50,7 +51,7 @@ const FilterForm = ({
 
   useEffect(() => {
     setCategoriesLoading(true);
-    fetch('/api/categories')
+    api.categories.getAll()
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.data.categories)) {

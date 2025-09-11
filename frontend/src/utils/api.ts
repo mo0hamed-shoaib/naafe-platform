@@ -74,6 +74,36 @@ export const api = {
         headers: getAuthHeaders(token),
       }),
     
+    getById: (userId: string, token: string) =>
+      apiRequest(`/api/users/${userId}`, {
+        headers: getAuthHeaders(token),
+      }),
+    
+    getStats: (userId: string, token: string) =>
+      apiRequest(`/api/users/${userId}/stats`, {
+        headers: getAuthHeaders(token),
+      }),
+    
+    getUserListings: (userId: string, token: string) =>
+      apiRequest(`/api/users/${userId}/listings`, {
+        headers: getAuthHeaders(token),
+      }),
+    
+    getMyListings: (token: string) =>
+      apiRequest('/api/listings/users/me/listings', {
+        headers: getAuthHeaders(token),
+      }),
+    
+    getMyRequests: (token: string) =>
+      apiRequest('/api/requests/my-requests', {
+        headers: getAuthHeaders(token),
+      }),
+    
+    getSavedServices: (token: string) =>
+      apiRequest('/api/users/me/saved-services', {
+        headers: getAuthHeaders(token),
+      }),
+    
     getSkills: (token: string) =>
       apiRequest('/api/users/me/skills', {
         headers: getAuthHeaders(token),
@@ -101,6 +131,11 @@ export const api = {
   ads: {
     getActive: (type: string, location: string, limit: number) =>
       apiRequest(`/api/ads/active?type=${type}&location=${location}&limit=${limit}`),
+    
+    getMyAds: (token: string) =>
+      apiRequest('/api/ads/my-ads', {
+        headers: getAuthHeaders(token),
+      }),
   },
 
   // Request endpoints
@@ -143,6 +178,22 @@ export const api = {
   upgradeRequests: {
     getMyRequests: (token: string) =>
       apiRequest('/api/upgrade-requests/me', {
+        headers: getAuthHeaders(token),
+      }),
+  },
+
+  // Review endpoints
+  reviews: {
+    getUserReviews: (userId: string, token: string) =>
+      apiRequest(`/api/reviews/user/${userId}`, {
+        headers: getAuthHeaders(token),
+      }),
+  },
+
+  // Payment endpoints
+  payment: {
+    getTransactions: (page: number, limit: number, token: string) =>
+      apiRequest(`/api/payment/transactions?page=${page}&limit=${limit}`, {
         headers: getAuthHeaders(token),
       }),
   },

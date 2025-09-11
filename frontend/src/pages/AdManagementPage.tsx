@@ -4,6 +4,7 @@ import PageLayout from '../components/layout/PageLayout';
 import Button from '../components/ui/Button';
 import BaseCard from '../components/ui/BaseCard';
 import Modal from '../admin/components/UI/Modal';
+import api from '../utils/api';
 import { 
   Eye, 
   MousePointer, 
@@ -80,11 +81,7 @@ const AdManagementPage: React.FC = () => {
   const fetchUserAds = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/ads/my-ads', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
+      const response = await api.ads.getMyAds(accessToken);
 
       const data = await response.json();
       if (data.success) {

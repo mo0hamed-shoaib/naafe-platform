@@ -3,6 +3,7 @@ import PageLayout from '../components/layout/PageLayout';
 import BaseCard from '../components/ui/BaseCard';
 import Button from '../components/ui/Button';
 import SortableTable, { SortDirection } from '../admin/components/UI/SortableTable';
+import api from '../utils/api';
 // Inline Column type from SortableTable
 interface Column<T> {
   key: keyof T;
@@ -60,9 +61,7 @@ const TransactionsPage: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`/api/payment/transactions?page=${page}&limit=20`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
+        const res = await api.payment.getTransactions(page, 20, accessToken);
         const data = await res.json();
         if (data.success) {
           setTransactions(data.data.transactions);

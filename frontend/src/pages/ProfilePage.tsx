@@ -12,14 +12,9 @@ import { TimePicker, ConfigProvider } from 'antd';
 import dayjs from 'dayjs';
 import arEG from 'antd/locale/ar_EG';
 import { Pencil } from 'lucide-react';
+import api from '../utils/api';
 
-const fetchWithAuth = async (url: string, token: string) => {
-  const res = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error((await res.json()).error?.message || 'فشل تحميل البيانات');
-  return res.json();
-};
+// Note: All API calls now use the centralized API utility with proper backend URLs
 
 const TABS = [
   { key: 'offered', label: 'الخدمات' },
@@ -200,18 +195,19 @@ const ProfilePage: React.FC = () => {
           setLoading(false);
           return;
         }
-        const profileUrl = isSelf ? '/api/users/me' : `/api/users/${userId}`;
-        const profileRes = await fetchWithAuth(profileUrl, token);
-        setProfile(profileRes.data.user);
-        const statsRes = await fetchWithAuth(`/api/users/${userId}/stats`, token);
-        setStats(statsRes.data.stats);
-        const realProfileId = profileRes.data.user._id;
-        if (profileRes.data.user.roles?.includes('provider')) {
+        const profileRes = isSelf ? await api.user.getMe(token) : await api.user.getById(userId, token);
+        const profileData = await profileRes.json();
+        setProfile(profileData.data.user);
+        const statsRes = await api.user.getStats(userId, token);
+        const statsData = await statsRes.json();
+        setStats(statsData.data.stats);
+        const realProfileId = profileData.data.user._id;
+        if (profileData.data.user.roles?.includes('provider')) {
           try {
-            const listingsUrl = isSelf ? '/api/listings/users/me/listings' : `/api/users/${realProfileId}/listings`;
-            const servicesRes = await fetchWithAuth(listingsUrl, token);
+            const servicesRes = isSelf ? await api.user.getMyListings(token) : await api.user.getUserListings(realProfileId, token);
+            const servicesData = await servicesRes.json();
             // Map _id to id for each listing
-            setServices((servicesRes.data.listings || []).map((s: Service) => ({ ...s, id: (s as unknown as { _id: string })._id })));
+            setServices((servicesData.data.listings || []).map((s: Service) => ({ ...s, id: (s as unknown as { _id: string })._id })));
           } catch (error) {
             console.warn('Could not fetch provider listings:', error);
             setServices([]);
@@ -219,13 +215,13 @@ const ProfilePage: React.FC = () => {
         } else {
           setServices([]);
         }
-        if (profileRes.data.user.roles?.includes('seeker')) {
+        if (profileData.data.user.roles?.includes('seeker')) {
           try {
             // Use the correct endpoint for fetching user's own requests
-            const requestsUrl = isSelf ? '/api/users/me/requests' : `/api/requests?seeker=${realProfileId}`;
-            const reqRes = await fetchWithAuth(requestsUrl, token);
+            const reqRes = isSelf ? await api.user.getMyRequests(token) : await api.requests.getAll(new URLSearchParams(`seeker=${realProfileId}`));
+            const reqData = await reqRes.json();
             // Map _id to id for each jobRequest
-            setRequestedServices((reqRes.data.jobRequests || []).map((r: Service) => ({ ...r, id: (r as unknown as { _id: string })._id })));
+            setRequestedServices((reqData.data.jobRequests || []).map((r: Service) => ({ ...r, id: (r as unknown as { _id: string })._id })));
           } catch (error) {
             console.warn('Could not fetch seeker requests:', error);
             setRequestedServices([]);
@@ -237,8 +233,9 @@ const ProfilePage: React.FC = () => {
         // Fetch saved services (only for self)
         if (isSelf) {
           try {
-            const savedRes = await fetchWithAuth('/api/users/me/saved-services', token);
-            setSavedServices((savedRes.data.savedServices || []).map((s: Service) => ({ ...s, id: (s as unknown as { _id: string })._id })));
+            const savedRes = await api.user.getSavedServices(token);
+            const savedData = await savedRes.json();
+            setSavedServices((savedData.data.savedServices || []).map((s: Service) => ({ ...s, id: (s as unknown as { _id: string })._id })));
           } catch (error) {
             console.warn('Could not fetch saved services:', error);
             setSavedServices([]);
@@ -247,8 +244,9 @@ const ProfilePage: React.FC = () => {
           setSavedServices([]);
         }
         
-        const reviewsRes = await fetchWithAuth(`/api/reviews/user/${userId}`, token);
-        setReviews(reviewsRes.data.reviews || []);
+        const reviewsRes = await api.reviews.getUserReviews(userId, token);
+        const reviewsData = await reviewsRes.json();
+        setReviews(reviewsData.data.reviews || []);
       } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message || 'حدث خطأ أثناء تحميل البيانات');
