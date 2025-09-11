@@ -148,9 +148,11 @@ const RequestServiceDetailsPage = () => {
         
         if (!data.success) throw new Error(data.error?.message || 'Failed to fetch');
         
-        // TODO: Map backend jobRequest to frontend service model as needed
+        // Map backend jobRequest to frontend service model
         const mappedService = {
           ...data.data.jobRequest,
+          // Ensure budget is properly mapped
+          budget: data.data.jobRequest.budget || { min: 0, max: 0, currency: 'EGP' },
           postedBy: { 
             id: data.data.jobRequest.seeker?._id || data.data.jobRequest.seeker?.id || data.data.jobRequest.seeker, 
             name: data.data.jobRequest.seeker?.name ? 

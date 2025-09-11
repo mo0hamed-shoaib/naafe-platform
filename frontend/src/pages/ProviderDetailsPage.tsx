@@ -20,7 +20,8 @@ import {
   MessageSquare,
   Image as ImageIcon
 } from 'lucide-react';
-import { fetchWithAuth, translateCategory } from '../utils/helpers';
+import { translateCategory } from '../utils/helpers';
+import api from '../utils/api';
 
 interface Provider {
   _id: string;
@@ -109,20 +110,24 @@ const ProviderDetailsPage: React.FC = () => {
         const token = accessToken || localStorage.getItem('accessToken') || '';
         
         // Fetch provider profile
-        const providerRes = await fetchWithAuth(`/api/users/${id}`, token);
-        setProvider(providerRes.data.user);
+        const providerRes = await api.user.getById(id, token);
+        const providerData = await providerRes.json();
+        setProvider(providerData.data.user);
         
         // Fetch provider stats
-        const statsRes = await fetchWithAuth(`/api/users/${id}/stats`, token);
-        setStats(statsRes.data.stats);
+        const statsRes = await api.user.getStats(id, token);
+        const statsData = await statsRes.json();
+        setStats(statsData.data.stats);
         
         // Fetch provider services/listings
-        const servicesRes = await fetchWithAuth(`/api/users/${id}/listings`, token);
-        setServices(servicesRes.data.listings || []);
+        const servicesRes = await api.user.getListings(id, token);
+        const servicesData = await servicesRes.json();
+        setServices(servicesData.data.listings || []);
         
         // Fetch provider reviews
-        const reviewsRes = await fetchWithAuth(`/api/users/${id}/reviews`, token);
-        setReviews(reviewsRes.data.reviews || []);
+        const reviewsRes = await api.reviews.getProviderReviews(id, token);
+        const reviewsData = await reviewsRes.json();
+        setReviews(reviewsData.data.reviews || []);
         
       } catch (err) {
         console.error('Error fetching provider data:', err);
