@@ -137,9 +137,7 @@ const ChatPage: React.FC = () => {
         const providerId = conversation.participants.provider._id;
         
         try {
-          const res = await fetch(`/api/offers?jobRequest=${jobRequestId}&provider=${providerId}`, {
-            headers: { Authorization: `Bearer ${accessToken}` }
-          });
+          const res = await api.offers.getByJobRequestAndProvider(jobRequestId, providerId, accessToken);
           const data = await res.json();
           
           if (data.success && Array.isArray(data.data) && data.data.length > 0) {

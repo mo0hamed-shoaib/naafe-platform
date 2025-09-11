@@ -96,9 +96,7 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
     if (showUpgradeModal && user && !isProvider) {
       setUpgradeRequests([]);
       setHasUnviewedResponse(false);
-      fetch('/api/upgrade-requests/me', {
-        headers: { Authorization: `Bearer ${accessToken || localStorage.getItem('accessToken')}` },
-      })
+      api.upgradeRequests.getMyRequests(accessToken || localStorage.getItem('accessToken') || '')
         .then(res => res.json())
         .then(data => {
           if (data.success && Array.isArray(data.data.requests)) {

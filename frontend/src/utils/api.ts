@@ -248,6 +248,14 @@ export const api = {
         headers: getAuthHeaders(token),
       }),
   },
+
+  // Offer endpoints
+  offers: {
+    getByJobRequestAndProvider: (jobRequestId: string, providerId: string, token: string) =>
+      apiRequest(`/api/offers?jobRequest=${jobRequestId}&provider=${providerId}`, {
+        headers: getAuthHeaders(token),
+      }),
+  },
 };
 
 // Export the base URL for other uses (like Socket.IO)
