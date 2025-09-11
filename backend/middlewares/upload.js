@@ -2,9 +2,9 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-// Ensure uploads directory exists
+// Ensure uploads directory exists (only for development)
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
+if (process.env.NODE_ENV !== 'production' && !fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
@@ -16,18 +16,20 @@ const allowedMimeTypes = [
   'application/pdf',
 ];
 
-// Multer storage config
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, UPLOADS_DIR);
-  },
-  filename: function (req, file, cb) {
-    // Use timestamp + original name for uniqueness
-    const ext = path.extname(file.originalname).toLowerCase();
-    const base = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
-    cb(null, `${base}_${Date.now()}${ext}`);
-  },
-});
+// Multer storage config - use memory storage for cloud deployment
+const storage = process.env.NODE_ENV === 'production' 
+  ? multer.memoryStorage() // Use memory storage in production (cloud)
+  : multer.diskStorage({
+      destination: function (req, file, cb) {
+        cb(null, UPLOADS_DIR);
+      },
+      filename: function (req, file, cb) {
+        // Use timestamp + original name for uniqueness
+        const ext = path.extname(file.originalname).toLowerCase();
+        const base = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9-_]/g, '_');
+        cb(null, `${base}_${Date.now()}${ext}`);
+      },
+    });
 
 // File filter for type and extension
 function fileFilter(req, file, cb) {
