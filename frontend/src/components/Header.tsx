@@ -319,10 +319,7 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
   const handleMarkAllAsRead = async () => {
     if (!accessToken) return;
     try {
-      const res = await fetch('/api/notifications/read-all', {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const res = await api.notifications.markAllAsRead(accessToken);
       const data = await res.json();
       if (data.success) {
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
@@ -335,10 +332,7 @@ const Header = ({ onSearch, searchValue = '' }: HeaderProps) => {
   const handleMarkAsRead = async (notificationId: string, relatedChatId?: string) => {
     if (!accessToken) return;
     try {
-      const res = await fetch(`/api/notifications/${notificationId}/read`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const res = await api.notifications.markAsRead(notificationId, accessToken);
       const data = await res.json();
       if (data.success) {
         setNotifications(prev => prev.map(n => n._id === notificationId ? { ...n, isRead: true } : n));

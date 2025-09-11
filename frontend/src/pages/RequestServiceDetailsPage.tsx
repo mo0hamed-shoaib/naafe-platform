@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useOfferContext } from '../contexts/OfferContext';
 import { useToast } from '../contexts/ToastContext';
 import ReportServiceModal from '../components/ui/ReportServiceModal';
+import api from '../utils/api';
 
 interface BackendOffer {
   _id: string;
@@ -150,7 +151,7 @@ const RequestServiceDetailsPage = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/requests/${id}`);
+        const res = await api.requests.getById(id);
         const data = await res.json();
         
         if (!data.success) throw new Error(data.error?.message || 'Failed to fetch');

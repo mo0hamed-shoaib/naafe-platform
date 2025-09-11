@@ -95,7 +95,7 @@ export const api = {
       }),
     
     getMyRequests: (token: string) =>
-      apiRequest('/api/requests/my-requests', {
+      apiRequest('/api/users/me/requests', {
         headers: getAuthHeaders(token),
       }),
     
@@ -114,6 +114,11 @@ export const api = {
         method: 'PATCH',
         headers: getAuthHeaders(token),
         body: JSON.stringify({ skills }),
+      }),
+    
+    getPortfolio: (userId: string, token: string) =>
+      apiRequest(`/api/users/${userId}/portfolio`, {
+        headers: getAuthHeaders(token),
       }),
   },
 
@@ -170,6 +175,18 @@ export const api = {
   notifications: {
     get: (token: string, limit?: number) =>
       apiRequest(`/api/notifications?limit=${limit || 10}`, {
+        headers: getAuthHeaders(token),
+      }),
+    
+    markAsRead: (notificationId: string, token: string) =>
+      apiRequest(`/api/notifications/${notificationId}/read`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(token),
+      }),
+    
+    markAllAsRead: (token: string) =>
+      apiRequest('/api/notifications/mark-all-read', {
+        method: 'PATCH',
         headers: getAuthHeaders(token),
       }),
   },

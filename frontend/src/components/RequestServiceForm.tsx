@@ -369,9 +369,7 @@ const RequestServiceForm: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetch('/api/users/me', {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-    })
+    api.user.getMe(accessToken)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data.user?.profile?.location) {

@@ -285,7 +285,7 @@ const ProfilePage: React.FC = () => {
     setPortfolioLoading(true);
     setPortfolioError(null);
     // TODO: Replace with real API call
-    fetch(`/api/users/${profile._id}/portfolio`)
+    api.user.getPortfolio(profile._id, accessToken)
       .then(res => res.json())
       .then(data => {
         if (data.success) setPortfolioImages(data.data.images || []);
