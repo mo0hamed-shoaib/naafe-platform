@@ -31,6 +31,9 @@ app.use(cors({
   origin: [
     'http://localhost:5173', 
     'http://127.0.0.1:5173',
+    'https://naafe-platform.vercel.app',
+    'https://naafe-platform-eml4s5r7l-mohamed-gamals-projects-634a25af.vercel.app',
+    'https://naafe-platform-3mfilwk41-mohamed-gamals-projects-634a25af.vercel.app',
     process.env.FRONTEND_URL || 'https://your-vercel-domain.vercel.app'
   ],
   credentials: true
