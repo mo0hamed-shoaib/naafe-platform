@@ -103,6 +103,23 @@ export const api = {
       apiRequest('/api/users/me/saved-services', {
         headers: getAuthHeaders(token),
       }),
+
+    checkSavedService: (serviceId: string, token: string) =>
+      apiRequest(`/api/users/me/saved-services/${serviceId}`, {
+        headers: getAuthHeaders(token),
+      }),
+
+    saveService: (serviceId: string, token: string) =>
+      apiRequest(`/api/users/me/saved-services/${serviceId}`, {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+      }),
+
+    unsaveService: (serviceId: string, token: string) =>
+      apiRequest(`/api/users/me/saved-services/${serviceId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(token),
+      }),
     
     getSkills: (token: string) =>
       apiRequest('/api/users/me/skills', {
@@ -156,6 +173,11 @@ export const api = {
         headers: getAuthHeaders(token),
         body: JSON.stringify(requestData),
       }),
+
+    getOffers: (id: string, token: string) =>
+      apiRequest(`/api/requests/${id}/offers`, {
+        headers: getAuthHeaders(token),
+      }),
   },
 
   // Listing endpoints
@@ -202,6 +224,16 @@ export const api = {
       apiRequest('/api/upgrade-requests/viewed', {
         method: 'PATCH',
         headers: getAuthHeaders(token),
+      }),
+  },
+
+  // Reports endpoints
+  reports: {
+    create: (data: any, token: string) =>
+      apiRequest('/api/reports', {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify(data),
       }),
   },
 

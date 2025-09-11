@@ -62,11 +62,7 @@ const RequestServiceDetailsPage = () => {
     if (!id) return;
     
     try {
-      const res = await fetch(`/api/requests/${id}/offers`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
+      const res = await api.requests.getOffers(id, accessToken || '');
       
       if (res.ok) {
         const data = await res.json();
@@ -119,11 +115,7 @@ const RequestServiceDetailsPage = () => {
     console.log('🔍 checkIfSaved: Checking saved status for service', { id, userId: user.id });
     
     try {
-      const res = await fetch(`/api/users/me/saved-services/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
+      const res = await api.user.checkSavedService(id, accessToken || '');
       
       console.log('🔍 checkIfSaved: Response status', res.status);
       
@@ -241,12 +233,9 @@ const RequestServiceDetailsPage = () => {
       const method = isSaved ? 'DELETE' : 'POST';
       console.log('🔍 handleSave: Making request', { method, url: `/api/users/me/saved-services/${id}` });
       
-      const res = await fetch(`/api/users/me/saved-services/${id}`, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
+      const res = isSaved 
+        ? await api.user.unsaveService(id, accessToken || '')
+        : await api.user.saveService(id, accessToken || '');
 
       console.log('🔍 handleSave: Response status', res.status);
 
@@ -312,19 +301,12 @@ const RequestServiceDetailsPage = () => {
 
     setIsReporting(true);
     try {
-      const res = await fetch(`/api/reports`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          type: 'service_request',
-          targetId: id,
-          reason: problemType,
-          description: description,
-        }),
-      });
+      const res = await api.reports.create({
+        type: 'service_request',
+        targetId: id,
+        reason: problemType,
+        description: description,
+      }, accessToken || '');
 
       if (res.ok) {
         showSuccess('تم إرسال البلاغ بنجاح');
