@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, TrendingUp } from 'lucide-react';
+import api from '../../utils/api';
 
 const defaultImage = 'https://via.placeholder.com/300x300?text=No+Image';
 
@@ -23,7 +24,7 @@ const Categories: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    fetch('/api/categories')
+    api.categories.getAll()
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.data.categories)) {
