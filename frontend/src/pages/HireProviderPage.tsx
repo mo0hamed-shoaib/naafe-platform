@@ -11,6 +11,7 @@ import FormTextarea from '../components/ui/FormTextarea';
 import UnifiedSelect from '../components/ui/UnifiedSelect';
 import { AIAssistant, PricingGuidance } from '../components/ui';
 import { EGYPT_GOVERNORATES, EGYPT_CITIES } from '../utils/constants';
+import api from '../utils/api';
 import { TimePicker, ConfigProvider } from 'antd';
 import dayjs from 'dayjs';
 import arEG from 'antd/locale/ar_EG';
@@ -229,13 +230,7 @@ const HireProviderPage: React.FC = () => {
         const formData = new FormData();
         formData.append('image', file);
 
-        const res = await fetch('/api/upload/image', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken || localStorage.getItem('accessToken')}`
-          },
-          body: formData
-        });
+        const res = await api.upload.image(formData, accessToken || localStorage.getItem('accessToken') || '');
 
         const data = await res.json();
         if (data.success) {

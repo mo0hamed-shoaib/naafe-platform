@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Button from './Button';
 import BaseCard from './BaseCard';
 import FormTextarea from './FormTextarea';
+import api from '../../utils/api';
 
 interface AIAssistantProps {
   formType: 'service' | 'request';
@@ -79,14 +80,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
       console.log('AI Assistant Request:', requestBody);
       console.log('Access Token:', accessToken ? 'Present' : 'Missing');
       
-      const response = await fetch('/api/ai/assist-form', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify(requestBody)
-      });
+      const response = await api.ai.assistForm(requestBody, accessToken || '');
 
       console.log('Response status:', response.status);
       const data = await response.json();

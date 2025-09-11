@@ -320,13 +320,7 @@ const RequestServiceForm: React.FC = () => {
       formData.append('image', file);
 
       try {
-        const response = await fetch('/api/upload/image', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: formData,
-        });
+        const response = await api.upload.image(formData, accessToken || '');
 
         if (response.ok) {
           const data = await response.json();

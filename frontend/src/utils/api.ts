@@ -252,6 +252,29 @@ export const api = {
       }),
   },
 
+  // AI endpoints
+  ai: {
+    assistForm: (data: any, token: string) =>
+      apiRequest('/api/ai/assist-form', {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify(data),
+      }),
+  },
+
+  // Upload endpoints
+  upload: {
+    image: (formData: FormData, token: string) =>
+      apiRequest('/api/upload/image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Don't set Content-Type for FormData, let the browser set it
+        },
+        body: formData,
+      }),
+  },
+
   // Admin endpoints
   admin: {
     getUpgradeRequests: (token: string) =>
