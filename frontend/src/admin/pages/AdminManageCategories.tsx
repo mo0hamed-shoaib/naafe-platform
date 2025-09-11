@@ -10,6 +10,7 @@ import { FormInput, FormTextarea } from '../../components/ui';
 import ConfirmationModal from '../components/UI/ConfirmationModal';
 import Button from '../../components/ui/Button';
 import SortableTable, { SortDirection } from '../components/UI/SortableTable';
+import api from '../../utils/api';
 
 const CATEGORIES_API = '/api/categories';
 const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
@@ -41,12 +42,10 @@ function mapCategory(raw: unknown): Category {
   };
 }
 
-const fetchCategories = async ({ page }: { page: number; }): Promise<CategoriesApiResponse> => {
+const fetchCategories = async ({ page, accessToken }: { page: number; accessToken: string | null; }): Promise<CategoriesApiResponse> => {
   const params = new URLSearchParams();
   params.append('page', page.toString());
-  const res = await fetch(`${CATEGORIES_API}?${params.toString()}`, {
-    credentials: 'include',
-  });
+  const res = await api.admin.getCategories(page, accessToken || '');
   if (!res.ok) throw new Error('فشل تحميل الفئات');
   const raw = await res.json();
   // Debug log
@@ -162,7 +161,7 @@ const AdminManageCategories: React.FC = () => {
     error,
   } = useQuery<CategoriesApiResponse, Error>({
     queryKey: ['categories', currentPage],
-    queryFn: () => fetchCategories({ page: currentPage }),
+    queryFn: () => fetchCategories({ page: currentPage, accessToken }),
   });
 
   const categories = data?.categories || [];

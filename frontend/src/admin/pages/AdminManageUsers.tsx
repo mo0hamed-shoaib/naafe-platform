@@ -12,6 +12,7 @@ import ConfirmationModal from '../components/UI/ConfirmationModal';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { CreditCard, FileText, Camera } from 'lucide-react';
+import api from '../../utils/api';
 
 // Define types for API response
 interface User {
@@ -85,12 +86,7 @@ const fetchUsers = async ({ page, search, filter, token }: { page: number; searc
     else if (filter === 'blocked') params.append('isBlocked', 'true');
   }
   console.debug('[fetchUsers] token:', token);
-  const res = await fetch(`/api/users?${params.toString()}`, {
-    credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const res = await api.admin.getUsers(parseInt(params.get('page') || '1'), token || '');
   if (!res.ok) throw new Error('فشل تحميل المستخدمين');
   const raw = await res.json();
   // Debug log

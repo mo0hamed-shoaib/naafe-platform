@@ -1,3 +1,5 @@
+import api from '../utils/api';
+
 interface ComplaintData {
   reportedUserId: string;
   jobRequestId: string;
@@ -132,12 +134,7 @@ export const getAdminComplaints = async (
   if (search) params.append('search', search);
   if (filter && filter !== 'all') params.append('status', filter);
 
-  const response = await fetch(`/api/complaints/admin?${params.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    credentials: 'include',
-  });
+  const response = await api.admin.getComplaints(page, token);
 
   if (!response.ok) {
     const errorData = await response.json();

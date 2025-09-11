@@ -11,6 +11,7 @@ import Breadcrumb from '../components/UI/Breadcrumb';
 import SearchAndFilter from '../components/UI/SearchAndFilter';
 import Button from '../../components/ui/Button';
 import FormTextarea from '../../components/ui/FormTextarea';
+import api from '../../utils/api';
 
 function uuidv4() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -81,9 +82,7 @@ const AdminIdentityVerifications: React.FC = () => {
       params.append('page', page.toString());
       if (searchTerm) params.append('search', searchTerm);
       if (filterStatus && filterStatus !== 'all') params.append('status', filterStatus);
-      const res = await fetch(`/api/verification/all?${params.toString()}`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` },
-      });
+      const res = await api.admin.getVerifications(page, accessToken || '');
       const data = await res.json();
       if (data.success && data.data && data.data.users) {
         setVerifications(data.data.users);

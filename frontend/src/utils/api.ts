@@ -218,6 +218,51 @@ export const api = {
         headers: getAuthHeaders(token),
         body: JSON.stringify(payload),
       }),
+
+    getStats: (token: string) =>
+      apiRequest('/api/admin/stats', {
+        headers: getAuthHeaders(token),
+      }),
+
+    getUserGrowthData: (token: string) =>
+      apiRequest('/api/admin/charts/user-growth', {
+        headers: getAuthHeaders(token),
+      }),
+
+    getServiceCategoriesData: (token: string) =>
+      apiRequest('/api/admin/charts/service-categories', {
+        headers: getAuthHeaders(token),
+      }),
+
+    getRevenueData: (token: string) =>
+      apiRequest('/api/admin/charts/revenue', {
+        headers: getAuthHeaders(token),
+      }),
+
+    getActivityData: (token: string) =>
+      apiRequest('/api/admin/activity', {
+        headers: getAuthHeaders(token),
+      }),
+
+    getUsers: (page: number, token: string) =>
+      apiRequest(`/api/users?page=${page}`, {
+        headers: getAuthHeaders(token),
+      }),
+
+    getVerifications: (page: number, token: string) =>
+      apiRequest(`/api/verification/all?page=${page}`, {
+        headers: getAuthHeaders(token),
+      }),
+
+    getCategories: (page: number, token: string) =>
+      apiRequest(`/api/categories?page=${page}`, {
+        headers: getAuthHeaders(token),
+      }),
+
+    getComplaints: (page: number, token: string) =>
+      apiRequest(`/api/complaints/admin?page=${page}`, {
+        headers: getAuthHeaders(token),
+      }),
   },
 
   // Review endpoints
@@ -238,6 +283,11 @@ export const api = {
 
   // Chat endpoints
   chat: {
+    getConversations: (page: number, limit: number, token: string) =>
+      apiRequest(`/api/chat/conversations?page=${page}&limit=${limit}`, {
+        headers: getAuthHeaders(token),
+      }),
+    
     getConversation: (conversationId: string, token: string) =>
       apiRequest(`/api/chat/conversations/${conversationId}`, {
         headers: getAuthHeaders(token),

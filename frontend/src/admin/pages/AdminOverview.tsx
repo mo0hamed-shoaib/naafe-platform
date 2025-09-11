@@ -3,6 +3,7 @@ import { Users, Wrench, DollarSign, TrendingUp, TrendingDown, MessageSquare, Fil
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import Breadcrumb from '../components/UI/Breadcrumb';
+import api from '../../utils/api';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -44,12 +45,7 @@ ChartJS.register(
 
 // API functions
 const fetchDashboardStats = async (token: string | null) => {
-  const res = await fetch('/api/admin/stats', {
-    credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const res = await api.admin.getStats(token || '');
   if (!res.ok) throw new Error('فشل تحميل إحصائيات لوحة التحكم');
   const json = await res.json();
   if (!json.success || !json.data) throw new Error('الاستجابة من الخادم غير متوقعة');
@@ -57,48 +53,28 @@ const fetchDashboardStats = async (token: string | null) => {
 };
 
 const fetchUserGrowthData = async (token: string | null) => {
-  const res = await fetch('/api/admin/charts/user-growth', {
-    credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const res = await api.admin.getUserGrowthData(token || '');
   if (!res.ok) throw new Error('فشل تحميل بيانات نمو المستخدمين');
   const json = await res.json();
   return json.success ? json.data : [];
 };
 
 const fetchServiceCategoriesData = async (token: string | null) => {
-  const res = await fetch('/api/admin/charts/service-categories', {
-    credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const res = await api.admin.getServiceCategoriesData(token || '');
   if (!res.ok) throw new Error('فشل تحميل بيانات فئات الخدمات');
   const json = await res.json();
   return json.success ? json.data : { labels: [], data: [] };
 };
 
 const fetchRevenueData = async (token: string | null) => {
-  const res = await fetch('/api/admin/charts/revenue', {
-    credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const res = await api.admin.getRevenueData(token || '');
   if (!res.ok) throw new Error('فشل تحميل بيانات الإيرادات');
   const json = await res.json();
   return json.success ? json.data : [];
 };
 
 const fetchRecentActivity = async (token: string | null) => {
-  const res = await fetch('/api/admin/activity', {
-    credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const res = await api.admin.getActivityData(token || '');
   if (!res.ok) throw new Error('فشل تحميل النشاط الأخير');
   const json = await res.json();
   return json.success ? json.data : [];

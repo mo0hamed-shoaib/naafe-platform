@@ -6,6 +6,7 @@ import BaseCard from '../components/ui/BaseCard';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import { MessageCircle, User, Clock, ArrowRight } from 'lucide-react';
+import api from '../utils/api';
 
 interface Conversation {
   _id: string;
@@ -54,9 +55,7 @@ const ConversationsPage: React.FC = () => {
     if (!accessToken) return;
     
     setLoading(true);
-    fetch(`/api/chat/conversations?page=${page}&limit=20`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+    api.chat.getConversations(page, 20, accessToken || '')
       .then(res => res.json())
       .then(data => {
         if (data.success) {

@@ -10,6 +10,7 @@ import Pagination from '../components/UI/Pagination';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import SortableTable, { SortDirection } from '../components/UI/SortableTable';
+import api from '../../utils/api';
 
 const STATUS_LABELS = {
   pending: 'قيد الانتظار',
@@ -67,9 +68,7 @@ const AdminUpgradeRequests: React.FC = () => {
         const params = new URLSearchParams();
         if (statusFilter !== 'all') params.append('status', statusFilter);
         if (search) params.append('search', search);
-        const res = await fetch(`/api/admin/upgrade-requests?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const res = await api.admin.getUpgradeRequests(accessToken || '');
         const data = await res.json();
         if (!data.success) throw new Error(data.error?.message || 'فشل التحميل');
         setRequests(data.data.requests);
