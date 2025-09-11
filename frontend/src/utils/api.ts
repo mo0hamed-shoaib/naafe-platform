@@ -271,6 +271,13 @@ export const api = {
       apiRequest(`/api/reviews/user/${userId}`, {
         headers: getAuthHeaders(token),
       }),
+
+    create: (payload: any, token: string) =>
+      apiRequest('/api/reviews', {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify(payload),
+      }),
   },
 
   // Payment endpoints
@@ -304,6 +311,47 @@ export const api = {
     getByJobRequestAndProvider: (jobRequestId: string, providerId: string, token: string) =>
       apiRequest(`/api/offers?jobRequest=${jobRequestId}&provider=${providerId}`, {
         headers: getAuthHeaders(token),
+      }),
+
+    getById: (offerId: string, token: string) =>
+      apiRequest(`/api/offers/${offerId}`, {
+        headers: getAuthHeaders(token),
+      }),
+
+    getNegotiationHistory: (offerId: string, token: string) =>
+      apiRequest(`/api/offers/${offerId}/negotiation-history`, {
+        headers: getAuthHeaders(token),
+      }),
+
+    checkPaymentStatus: (offerId: string, token: string) =>
+      apiRequest(`/api/payment/check-status/${offerId}`, {
+        headers: getAuthHeaders(token),
+      }),
+
+    accept: (offerId: string, token: string) =>
+      apiRequest(`/api/offers/${offerId}/accept`, {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+      }),
+
+    createEscrowPayment: (payload: any, token: string) =>
+      apiRequest('/api/payment/create-escrow-payment', {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify(payload),
+      }),
+
+    complete: (offerId: string, token: string) =>
+      apiRequest(`/api/offers/${offerId}/complete`, {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+      }),
+
+    cancelRequest: (offerId: string, payload: any, token: string) =>
+      apiRequest(`/api/offers/${offerId}/cancel-request`, {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify(payload),
       }),
   },
 };

@@ -160,9 +160,7 @@ const ChatPage: React.FC = () => {
     const fetchOfferIfMissing = async () => {
       if (offerId && !offers.find(o => o.id === offerId) && accessToken) {
         try {
-          const res = await fetch(`/api/offers/${offerId}`, {
-            headers: { Authorization: `Bearer ${accessToken}` }
-          });
+          const res = await api.offers.getById(offerId, accessToken || '');
           const data = await res.json();
           if (data.success && data.data) {
             const backendOffer = data.data;
@@ -199,9 +197,7 @@ const ChatPage: React.FC = () => {
     if (!chatId || !accessToken || !user || !offerId || isCancelled) return;
 
     try {
-      const offerResponse = await fetch(`/api/offers/${offerId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const offerResponse = await api.offers.getById(offerId, accessToken || '');
       
       if (offerResponse.ok) {
         const offerData = await offerResponse.json();
@@ -214,9 +210,7 @@ const ChatPage: React.FC = () => {
         }
       }
       
-      const response = await fetch(`/api/payment/check-status/${chatId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const response = await api.offers.checkPaymentStatus(chatId, accessToken || '');
       
       if (response.ok) {
         const data = await response.json();
@@ -453,9 +447,7 @@ const ChatPage: React.FC = () => {
         return;
       }
       
-      const checkResponse = await fetch(`/api/offers/${offerId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const checkResponse = await api.offers.getById(offerId, accessToken || '');
       
       if (checkResponse.ok) {
         const checkData = await checkResponse.json();
@@ -467,13 +459,7 @@ const ChatPage: React.FC = () => {
         }
       }
       
-      const response = await fetch(`/api/offers/${offerId}/accept`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.offers.accept(offerId, accessToken || '');
       
       const data = await response.json();
       if (response.ok && data.success) {
@@ -490,9 +476,7 @@ const ChatPage: React.FC = () => {
         } else if (data.error?.message?.includes('status')) {
           showError('فشل في قبول العرض', 'حالة العرض الحالية لا تسمح بالقبول');
           await checkServiceStatus();
-          const offerResponse = await fetch(`/api/offers/${offerId}`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
+          const offerResponse = await api.offers.getById(offerId, accessToken || '');
           if (offerResponse.ok) {
             const offerData = await offerResponse.json();
             if (offerData.success && offerData.data && offerData.data.status === 'accepted') {
@@ -530,17 +514,10 @@ const ChatPage: React.FC = () => {
 
     setPaymentLoading(true);
     try {
-      const response = await fetch('/api/payment/create-escrow-payment', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          offerId,
-          amount
-        })
-      });
+      const response = await api.offers.createEscrowPayment({
+        offerId,
+        amount
+      }, accessToken || '');
 
       const data = await response.json();
       if (response.ok && data.success && data.data.url) {
@@ -563,13 +540,7 @@ const ChatPage: React.FC = () => {
 
     setCompletionLoading(true);
     try {
-      const response = await fetch(`/api/offers/${offerId}/complete`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.offers.complete(offerId, accessToken || '');
 
       const data = await response.json();
       if (response.ok && data.success) {
@@ -600,20 +571,13 @@ const ChatPage: React.FC = () => {
         ? conversation?.participants.provider._id
         : conversation?.participants.seeker._id;
 
-      const response = await fetch(`/api/reviews`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          rating,
-          comment,
-          role,
-          reviewedUser,
-          jobRequest: conversation?.jobRequestId?._id
-        })
-      });
+      const response = await api.reviews.create({
+        rating,
+        comment,
+        role,
+        reviewedUser,
+        jobRequest: conversation?.jobRequestId?._id
+      }, accessToken || '');
       const data = await response.json();
       if (response.ok && data.success) {
         showSuccess('تم إرسال التقييم بنجاح');
@@ -633,16 +597,9 @@ const ChatPage: React.FC = () => {
 
     setCancellationLoading(true);
     try {
-      const response = await fetch(`/api/offers/${offerId}/cancel-request`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          reason: cancellationReason || 'طلب إلغاء بدون سبب محدد'
-        })
-      });
+      const response = await api.offers.cancelRequest(offerId, {
+        reason: cancellationReason || 'طلب إلغاء بدون سبب محدد'
+      }, accessToken || '');
 
       const data = await response.json();
       if (response.ok && data.success) {

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { useSocket } from '../hooks/useSocket';
+import api from '../utils/api';
 
 export interface Offer {
   id: string;
@@ -89,9 +90,7 @@ export const OfferProvider: React.FC<OfferProviderProps> = ({ children }) => {
     
     console.log('Fetching negotiation for offer:', offerId);
     
-    const res = await fetch(`/api/offers/${offerId}` , {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
+    const res = await api.offers.getById(offerId, accessToken);
     const data = await res.json();
     console.log('Negotiation data:', data);
     
@@ -175,9 +174,7 @@ export const OfferProvider: React.FC<OfferProviderProps> = ({ children }) => {
   // Fetch negotiation history
   const fetchNegotiationHistory = useCallback(async (offerId: string) => {
     if (!accessToken) return;
-    const res = await fetch(`/api/offers/${offerId}/negotiation-history`, {
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
+    const res = await api.offers.getNegotiationHistory(offerId, accessToken);
     const data = await res.json();
     if (data.success) {
       setNegotiationState(prev => ({
