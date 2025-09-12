@@ -292,7 +292,8 @@ const RequestServiceForm: React.FC = () => {
     console.log('🔍 Form validation check:', {
       hasRequiredFields,
       hasNoErrors,
-      validationErrors: Object.keys(validationErrors),
+      validationErrors: validationErrors, // Show actual errors, not just keys
+      validationErrorsKeys: Object.keys(validationErrors),
       formData: {
         requestTitle: formData.requestTitle,
         category: formData.category,
