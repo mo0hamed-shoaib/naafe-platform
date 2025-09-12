@@ -7,8 +7,17 @@ import uploadMiddleware from '../middlewares/upload.js';
 
 const router = express.Router();
 
-// Image upload endpoint
-router.post('/upload-image', authenticateToken, uploadMiddleware.uploadSingle('image'), userController.uploadImage);
+// Image upload endpoint with debug middleware
+router.post('/upload-image', authenticateToken, (req, res, next) => {
+  console.log('🔍 Before upload middleware');
+  console.log('🔍 req.body:', req.body);
+  next();
+}, uploadMiddleware.uploadSingle('image'), (req, res, next) => {
+  console.log('🔍 After upload middleware');
+  console.log('🔍 req.file:', req.file);
+  console.log('🔍 req.body:', req.body);
+  next();
+}, userController.uploadImage);
 
 /**
  * @route   GET /api/users/me

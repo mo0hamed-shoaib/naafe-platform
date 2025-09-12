@@ -787,7 +787,13 @@ class UserController {
    */
   async uploadImage(req, res) {
     try {
+      console.log('🔍 Upload controller hit');
+      console.log('🔍 req.file:', req.file);
+      console.log('🔍 req.body:', req.body);
+      console.log('🔍 req.files:', req.files);
+      
       if (!req.file) {
+        console.log('❌ No file received');
         return res.status(400).json({
           success: false,
           error: {
@@ -797,6 +803,13 @@ class UserController {
           timestamp: new Date().toISOString()
         });
       }
+
+      console.log('✅ File received:', {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        buffer: req.file.buffer ? 'Buffer present' : 'No buffer'
+      });
 
       logger.info(`Image uploaded: ${req.file.originalname}`);
 
@@ -818,6 +831,7 @@ class UserController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
+      console.log('❌ Upload controller error:', error.message);
       logger.error(`Image upload error: ${error.message}`);
       res.status(500).json({
         success: false,
