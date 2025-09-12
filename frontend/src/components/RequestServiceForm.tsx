@@ -316,17 +316,26 @@ const RequestServiceForm: React.FC = () => {
         continue;
       }
 
-      const formData = new FormData();
-      formData.append('image', file);
-
       try {
-        const response = await api.upload.image(formData, accessToken || '');
+        const imgbbApiKey = import.meta.env.VITE_IMGBB_API_KEY;
+        if (!imgbbApiKey) {
+          alert('مفتاح رفع الصور غير متوفر. الرجاء المحاولة لاحقاً.');
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+          method: 'POST',
+          body: formData,
+        });
 
         if (response.ok) {
           const data = await response.json();
           setFormData(prev => ({
             ...prev,
-            images: [...prev.images, data.imageUrl]
+            images: [...prev.images, data.data.url]
           }));
           setImageUploadProgress(prev => ({ ...prev, [file.name]: true }));
         } else {

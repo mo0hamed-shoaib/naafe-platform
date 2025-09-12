@@ -227,10 +227,19 @@ const HireProviderPage: React.FC = () => {
       setImageUploadProgress(prev => ({ ...prev, [file.name]: true }));
 
       try {
+        const imgbbApiKey = import.meta.env.VITE_IMGBB_API_KEY;
+        if (!imgbbApiKey) {
+          alert('مفتاح رفع الصور غير متوفر. الرجاء المحاولة لاحقاً.');
+          continue;
+        }
+
         const formData = new FormData();
         formData.append('image', file);
 
-        const res = await api.upload.image(formData, accessToken || localStorage.getItem('accessToken') || '');
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
+          method: 'POST',
+          body: formData,
+        });
 
         const data = await res.json();
         if (data.success) {

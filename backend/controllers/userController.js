@@ -815,19 +815,23 @@ class UserController {
 
       logger.info(`Image uploaded: ${req.file.originalname}`);
 
-      // For production (Railway), we're using memory storage
-      // Return a mock URL since we don't have cloud storage set up yet
-      // In a real implementation, you'd upload to AWS S3, Cloudinary, etc.
+      // Convert file buffer to base64 for immediate display
+      // In production, we're using memory storage, so we need to return the image data
+      const base64Image = req.file.buffer.toString('base64');
+      const dataUrl = `data:${req.file.mimetype};base64,${base64Image}`;
       
-      const imageUrl = `https://naafe-platform-production.up.railway.app/uploads/${req.file.originalname}_${Date.now()}`;
+      // Also create a temporary URL for compatibility
+      const tempUrl = `temp_${Date.now()}_${req.file.originalname}`;
       
       res.status(200).json({
         success: true,
         data: {
-          url: imageUrl,
+          url: dataUrl, // Base64 data URL for immediate display
+          tempUrl: tempUrl, // Temporary identifier
           filename: req.file.originalname,
           size: req.file.size,
-          mimetype: req.file.mimetype
+          mimetype: req.file.mimetype,
+          base64: base64Image // Raw base64 for storage
         },
         message: 'Image uploaded successfully',
         timestamp: new Date().toISOString()
