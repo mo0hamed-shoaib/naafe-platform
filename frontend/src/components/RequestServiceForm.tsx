@@ -288,6 +288,26 @@ const RequestServiceForm: React.FC = () => {
     // Check if there are no validation errors
     const hasNoErrors = Object.keys(validationErrors).length === 0;
 
+    // Debug logging
+    console.log('🔍 Form validation check:', {
+      hasRequiredFields,
+      hasNoErrors,
+      validationErrors: Object.keys(validationErrors),
+      formData: {
+        requestTitle: formData.requestTitle,
+        category: formData.category,
+        requestDescription: formData.requestDescription,
+        minBudget: formData.minBudget,
+        maxBudget: formData.maxBudget,
+        government: formData.government,
+        city: formData.city,
+        street: formData.street,
+        apartmentNumber: formData.apartmentNumber,
+        preferredDateTime: formData.preferredDateTime,
+        deliveryTimeDays: formData.deliveryTimeDays,
+      }
+    });
+
     return hasRequiredFields && hasNoErrors;
   };
 
