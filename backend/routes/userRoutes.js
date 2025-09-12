@@ -7,12 +7,15 @@ import uploadMiddleware from '../middlewares/upload.js';
 
 const router = express.Router();
 
-// Image upload endpoint - moved to top to avoid route conflicts
-router.post('/upload-image', authenticateToken, uploadMiddleware.uploadSingle('image'), (req, res) => {
-  console.log('🔍 Upload endpoint hit');
-  console.log('🔍 req.file:', req.file);
+// Image upload endpoint - test without upload middleware
+router.post('/upload-image', authenticateToken, (req, res) => {
+  console.log('🔍 Upload endpoint hit - no upload middleware');
   console.log('🔍 req.user:', req.user);
-  userController.uploadImage(req, res);
+  res.status(200).json({
+    success: true,
+    message: 'Endpoint reached successfully',
+    timestamp: new Date().toISOString()
+  });
 });
 
 /**
