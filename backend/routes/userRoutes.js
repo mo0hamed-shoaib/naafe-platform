@@ -157,7 +157,12 @@ router.get('/providers/featured', userController.getFeaturedPremiumProviders);
 // Targeted leads for premium providers
 router.get('/providers/me/targeted-leads', authenticateToken, userController.getTargetedLeads);
 
-// Image upload endpoint
-router.post('/upload-image', authenticateToken, uploadMiddleware.uploadSingle('image'), userController.uploadImage);
+// Image upload endpoint - debug version
+router.post('/upload-image', authenticateToken, uploadMiddleware.uploadSingle('image'), (req, res) => {
+  console.log('🔍 Upload endpoint hit');
+  console.log('🔍 req.file:', req.file);
+  console.log('🔍 req.user:', req.user);
+  userController.uploadImage(req, res);
+});
 
 export default router; 
