@@ -18,9 +18,10 @@ export const apiRequest = async (
 ): Promise<Response> => {
   const url = `${API_BASE}${endpoint}`;
   
-  const defaultHeaders = {
-    'Content-Type': 'application/json',
-  };
+  // Don't set Content-Type for FormData, let the browser handle it
+  const defaultHeaders = options.body instanceof FormData 
+    ? {} 
+    : { 'Content-Type': 'application/json' };
 
   const config: RequestInit = {
     ...options,
