@@ -308,6 +308,12 @@ const RequestServiceForm: React.FC = () => {
         deliveryTimeDays: formData.deliveryTimeDays,
       }
     });
+    
+    // Extra debug for validation errors
+    if (Object.keys(validationErrors).length > 0) {
+      console.log('❌ VALIDATION ERRORS:', validationErrors);
+      console.log('❌ ERROR FIELDS:', Object.keys(validationErrors));
+    }
 
     return hasRequiredFields && hasNoErrors;
   };
