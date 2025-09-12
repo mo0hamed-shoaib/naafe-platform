@@ -262,7 +262,7 @@ export const api = {
       }),
   },
 
-  // Upload endpoints
+  // Upload endpoints - Updated to use /api/users/upload-image
   upload: {
     image: (formData: FormData, token: string) =>
       apiRequest('/api/users/upload-image', {
