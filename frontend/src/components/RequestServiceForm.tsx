@@ -690,9 +690,8 @@ const RequestServiceForm: React.FC = () => {
                         onBlur={handleBlur}
                         placeholder="أدخل اسم المدينة"
                         size="md"
-                        className="mt-2"
+                        className={`mt-2 ${shouldShowError('city') ? 'border-red-500' : ''}`}
                         required
-                        className={shouldShowError('city') ? 'border-red-500' : ''}
                       />
                     )}
                   </div>

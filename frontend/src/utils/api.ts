@@ -133,20 +133,6 @@ export const api = {
         body: JSON.stringify({ skills }),
       }),
 
-    getById: (userId: string, token: string) =>
-      apiRequest(`/api/users/${userId}`, {
-        headers: getAuthHeaders(token),
-      }),
-
-    getStats: (userId: string, token: string) =>
-      apiRequest(`/api/users/${userId}/stats`, {
-        headers: getAuthHeaders(token),
-      }),
-
-    getListings: (userId: string, token: string) =>
-      apiRequest(`/api/users/${userId}/listings`, {
-        headers: getAuthHeaders(token),
-      }),
     
     getPortfolio: (userId: string, token: string) =>
       apiRequest(`/api/users/${userId}/portfolio`, {
