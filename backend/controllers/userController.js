@@ -811,6 +811,8 @@ class UserController {
         buffer: req.file.buffer ? 'Buffer present' : 'No buffer'
       });
 
+      console.log('🚀 SENDING SUCCESS RESPONSE WITH FILE INFO');
+
       logger.info(`Image uploaded: ${req.file.originalname}`);
 
       // For production (Railway), we're using memory storage
