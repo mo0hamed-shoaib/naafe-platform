@@ -285,8 +285,8 @@ const RequestServiceForm: React.FC = () => {
       formData.preferredDateTime.trim() &&
       formData.deliveryTimeDays.trim();
 
-    // Check if there are no validation errors
-    const hasNoErrors = Object.keys(validationErrors).length === 0;
+    // Check if there are no validation errors (filter out undefined values)
+    const hasNoErrors = Object.values(validationErrors).every(error => !error || error === undefined);
 
     // Debug logging
     console.log('🔍 Form validation check:', {
