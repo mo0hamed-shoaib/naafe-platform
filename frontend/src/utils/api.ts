@@ -265,7 +265,7 @@ export const api = {
   // Upload endpoints
   upload: {
     image: (formData: FormData, token: string) =>
-      apiRequest('/api/upload/image', {
+      apiRequest('/api/users/upload-image', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

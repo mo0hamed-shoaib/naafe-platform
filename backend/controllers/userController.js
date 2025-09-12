@@ -780,6 +780,55 @@ class UserController {
       });
     }
   }
+
+  /**
+   * Upload image
+   * POST /api/users/upload-image
+   */
+  async uploadImage(req, res) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'No image file provided'
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      logger.info(`Image uploaded: ${req.file.originalname}`);
+
+      // For production (Railway), we're using memory storage
+      // Return a mock URL since we don't have cloud storage set up yet
+      // In a real implementation, you'd upload to AWS S3, Cloudinary, etc.
+      
+      const imageUrl = `https://naafe-platform-production.up.railway.app/uploads/${req.file.originalname}_${Date.now()}`;
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          url: imageUrl,
+          filename: req.file.originalname,
+          size: req.file.size,
+          mimetype: req.file.mimetype
+        },
+        message: 'Image uploaded successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error(`Image upload error: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Internal server error'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
 }
 
 export default new UserController(); 

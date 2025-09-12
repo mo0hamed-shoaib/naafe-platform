@@ -3,6 +3,7 @@ import userController from '../controllers/userController.js';
 import jobRequestController from '../controllers/jobRequestController.js';
 import { validateUpdateProfile, validateUserId } from '../validation/userValidation.js';
 import { authenticateToken, optionalAuth, requireRole } from '../middlewares/auth.middleware.js';
+import { uploadSingle } from '../middlewares/upload.js';
 
 const router = express.Router();
 
@@ -155,5 +156,8 @@ router.patch('/:id/unblock', authenticateToken, requireRole(['admin']), userCont
 router.get('/providers/featured', userController.getFeaturedPremiumProviders);
 // Targeted leads for premium providers
 router.get('/providers/me/targeted-leads', authenticateToken, userController.getTargetedLeads);
+
+// Image upload endpoint
+router.post('/upload-image', authenticateToken, uploadSingle('image'), userController.uploadImage);
 
 export default router; 
